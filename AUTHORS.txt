@@ -1,0 +1,8 @@
+Authors
+-------
+
+* Michal Walkowski <michal.walkowski at dsecure.me> (project leader)
+* Maciej Biskup    <maciej.biskup at dsecure.me>
+* Pawel  Linkert   <pawel.linkert at dsecure.me>
+* Konrad Kaluzny   <konrad.kaluzny at dsecure.me>
+* Maciej Krakowiak <maciej.krakowiak at dsecure.me>

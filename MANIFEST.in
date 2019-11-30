@@ -1,0 +1,6 @@
+include AUTHORS.txt VERSION.txt README.md NOTICE.txt LICENSE.md CODE_OF_CONDUCT.md requirements.txt test_requirements.txt
+recursive-include doc *.py *.rst *.txt *.html *.css *.js *.png *.git *.jpg, *.xml
+recursive-include src/vmc *
+
+global-exclude *.pyc
+global-exclude __pycache__

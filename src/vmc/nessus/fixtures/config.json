@@ -1,0 +1,15 @@
+[
+  {
+    "model": "nessus.config",
+    "pk": 1,
+    "fields": {
+      "name": "Test Config",
+      "url": "http://test",
+      "api_key": "API_KEY",
+      "secret_key": "SECRET_KEY",
+      "insecure": 1,
+      "created_date": "2019-03-06T22:37:31.540Z",
+      "modified_date": "2019-03-06T22:37:31.540Z"
+    }
+  }
+]

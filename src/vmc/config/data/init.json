@@ -1,0 +1,64 @@
+[
+  {
+    "model": "auth.user",
+    "pk": 1,
+    "fields": {
+      "password": "pbkdf2_sha256$120000$0H3bVC5lUpTu$p8GDS9KUFy2cQzO9pGajRBBP6nzbo0Wxb5Ztj4394js=",
+      "last_login": "2019-03-05T18:22:41.092Z",
+      "is_superuser": true,
+      "username": "admin",
+      "first_name": "",
+      "last_name": "",
+      "email": "",
+      "is_staff": true,
+      "is_active": true,
+      "date_joined": "2019-03-05T18:21:42.000Z",
+      "groups": [],
+      "user_permissions": []
+    }
+  },
+  {
+    "model": "django_celery_beat.crontabschedule",
+    "pk": 1,
+    "fields": {
+      "minute": "0",
+      "hour": "6",
+      "day_of_week": "*",
+      "day_of_month": "*",
+      "month_of_year": "*",
+      "timezone": "UTC"
+    }
+  },
+  {
+    "model": "django_celery_beat.periodictasks",
+    "pk": 1,
+    "fields": {
+      "last_update": "2019-04-20T21:18:38.990Z"
+    }
+  },
+  {
+    "model": "django_celery_beat.periodictask",
+    "pk": 1,
+    "fields": {
+      "name": "Update CVE and CWE every night",
+      "task": "knowledge_base.tasks.update_cve_cwe",
+      "interval": null,
+      "crontab": 1,
+      "solar": null,
+      "args": "[]",
+      "kwargs": "{}",
+      "queue": null,
+      "exchange": null,
+      "routing_key": null,
+      "priority": null,
+      "expires": null,
+      "one_off": false,
+      "start_time": null,
+      "enabled": true,
+      "last_run_at": null,
+      "total_run_count": 0,
+      "date_changed": "2019-04-20T21:17:55.202Z",
+      "description": ""
+    }
+  }
+]

@@ -1,0 +1,187 @@
+{
+  "cves": {
+    "CVE-2008-1036": {
+      "oval": [
+        {
+          "submitted": "2010-07-09T03:56:16-04:00",
+          "description": "The International Components for Unicode (ICU) library in Apple Mac OS X before 10.5.3, Red Hat Enterprise Linux 5, and other operating systems omits some invalid character sequences during conversion of some character encodings, which might allow remote attackers to conduct cross-site scripting (XSS) attacks.",
+          "family": "unix",
+          "status": "accepted",
+          "version": "18",
+          "class": "vulnerability",
+          "accepted": "2013-04-29T04:09:06.320-04:00",
+          "contributors": [
+            {
+              "organization": "SCAP.com, LLC",
+              "name": "Aharon Chernin"
+            },
+            {
+              "organization": "G2, Inc.",
+              "name": "Dragos Prisaca"
+            }
+          ],
+          "id": "oval:org.mitre.oval:def:10824",
+          "title": "The International Components for Unicode (ICU) library in Apple Mac OS X before 10.5.3, Red Hat Enterprise Linux 5, and other operating systems omits some invalid character sequences during conversion of some character encodings, which might allow remote attackers to conduct cross-site scripting (XSS) attacks.",
+          "definition_extensions": [
+            {
+              "oval": "oval:org.mitre.oval:def:11414",
+              "comment": "The operating system installed on the system is Red Hat Enterprise Linux 5"
+            },
+            {
+              "oval": "oval:org.mitre.oval:def:15802",
+              "comment": "The operating system installed on the system is CentOS Linux 5.x"
+            },
+            {
+              "oval": "oval:org.mitre.oval:def:15459",
+              "comment": "Oracle Linux 5.x"
+            }
+          ]
+        }
+      ],
+      "redhat": {
+        "rpms": [
+          "icu-0:3.6-5.11.2",
+          "libicu-0:3.6-5.11.2",
+          "libicu-devel-0:3.6-5.11.2",
+          "libicu-doc-0:3.6-5.11.2"
+        ],
+        "advisories": [
+          {
+            "rhsa": {
+              "severity": "Moderate",
+              "released": "2009-03-12",
+              "id": "RHSA-2009:0296",
+              "title": "RHSA-2009:0296: icu security update (Moderate)"
+            },
+            "bugzilla": {
+              "id": "464168",
+              "title": "CVE-2008-1036 ICU: Invalid character sequences omission during conversion of some character encodings (XSS attack possible)"
+            },
+            "oval": {
+              "AND": [
+                {
+                  "oval": "oval:com.redhat.rhsa:tst:20070055001",
+                  "comment": "Red Hat Enterprise Linux 5 is installed"
+                },
+                {
+                  "OR": [
+                    {
+                      "AND": [
+                        {
+                          "oval": "oval:com.redhat.rhsa:tst:20090296002",
+                          "comment": "icu is earlier than 0:3.6-5.11.2"
+                        },
+                        {
+                          "oval": "oval:com.redhat.rhsa:tst:20080090003",
+                          "comment": "icu is signed with Red Hat redhatrelease key"
+                        }
+                      ]
+                    },
+                    {
+                      "AND": [
+                        {
+                          "oval": "oval:com.redhat.rhsa:tst:20090296006",
+                          "comment": "libicu is earlier than 0:3.6-5.11.2"
+                        },
+                        {
+                          "oval": "oval:com.redhat.rhsa:tst:20080090009",
+                          "comment": "libicu is signed with Red Hat redhatrelease key"
+                        }
+                      ]
+                    },
+                    {
+                      "AND": [
+                        {
+                          "oval": "oval:com.redhat.rhsa:tst:20090296008",
+                          "comment": "libicu-devel is earlier than 0:3.6-5.11.2"
+                        },
+                        {
+                          "oval": "oval:com.redhat.rhsa:tst:20080090007",
+                          "comment": "libicu-devel is signed with Red Hat redhatrelease key"
+                        }
+                      ]
+                    },
+                    {
+                      "AND": [
+                        {
+                          "oval": "oval:com.redhat.rhsa:tst:20090296004",
+                          "comment": "libicu-doc is earlier than 0:3.6-5.11.2"
+                        },
+                        {
+                          "oval": "oval:com.redhat.rhsa:tst:20080090005",
+                          "comment": "libicu-doc is signed with Red Hat redhatrelease key"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "refmap": {
+        "bid": [
+          "29412",
+          "29488"
+        ],
+        "vupen": [
+          "ADV-2008-1697"
+        ],
+        "xf": [
+          "macosx-icu-security-bypass(42717)"
+        ],
+        "debian": [
+          "DSA-1762"
+        ],
+        "sectrack": [
+          "1020139"
+        ],
+        "cert": [
+          "TA08-150A"
+        ],
+        "misc": [
+          "http://wiki.rpath.com/wiki/Advisories:rPSA-2009-0064"
+        ],
+        "apple": [
+          "APPLE-SA-2008-05-28"
+        ],
+        "secunia": [
+          "30430",
+          "34290",
+          "34777"
+        ],
+        "ubuntu": [
+          "USN-747-1"
+        ]
+      }
+    },
+    "CVE-2018-12326": {
+    "redhat": {
+      "advisories": [
+        {
+          "rhsa": {
+            "id": "RHSA-2019:0052"
+          }
+        },
+        {
+          "rhsa": {
+            "id": "RHSA-2019:0094"
+          }
+        }
+      ]
+    },
+    "refmap": {
+      "exploit-db": [
+        "44904"
+      ],
+      "misc": [
+        "https://gist.github.com/fakhrizulkifli/f831f40ec6cde4f744c552503d8698f0",
+        "https://github.com/antirez/redis/commit/9fdcc15962f9ff4baebe6fdd947816f43f730d50",
+        "https://raw.githubusercontent.com/antirez/redis/4.0/00-RELEASENOTES",
+        "https://raw.githubusercontent.com/antirez/redis/5.0/00-RELEASENOTES"
+      ]
+    }
+  }
+  }
+}

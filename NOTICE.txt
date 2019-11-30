@@ -1,0 +1,8 @@
+VMC
+Copyright 2019 DSecure.me
+
+This product includes software developed by The Apache Software
+Foundation (http://www.apache.org/).
+
+This product includes software developed by
+DSecure.me (http://dsecure.me).

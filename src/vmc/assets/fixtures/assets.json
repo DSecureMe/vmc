@@ -1,0 +1,41 @@
+[
+  {
+    "model": "assets.port",
+    "pk": 1,
+    "fields": {
+      "number": 22,
+      "svc_name": "ssh",
+      "protocol": "tcp",
+      "created_date": "2019-03-06T22:37:31.540Z",
+      "modified_date": "2019-03-06T22:37:31.540Z"
+    }
+  },
+  {
+    "model": "assets.asset",
+    "pk": 1,
+    "fields": {
+      "ip_address": "10.10.10.1",
+      "mac_address": "AA:BB:CC:DD:EE:FF",
+      "os": "Windows",
+      "created_date": "2019-03-06T22:37:31.540Z",
+      "modified_date": "2019-03-06T22:37:31.540Z",
+      "confidentiality_requirement": "N",
+      "integrity_requirement": "N",
+      "availability_requirement": "N"
+    }
+  },
+  {
+    "model": "assets.asset",
+    "pk": 2,
+    "fields": {
+      "ip_address": "10.10.10.2",
+      "mac_address": "AA:BB:CC:DD:EE:FF",
+      "os": "Linux",
+      "created_date": "2019-03-06T22:37:31.540Z",
+      "modified_date": "2019-03-06T22:37:31.540Z",
+      "confidentiality_requirement": "N",
+      "integrity_requirement": "N",
+      "availability_requirement": "N"
+    }
+  }
+]

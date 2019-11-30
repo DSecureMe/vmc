@@ -1,0 +1,25 @@
+#Redis
+redis.url: redis://redis:6379/1
+
+#Elastic Search
+elasticsearch.hosts: ["http://elasticsearch:9200"]
+elasticsearch.user: elastic
+elasticsearch.password: kibana
+
+#database
+database.engine: django.db.backends.postgresql_psycopg2
+database.name: vmc
+database.user: user
+database.password: password
+database.host: postgres
+database.port: 5432
+
+# Queue
+rabbitmq.username: vmc
+rabbitmq.password: test_vmc
+rabbitmq.host: rabbitmq
+rabbitmq.port: 5672
+
+# Secret
+secret_key: "jk&e^6%5@^5!^1jq8#vd2g^@8w9g5#i_v*ho!#mx%y7%5fuz9%"
+debug: true
