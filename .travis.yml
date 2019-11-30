@@ -5,4 +5,4 @@ python:
 install: pip install tox-travis codecov
 script: tox
 after_success:
-  - codecov
+  - codecov --token=$CODECOV_TOKEN
