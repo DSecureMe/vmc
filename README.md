@@ -1,6 +1,6 @@
 ![Logo](https://dsecure.me/wp-content/uploads/2019/11/dSecure-1.png)
 
-[![Build Status](https://travis-ci.com/DSecureMe/vmc.svg?branch=master)](https://travis-ci.com/DSecureMe/vmc)
+[![Build Status](https://travis-ci.com/DSecureMe/vmc.svg?branch=master)](https://travis-ci.com/DSecureMe/vmc) [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0) [![PyPI version](https://badge.fury.io/py/vmcenter.svg)](https://badge.fury.io/py/vmcenter)
 
 **[VMC](https://dsecure.me)** (Vulnerability Management Center) is a platform designed to make vulnerability governance easier for any security specialists and SOC teams within their organisations. VMC is a great partner in any vulnerability management process, allowing automation and making your life easier. You can integrate VMC with vulnerability scanners and platforms like [TheHive](https://github.com/TheHive-Project/TheHive). Additionally, VMC takes care of asset management integrating with [Ralph](https://github.com/allegro/ralph), whole vulnerability reporting and dashboards ([Kibana](https://github.com/elastic/kibana)) for the clear overview. VMC allows you to focus on the most important vulnerability issues within your environment.
 
