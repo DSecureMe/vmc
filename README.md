@@ -2,9 +2,9 @@
 
 [![Build Status](https://travis-ci.com/DSecureMe/vmc.svg?branch=master)](https://travis-ci.com/DSecureMe/vmc) [![codecov](https://codecov.io/gh/DSecureMe/vmc/branch/master/graph/badge.svg)](https://codecov.io/gh/DSecureMe/vmc) [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0) [![PyPI version](https://badge.fury.io/py/vmcenter.svg)](https://badge.fury.io/py/vmcenter)
 
-**[VMC](https://dsecure.me)** (Vulnerability Management Center) is a platform designed to make vulnerability governance easier for any security specialists and SOC teams within their organisations. VMC is a great partner in any vulnerability management process, allowing automation and making your life easier. You can integrate VMC with vulnerability scanners and platforms like [TheHive](https://github.com/TheHive-Project/TheHive). Additionally, VMC takes care of asset management integrating with [Ralph](https://github.com/allegro/ralph), whole vulnerability reporting and dashboards ([Kibana](https://github.com/elastic/kibana)) for the clear overview. VMC allows you to focus on the most important vulnerability issues within your environment.
+**[VMC](https://dsecure.me)** (Vulnerability Management Center) is a platform designed to make vulnerability governance easier for any security specialists and SOC teams within their organisations. VMC is a great partner in any vulnerability management process, allowing automation and making your life easier. You can integrate VMC with vulnerability scanners and platforms like [TheHive](https://github.com/TheHive-Project/TheHive) (_Work in Progess_). Additionally, VMC takes care of asset management integrating with [Ralph](https://github.com/allegro/ralph) - _Work in Progress_, whole vulnerability reporting and dashboards ([Kibana](https://github.com/elastic/kibana)) for the clear overview. VMC allows you to focus on the most important vulnerability issues within your environment.
 
-# Value for bussiness
+# Value for business
 Thanks to VMC you can focus on the most important assets from environment perspective given information about vulnerabilities and assets.
 
 VMC can present important information in brief and compact way
@@ -20,7 +20,7 @@ VMC also shows live updates regarding you environemnt. It guides your focus to s
 
 ![screen2](https://raw.githubusercontent.com/DSecureMe/vmc/master/images/54525980_511427642719427_3614827467690213376_n.png)
 
-You can install VMC either on your machine or use elegant docker solution. Docker configuration is moved to separate repository _link_placeholer_
+You can install VMC either on your machine or use elegant [docker solution](https://github.com/DSecureMe/vmc-docker).
 
 # Details
 ## Documentation
@@ -35,7 +35,9 @@ Source code in this repository is covered by one of three licenses:
 The default license throughout the repository is Apache License 2.0 unless the header specifies another license.
 
 # Try it
-_Coming soon_
+We encourage you to try our docker image. You can get it from [here](https://github.com/DSecureMe/vmc-docker)
+Instruction how to use it is in the docker [readme](https://github.com/DSecureMe/vmc-docker/blob/master/README.MD) file
+
 
 # Contributing
 Please see our [Code of conduct](https://github.com/DSecureMe/vmc/blob/master/CODE_OF_CONDUCT.md). We welcome your contributions. Please feel free to fork the code, play with it, make some patches and send us pull requests via issues.
