@@ -39,7 +39,7 @@ def tests_require():
 
 
 setup(
-    name='vmc',
+    name='vmcenter',
     version=read('VERSION.txt'),
     author='DSecure.me',
     author_email='vmc-support@dsecure.me',
@@ -72,7 +72,6 @@ setup(
         'Natural Language :: English',
         'Intended Audience :: System Administrators',
         'Intended Audience :: Information Technology',
-        'License :: OSI Approved :: Apache Software License 2.0',
         'Natural Language :: English',
         'Programming Language :: Python',
         'Programming Language :: Python :: 3.4',
