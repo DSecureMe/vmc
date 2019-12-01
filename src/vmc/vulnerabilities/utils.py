@@ -20,7 +20,7 @@
 
 import decimal
 
-from vmc.knowledge_base.metics import ScopeV3
+from vmc.knowledge_base.metrics import ScopeV3
 from vmc.knowledge_base.models import Cve
 from vmc.assets.models import Asset
 from vmc.knowledge_base.utils import exploitability_v2, impact_v2, f_impact_v2

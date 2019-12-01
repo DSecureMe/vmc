@@ -39,7 +39,7 @@ class Command(BaseCommand):
             if settings.DEBUG:
                 call_command(
                     'loaddata',
-                    *['config/data/init.json'],
+                    *[Command._get_init_file_path()],
                     **options
                 )
                 call_command(
@@ -56,3 +56,8 @@ class Command(BaseCommand):
         else:
             self.stdout.write("Unable to start VMC Admin Panel")
             exit(1)
+
+    @staticmethod
+    def _get_init_file_path() -> str:
+        import vmc
+        return os.path.join(os.path.dirname(vmc.__file__), 'config', 'data', 'init.json')

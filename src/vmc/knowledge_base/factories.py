@@ -28,7 +28,7 @@ from django.utils.dateparse import parse_datetime
 
 from vmc.common.xml import iter_elements_by_name
 from vmc.knowledge_base import models
-from vmc.knowledge_base import metics
+from vmc.knowledge_base import metrics
 
 
 class CWEFactory:
@@ -255,74 +255,74 @@ class CveFactory:
         return parse_datetime(item['lastModifiedDate'])
 
     @staticmethod
-    def access_vector_v2(item: dict) -> metics.AccessVectorV2:
+    def access_vector_v2(item: dict) -> metrics.AccessVectorV2:
         av = CveFactory.value_from_base_metrics('cvssV2', 'accessVector', item)
-        return metics.AccessVectorV2(av).value
+        return metrics.AccessVectorV2(av).value
 
     @staticmethod
-    def access_complexity_v2(item: dict) -> metics.AccessComplexityV2:
+    def access_complexity_v2(item: dict) -> metrics.AccessComplexityV2:
         ac = CveFactory.value_from_base_metrics('cvssV2', 'accessComplexity', item)
-        return metics.AccessComplexityV2(ac).value
+        return metrics.AccessComplexityV2(ac).value
 
     @staticmethod
-    def authentication_v2(item: dict) -> metics.AuthenticationV2:
+    def authentication_v2(item: dict) -> metrics.AuthenticationV2:
         auth = CveFactory.value_from_base_metrics('cvssV2', 'authentication', item)
-        return metics.AuthenticationV2(auth).value
+        return metrics.AuthenticationV2(auth).value
 
     @staticmethod
-    def confidentiality_impact_v2(item: dict) -> metics.ImpactV2:
+    def confidentiality_impact_v2(item: dict) -> metrics.ImpactV2:
         imp = CveFactory.value_from_base_metrics('cvssV2', 'confidentialityImpact', item)
-        return metics.ImpactV2(imp).value
+        return metrics.ImpactV2(imp).value
 
     @staticmethod
-    def integrity_impact_v2(item: dict) -> metics.ImpactV2:
+    def integrity_impact_v2(item: dict) -> metrics.ImpactV2:
         imp = CveFactory.value_from_base_metrics('cvssV2', 'integrityImpact', item)
-        return metics.ImpactV2(imp).value
+        return metrics.ImpactV2(imp).value
 
     @staticmethod
-    def availability_impact_v2(item: dict) -> metics.ImpactV2:
+    def availability_impact_v2(item: dict) -> metrics.ImpactV2:
         imp = CveFactory.value_from_base_metrics('cvssV2', 'availabilityImpact', item)
-        return metics.ImpactV2(imp).value
+        return metrics.ImpactV2(imp).value
 
     @staticmethod
-    def attack_vector_v3(item: dict) -> metics.AttackVectorV3:
+    def attack_vector_v3(item: dict) -> metrics.AttackVectorV3:
         av = CveFactory.value_from_base_metrics('cvssV3', 'attackVector', item)
-        return metics.AttackVectorV3(av).value
+        return metrics.AttackVectorV3(av).value
 
     @staticmethod
-    def attack_complexity_v3(item: dict) -> metics.AttackComplexityV3:
+    def attack_complexity_v3(item: dict) -> metrics.AttackComplexityV3:
         ac = CveFactory.value_from_base_metrics('cvssV3', 'attackComplexity', item)
-        return metics.AttackComplexityV3(ac).value
+        return metrics.AttackComplexityV3(ac).value
 
     @staticmethod
-    def privileges_required_v3(item: dict) -> metics.PrivilegesRequiredV3:
+    def privileges_required_v3(item: dict) -> metrics.PrivilegesRequiredV3:
         pr = CveFactory.value_from_base_metrics('cvssV3', 'privilegesRequired', item)
-        return metics.PrivilegesRequiredV3(pr).value
+        return metrics.PrivilegesRequiredV3(pr).value
 
     @staticmethod
-    def user_interaction_v3(item: dict) -> metics.UserInteractionV3:
+    def user_interaction_v3(item: dict) -> metrics.UserInteractionV3:
         us = CveFactory.value_from_base_metrics('cvssV3', 'userInteraction', item)
-        return metics.UserInteractionV3(us).value
+        return metrics.UserInteractionV3(us).value
 
     @staticmethod
-    def scope_v3(item: dict) -> metics.ScopeV3:
+    def scope_v3(item: dict) -> metrics.ScopeV3:
         sc = CveFactory.value_from_base_metrics('cvssV3', 'scope', item)
-        return metics.ScopeV3(sc).value
+        return metrics.ScopeV3(sc).value
 
     @staticmethod
-    def confidentiality_impact_v3(item: dict) -> metics.ImpactV3:
+    def confidentiality_impact_v3(item: dict) -> metrics.ImpactV3:
         ci = CveFactory.value_from_base_metrics('cvssV3', 'confidentialityImpact', item)
-        return metics.ImpactV3(ci).value
+        return metrics.ImpactV3(ci).value
 
     @staticmethod
-    def integrity_impact_v3(item: dict) -> metics.ImpactV3:
+    def integrity_impact_v3(item: dict) -> metrics.ImpactV3:
         ii = CveFactory.value_from_base_metrics('cvssV3', 'integrityImpact', item)
-        return metics.ImpactV3(ii).value
+        return metrics.ImpactV3(ii).value
 
     @staticmethod
-    def availability_impact_v3(item: dict) -> metics.ImpactV3:
+    def availability_impact_v3(item: dict) -> metrics.ImpactV3:
         ai = CveFactory.value_from_base_metrics('cvssV3', 'availabilityImpact', item)
-        return metics.ImpactV3(ai).value
+        return metrics.ImpactV3(ai).value
 
     @staticmethod
     def value_from_base_metrics(version: str, value: str, item: dict) -> [str, None]:

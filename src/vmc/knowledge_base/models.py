@@ -23,7 +23,7 @@ from simple_history.models import HistoricalRecords
 
 from vmc.common.models import BaseModel, TupleValueField
 
-from vmc.knowledge_base import metics
+from vmc.knowledge_base import metrics
 
 
 class Cwe(BaseModel):
@@ -67,84 +67,84 @@ class Cve(models.Model):
     published_date = models.DateTimeField(null=True, blank=True)
     last_modified_date = models.DateTimeField(null=True, blank=True)
     access_vector_v2 = TupleValueField(
-        choices=metics.AccessVectorV2.choices(),
-        default=metics.AccessVectorV2.LOCAL.value,
-        choice_type=metics.AccessVectorV2,
+        choices=metrics.AccessVectorV2.choices(),
+        default=metrics.AccessVectorV2.LOCAL.value,
+        choice_type=metrics.AccessVectorV2,
         max_length=1
     )
     access_complexity_v2 = TupleValueField(
-        choices=metics.AccessComplexityV2.choices(),
-        default=metics.AccessComplexityV2.LOW.value,
-        choice_type=metics.AccessComplexityV2,
+        choices=metrics.AccessComplexityV2.choices(),
+        default=metrics.AccessComplexityV2.LOW.value,
+        choice_type=metrics.AccessComplexityV2,
         max_length=1
     )
     authentication_v2 = TupleValueField(
-        choices=metics.AuthenticationV2.choices(),
-        default=metics.AuthenticationV2.NONE.value,
-        choice_type=metics.AuthenticationV2,
+        choices=metrics.AuthenticationV2.choices(),
+        default=metrics.AuthenticationV2.NONE.value,
+        choice_type=metrics.AuthenticationV2,
         max_length=1
     )
     confidentiality_impact_v2 = TupleValueField(
-        choices=metics.ImpactV2.choices(),
-        default=metics.ImpactV2.NONE.value,
-        choice_type=metics.ImpactV2,
+        choices=metrics.ImpactV2.choices(),
+        default=metrics.ImpactV2.NONE.value,
+        choice_type=metrics.ImpactV2,
         max_length=1
     )
     integrity_impact_v2 = TupleValueField(
-        choices=metics.ImpactV2.choices(),
-        default=metics.ImpactV2.NONE.value,
-        choice_type=metics.ImpactV2,
+        choices=metrics.ImpactV2.choices(),
+        default=metrics.ImpactV2.NONE.value,
+        choice_type=metrics.ImpactV2,
         max_length=1
     )
     availability_impact_v2 = TupleValueField(
-        choices=metics.ImpactV2.choices(),
-        default=metics.ImpactV2.NONE.value,
-        choice_type=metics.ImpactV2,
+        choices=metrics.ImpactV2.choices(),
+        default=metrics.ImpactV2.NONE.value,
+        choice_type=metrics.ImpactV2,
         max_length=1
     )
     attack_vector_v3 = TupleValueField(
-        choices=metics.AttackVectorV3.choices(),
-        choice_type=metics.AttackVectorV3,
+        choices=metrics.AttackVectorV3.choices(),
+        choice_type=metrics.AttackVectorV3,
         max_length=1,
         null=True
     )
     attack_complexity_v3 = TupleValueField(
-        choices=metics.AttackComplexityV3.choices(),
-        choice_type=metics.AttackComplexityV3,
+        choices=metrics.AttackComplexityV3.choices(),
+        choice_type=metrics.AttackComplexityV3,
         max_length=1,
         null=True
     )
     privileges_required_v3 = models.CharField(
-        choices=metics.PrivilegesRequiredV3.choices(),
+        choices=metrics.PrivilegesRequiredV3.choices(),
         max_length=1,
         null=True
     )
     user_interaction_v3 = TupleValueField(
-        choices=metics.UserInteractionV3.choices(),
-        choice_type=metics.UserInteractionV3,
+        choices=metrics.UserInteractionV3.choices(),
+        choice_type=metrics.UserInteractionV3,
         max_length=1,
         null=True
     )
     scope_v3 = models.CharField(
-        choices=metics.UserInteractionV3.choices(),
+        choices=metrics.UserInteractionV3.choices(),
         max_length=1,
         null=True
     )
     confidentiality_impact_v3 = TupleValueField(
-        choices=metics.ImpactV3.choices(),
-        choice_type=metics.ImpactV3,
+        choices=metrics.ImpactV3.choices(),
+        choice_type=metrics.ImpactV3,
         max_length=1,
         null=True
     )
     integrity_impact_v3 = TupleValueField(
-        choices=metics.ImpactV3.choices(),
-        choice_type=metics.ImpactV3,
+        choices=metrics.ImpactV3.choices(),
+        choice_type=metrics.ImpactV3,
         max_length=1,
         null=True
     )
     availability_impact_v3 = TupleValueField(
-        choices=metics.ImpactV3.choices(),
-        choice_type=metics.ImpactV3,
+        choices=metrics.ImpactV3.choices(),
+        choice_type=metrics.ImpactV3,
         max_length=1,
         null=True
     )
@@ -152,8 +152,8 @@ class Cve(models.Model):
     history = HistoricalRecords()
 
     def get_privileges_required_v3_value(self) -> float:
-        scope = metics.ScopeV3(self.scope_v3)
-        return float(metics.PrivilegesRequiredV3(self.privileges_required_v3).value_with_scope(scope))
+        scope = metrics.ScopeV3(self.scope_v3)
+        return float(metrics.PrivilegesRequiredV3(self.privileges_required_v3).value_with_scope(scope))
 
     def __str__(self):
         return self.id

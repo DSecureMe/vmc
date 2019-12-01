@@ -20,7 +20,7 @@
 
 import decimal
 
-from vmc.knowledge_base.metics import ScopeV3
+from vmc.knowledge_base.metrics import ScopeV3
 from vmc.knowledge_base.models import Cve
 
 

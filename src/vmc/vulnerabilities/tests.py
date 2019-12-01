@@ -23,7 +23,7 @@ from parameterized import parameterized
 
 from vmc.assets import models as as_models
 from vmc.knowledge_base import models as nvd_models
-from vmc.knowledge_base import metics
+from vmc.knowledge_base import metrics
 from vmc.vulnerabilities.utils import environmental_score_v2, environmental_score_v3
 
 
@@ -34,21 +34,21 @@ class CalculateEnvironmentalScore(TestCase):
         cls.cve = nvd_models.Cve.objects.create(
             id='CVE-2017-0002',
             base_score_v2=6.8,
-            access_vector_v2=metics.AccessVectorV2.NETWORK.value,
-            access_complexity_v2=metics.AccessComplexityV2.MEDIUM.value,
-            authentication_v2=metics.AuthenticationV2.NONE.value,
-            confidentiality_impact_v2=metics.ImpactV2.PARTIAL.value,
-            integrity_impact_v2=metics.ImpactV2.PARTIAL.value,
-            availability_impact_v2=metics.ImpactV2.PARTIAL.value,
+            access_vector_v2=metrics.AccessVectorV2.NETWORK.value,
+            access_complexity_v2=metrics.AccessComplexityV2.MEDIUM.value,
+            authentication_v2=metrics.AuthenticationV2.NONE.value,
+            confidentiality_impact_v2=metrics.ImpactV2.PARTIAL.value,
+            integrity_impact_v2=metrics.ImpactV2.PARTIAL.value,
+            availability_impact_v2=metrics.ImpactV2.PARTIAL.value,
             base_score_v3=8.8,
-            attack_vector_v3=metics.AttackVectorV3.NETWORK.value,
-            attack_complexity_v3=metics.AttackComplexityV3.LOW.value,
-            privileges_required_v3=metics.PrivilegesRequiredV3.NONE.value,
-            user_interaction_v3=metics.UserInteractionV3.REQUIRED.value,
-            scope_v3=metics.ScopeV3.UNCHANGED.value,
-            confidentiality_impact_v3=metics.ImpactV3.HIGH.value,
-            integrity_impact_v3=metics.ImpactV3.HIGH.value,
-            availability_impact_v3=metics.ImpactV3.HIGH.value
+            attack_vector_v3=metrics.AttackVectorV3.NETWORK.value,
+            attack_complexity_v3=metrics.AttackComplexityV3.LOW.value,
+            privileges_required_v3=metrics.PrivilegesRequiredV3.NONE.value,
+            user_interaction_v3=metrics.UserInteractionV3.REQUIRED.value,
+            scope_v3=metrics.ScopeV3.UNCHANGED.value,
+            confidentiality_impact_v3=metrics.ImpactV3.HIGH.value,
+            integrity_impact_v3=metrics.ImpactV3.HIGH.value,
+            availability_impact_v3=metrics.ImpactV3.HIGH.value
         )
         cls.asset = None
 
@@ -79,14 +79,14 @@ class CalculateEnvironmentalScore(TestCase):
         self.assertEqual(environmental_score_v2(self.cve, self.asset), expected)
 
     @parameterized.expand([
-        (metics.ScopeV3.UNCHANGED, as_models.Impact.LOW, as_models.Impact.LOW, as_models.Impact.LOW, 6.9),
-        (metics.ScopeV3.CHANGED, as_models.Impact.MEDIUM, as_models.Impact.LOW, as_models.Impact.LOW, 9.1),
-        (metics.ScopeV3.UNCHANGED, as_models.Impact.LOW, as_models.Impact.MEDIUM, as_models.Impact.LOW, 7.8),
-        (metics.ScopeV3.CHANGED, as_models.Impact.LOW, as_models.Impact.LOW, as_models.Impact.MEDIUM, 9.1),
-        (metics.ScopeV3.UNCHANGED, as_models.Impact.MEDIUM, as_models.Impact.MEDIUM, as_models.Impact.LOW, 8.4),
-        (metics.ScopeV3.CHANGED, as_models.Impact.MEDIUM, as_models.Impact.MEDIUM, as_models.Impact.MEDIUM, 9.6),
-        (metics.ScopeV3.UNCHANGED, as_models.Impact.HIGH, as_models.Impact.HIGH, as_models.Impact.HIGH, 8.8),
-        (metics.ScopeV3.CHANGED, as_models.Impact.NOT_DEFINED, as_models.Impact.HIGH, as_models.Impact.LOW, 9.6),
+        (metrics.ScopeV3.UNCHANGED, as_models.Impact.LOW, as_models.Impact.LOW, as_models.Impact.LOW, 6.9),
+        (metrics.ScopeV3.CHANGED, as_models.Impact.MEDIUM, as_models.Impact.LOW, as_models.Impact.LOW, 9.1),
+        (metrics.ScopeV3.UNCHANGED, as_models.Impact.LOW, as_models.Impact.MEDIUM, as_models.Impact.LOW, 7.8),
+        (metrics.ScopeV3.CHANGED, as_models.Impact.LOW, as_models.Impact.LOW, as_models.Impact.MEDIUM, 9.1),
+        (metrics.ScopeV3.UNCHANGED, as_models.Impact.MEDIUM, as_models.Impact.MEDIUM, as_models.Impact.LOW, 8.4),
+        (metrics.ScopeV3.CHANGED, as_models.Impact.MEDIUM, as_models.Impact.MEDIUM, as_models.Impact.MEDIUM, 9.6),
+        (metrics.ScopeV3.UNCHANGED, as_models.Impact.HIGH, as_models.Impact.HIGH, as_models.Impact.HIGH, 8.8),
+        (metrics.ScopeV3.CHANGED, as_models.Impact.NOT_DEFINED, as_models.Impact.HIGH, as_models.Impact.LOW, 9.6),
     ])
     def test_environmental_score_v3(self, scope, cr, ir, ar, expected):
         self.prepare_asset(cr, ir, ar)

@@ -30,7 +30,7 @@ from parameterized import parameterized
 from vmc.knowledge_base.cache import NotificationCache
 from vmc.knowledge_base.factories import CveFactory, CWEFactory, CpeFactory
 from vmc.knowledge_base import models
-from vmc.knowledge_base import metics
+from vmc.knowledge_base import metrics
 from vmc.knowledge_base.utils import calculate_base_score_v2, calculate_base_score_v3
 from vmc.knowledge_base.tasks import update_exploits, update_cwe, update_cpe, update_cve
 
@@ -163,13 +163,13 @@ class CveFactoryTest(TestCase):
         cve = models.Cve.objects.get(id='CVE-2017-0002')
 
         self.assertEqual(cve.__str__(), 'CVE-2017-0002')
-        self.assertEqual(cve.access_vector_v2, metics.AccessVectorV2.NETWORK.value)
-        self.assertEqual(cve.get_access_vector_v2_display(), metics.AccessVectorV2.NETWORK.name)
-        self.assertEqual(cve.access_complexity_v2, metics.AccessComplexityV2.MEDIUM.value)
-        self.assertEqual(cve.authentication_v2, metics.AuthenticationV2.NONE.value)
-        self.assertEqual(cve.confidentiality_impact_v2, metics.ImpactV2.PARTIAL.value)
-        self.assertEqual(cve.integrity_impact_v2, metics.ImpactV2.PARTIAL.value)
-        self.assertEqual(cve.availability_impact_v2, metics.ImpactV2.PARTIAL.value)
+        self.assertEqual(cve.access_vector_v2, metrics.AccessVectorV2.NETWORK.value)
+        self.assertEqual(cve.get_access_vector_v2_display(), metrics.AccessVectorV2.NETWORK.name)
+        self.assertEqual(cve.access_complexity_v2, metrics.AccessComplexityV2.MEDIUM.value)
+        self.assertEqual(cve.authentication_v2, metrics.AuthenticationV2.NONE.value)
+        self.assertEqual(cve.confidentiality_impact_v2, metrics.ImpactV2.PARTIAL.value)
+        self.assertEqual(cve.integrity_impact_v2, metrics.ImpactV2.PARTIAL.value)
+        self.assertEqual(cve.availability_impact_v2, metrics.ImpactV2.PARTIAL.value)
 
     def test_call_create(self):
         cve = models.Cve.objects.get(id='CVE-2017-0008')
@@ -205,21 +205,21 @@ class CveFactoryTest(TestCase):
         self.assertEqual(cve.cpe.filter(name='cpe:2.3:a:microsoft:internet_explorer:10:*:*:*:*:*:*:*').count(), 1)
         self.assertEqual(cve.cpe.filter(name='cpe:2.3:a:microsoft:internet_explorer:11:*:*:*:*:*:*:*').count(), 1)
 
-        self.assertEqual(cve.access_vector_v2, metics.AccessVectorV2.NETWORK.value)
-        self.assertEqual(cve.access_complexity_v2, metics.AccessComplexityV2.MEDIUM.value)
-        self.assertEqual(cve.authentication_v2, metics.AuthenticationV2.NONE.value)
-        self.assertEqual(cve.confidentiality_impact_v2, metics.ImpactV2.PARTIAL.value)
-        self.assertEqual(cve.integrity_impact_v2, metics.ImpactV2.NONE.value)
-        self.assertEqual(cve.availability_impact_v2, metics.ImpactV2.NONE.value)
+        self.assertEqual(cve.access_vector_v2, metrics.AccessVectorV2.NETWORK.value)
+        self.assertEqual(cve.access_complexity_v2, metrics.AccessComplexityV2.MEDIUM.value)
+        self.assertEqual(cve.authentication_v2, metrics.AuthenticationV2.NONE.value)
+        self.assertEqual(cve.confidentiality_impact_v2, metrics.ImpactV2.PARTIAL.value)
+        self.assertEqual(cve.integrity_impact_v2, metrics.ImpactV2.NONE.value)
+        self.assertEqual(cve.availability_impact_v2, metrics.ImpactV2.NONE.value)
 
-        self.assertEqual(cve.attack_vector_v3, metics.AttackVectorV3.NETWORK.value)
-        self.assertEqual(cve.attack_complexity_v3, metics.AttackComplexityV3.LOW.value)
-        self.assertEqual(cve.privileges_required_v3, metics.PrivilegesRequiredV3.NONE.value)
-        self.assertEqual(cve.user_interaction_v3, metics.UserInteractionV3.REQUIRED.value)
-        self.assertEqual(cve.scope_v3, metics.ScopeV3.UNCHANGED.value)
-        self.assertEqual(cve.confidentiality_impact_v3, metics.ImpactV3.LOW.value)
-        self.assertEqual(cve.integrity_impact_v3, metics.ImpactV3.NONE.value)
-        self.assertEqual(cve.availability_impact_v3, metics.ImpactV3.NONE.value)
+        self.assertEqual(cve.attack_vector_v3, metrics.AttackVectorV3.NETWORK.value)
+        self.assertEqual(cve.attack_complexity_v3, metrics.AttackComplexityV3.LOW.value)
+        self.assertEqual(cve.privileges_required_v3, metrics.PrivilegesRequiredV3.NONE.value)
+        self.assertEqual(cve.user_interaction_v3, metrics.UserInteractionV3.REQUIRED.value)
+        self.assertEqual(cve.scope_v3, metrics.ScopeV3.UNCHANGED.value)
+        self.assertEqual(cve.confidentiality_impact_v3, metrics.ImpactV3.LOW.value)
+        self.assertEqual(cve.integrity_impact_v3, metrics.ImpactV3.NONE.value)
+        self.assertEqual(cve.availability_impact_v3, metrics.ImpactV3.NONE.value)
 
         self.assertEqual(cve.get_privileges_required_v3_value(), 0.85)
         self.assertEqual([('CVE-2017-0008', True), ('CVE-2017-0002', True)], NotificationCache.get())
@@ -242,12 +242,12 @@ class CveFactoryTest(TestCase):
             self.assertEqual(cve.base_score_v3, calculate_base_score_v3(cve), cve.id)
 
     @parameterized.expand([
-        (metics.PrivilegesRequiredV3.NONE, metics.ScopeV3.CHANGED, Decimal('0.85')),
-        (metics.PrivilegesRequiredV3.NONE, metics.ScopeV3.UNCHANGED, Decimal('0.85')),
-        (metics.PrivilegesRequiredV3.LOW, metics.ScopeV3.CHANGED, Decimal('0.68')),
-        (metics.PrivilegesRequiredV3.LOW, metics.ScopeV3.UNCHANGED, Decimal('0.62')),
-        (metics.PrivilegesRequiredV3.HIGH, metics.ScopeV3.CHANGED, Decimal('0.50')),
-        (metics.PrivilegesRequiredV3.HIGH, metics.ScopeV3.UNCHANGED, Decimal('0.27'))
+        (metrics.PrivilegesRequiredV3.NONE, metrics.ScopeV3.CHANGED, Decimal('0.85')),
+        (metrics.PrivilegesRequiredV3.NONE, metrics.ScopeV3.UNCHANGED, Decimal('0.85')),
+        (metrics.PrivilegesRequiredV3.LOW, metrics.ScopeV3.CHANGED, Decimal('0.68')),
+        (metrics.PrivilegesRequiredV3.LOW, metrics.ScopeV3.UNCHANGED, Decimal('0.62')),
+        (metrics.PrivilegesRequiredV3.HIGH, metrics.ScopeV3.CHANGED, Decimal('0.50')),
+        (metrics.PrivilegesRequiredV3.HIGH, metrics.ScopeV3.UNCHANGED, Decimal('0.27'))
     ])
     def test_privileges_required_V3(self, pr, scope, expected):
         self.assertEqual(pr.value_with_scope(scope), expected)

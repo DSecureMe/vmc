@@ -105,7 +105,7 @@ TEMPLATES = [
     },
 ]
 
-WSGI_APPLICATION = 'config.wsgi.application'
+WSGI_APPLICATION = 'vmc.config.wsgi.application'
 
 DATABASES = {'default': {}}
 DATABASES['default']['ENGINE'] = get_config('database.engine', 'django.db.backends.postgresql_psycopg2')
@@ -118,20 +118,6 @@ if not get_config('database.unix_socket', ''):
     DATABASES['default']['PORT'] = get_config('database.port', '')
 else:
     DATABASES['default']['OPTIONS'] = {'unix_socket': get_config('database.unix_socket', '')}
-
-
-if get_config('module.newsletter', False):
-    DATABASES['newsletter'] = {
-        'ENGINE': get_config('module.newsletter.database.engine', 'django.db.backends.postgresql_psycopg2'),
-        'NAME': get_config('module.newsletter.database.name', 'vmc'),
-        'USER': get_config('module.newsletter.database.user', 'postgres'),
-        'PASSWORD': get_config('module.newsletter.database.password', ''),
-    }
-    if not get_config('database.unix_socket', ''):
-        DATABASES['newsletter']['HOST'] = get_config('module.newsletter.database.host', 'localhost')
-        DATABASES['newsletter']['PORT'] = get_config('module.newsletter.database.port', '')
-    else:
-        DATABASES['newsletter']['OPTIONS'] = {'unix_socket': get_config('module.newsletter.database.unix_socket', '')}
 
 
 AUTH_PASSWORD_VALIDATORS = [
