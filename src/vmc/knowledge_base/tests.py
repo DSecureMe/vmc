@@ -34,7 +34,7 @@ from vmc.knowledge_base import metrics
 from vmc.knowledge_base.utils import calculate_base_score_v2, calculate_base_score_v3
 from vmc.knowledge_base.tasks import update_exploits, update_cwe, update_cpe, update_cve
 
-from src.vmc.common.tests import get_fixture_location
+from vmc.common.tests import get_fixture_location
 
 
 class CWEFactoryTest(TestCase):

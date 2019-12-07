@@ -28,7 +28,7 @@ from vmc.nessus.models import Config
 from vmc.nessus.tasks import get_trash_folder_id, cleanup_assets, update, update_data
 from vmc.vulnerabilities.models import Vulnerability
 
-from src.vmc.common.tests import get_fixture_location
+from vmc.common.tests import get_fixture_location
 
 
 class ResponseMock:
