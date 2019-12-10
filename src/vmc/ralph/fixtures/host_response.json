@@ -1,0 +1,219 @@
+{
+  "id":62,
+  "url":"http://ralph-demo.allegro.tech/api/data-center-assets/62/?format=json",
+  "business_owners": [
+      {
+          "id": 35,
+          "url": "http://ralph-vmc-demo.dsecure.me/api/users/35/",
+          "username": "vmc-demo-admin",
+          "first_name": "",
+          "last_name": "",
+          "ui_url": "http://ralph-vmc-demo.dsecure.me/accounts/ralphuser/35/"
+      }
+  ],
+  "technical_owners": [
+      {
+          "id": 35,
+          "url": "http://ralph-vmc-demo.dsecure.me/api/users/35/",
+          "username": "vmc-demo-admin",
+          "first_name": "",
+          "last_name": "",
+          "ui_url": "http://ralph-vmc-demo.dsecure.me/accounts/ralphuser/35/"
+      }
+  ],
+  "ethernet":[
+    {
+      "id":102,
+      "mac":"02:44:AA:BB:77:99",
+      "ipaddress":{
+        "id":141,
+        "address":"10.0.0.25",
+        "hostname":"testhostname2",
+        "dhcp_expose":false,
+        "is_management":false,
+        "url":"http://ralph-demo.allegro.tech/api/ipaddresses/141/?format=json",
+        "ui_url":"http://ralph-demo.allegro.tech/networks/ipaddress/141/"
+      },
+      "url":"http://ralph-demo.allegro.tech/api/ethernets/102/?format=json",
+      "ui_url":"http://ralph-demo.allegro.tech/assets/ethernet/102/"
+    },
+    {
+      "id":34,
+      "mac":"12:34:56:67:77:99",
+      "ipaddress":{
+        "id":136,
+        "address":"10.0.0.23",
+        "hostname":"testhostname",
+        "dhcp_expose":false,
+        "is_management":true,
+        "url":"http://ralph-demo.allegro.tech/api/ipaddresses/136/?format=json",
+        "ui_url":"http://ralph-demo.allegro.tech/networks/ipaddress/136/"
+      },
+      "url":"http://ralph-demo.allegro.tech/api/ethernets/34/?format=json",
+      "ui_url":"http://ralph-demo.allegro.tech/assets/ethernet/34/"
+    }
+  ],
+  "ipaddresses":[],
+  "disk":[],
+  "memory":[],
+  "processors":[],
+  "object_type":"datacenterasset",
+  "custom_fields":{
+    "confidentiality": "H",
+    "integrity": "N",
+    "availability": "N",
+    "os": "Windows Server 2003"
+  },
+  "configuration_variables":{
+    "zaza123":"1"
+  },
+  "__str__":"data center asset: ralph1.allegro.pl (BC: dc100000001 / SN: 857-49-3315)",
+  "tags":[],
+  "service_env":{
+    "id":60,
+    "service":"load_balancing",
+    "environment":"dev",
+    "url":"http://ralph-demo.allegro.tech/api/services-environments/60/?format=json",
+    "service_uid":"sc-1",
+    "ui_url":"http://ralph-demo.allegro.tech/assets/serviceenvironment/60/"
+  },
+  "licences":[],
+  "configuration_path":{
+    "id":61,
+    "url":"http://ralph-demo.allegro.tech/api/configuration-classes/61/?format=json",
+    "module":{
+      "id":2,
+      "url":"http://ralph-demo.allegro.tech/api/configuration-modules/2/?format=json",
+      "name":"allegro",
+      "parent":null,
+      "support_team":"http://ralph-demo.allegro.tech/api/teams/1/?format=json",
+      "ui_url":"http://ralph-demo.allegro.tech/assets/configurationmodule/2/"
+    },
+    "ui_url":"http://ralph-demo.allegro.tech/assets/configurationclass/61/",
+    "created":"2019-01-31T10:52:57.587783",
+    "modified":"2019-08-18T16:54:32.835685",
+    "remarks":"",
+    "class_name":"db",
+    "path":"allegro/db"
+  },
+  "ui_url":"http://ralph-demo.allegro.tech/data_center/datacenterasset/62/",
+  "rack":{
+    "id":1,
+    "url":"http://ralph-demo.allegro.tech/api/racks/1/?format=json",
+    "ui_url":"http://ralph-demo.allegro.tech/data_center/rack/1/",
+    "name":"Rack #100",
+    "description":"",
+    "orientation":"right",
+    "max_u_height":48,
+    "visualization_col":1,
+    "visualization_row":1,
+    "require_position":true,
+    "reverse_ordering":false,
+    "server_room":{
+      "id":1,
+      "url":"http://ralph-demo.allegro.tech/api/server-rooms/1/?format=json",
+      "ui_url":"http://ralph-demo.allegro.tech/data_center/serverroom/1/",
+      "name":"Server Room A",
+      "visualization_cols_num":20,
+      "visualization_rows_num":10,
+      "data_center":{
+        "id":1,
+        "url":"http://ralph-demo.allegro.tech/api/data-centers/1/?format=json",
+        "ui_url":"http://ralph-demo.allegro.tech/data_center/datacenter/1/",
+        "name":"DC1",
+        "show_on_dashboard":true}
+    }
+  },
+  "scmstatuscheck":null,
+  "securityscan":null,
+  "related_hosts":{
+    "virtual_servers":[],
+    "physical_servers":[],
+    "cloud_hosts":[]
+  },
+  "created":"2019-01-31T10:52:57.593073",
+  "modified":"2019-01-31T10:52:57.593093",
+  "remarks":"",
+  "hostname":"ralph1.allegro.pl",
+  "sn":"857-49-3315",
+  "barcode":"dc100000001",
+  "niw":null,
+  "required_support":false,
+  "order_no":"Order number 1",
+  "invoice_no":"Invoice number 1",
+  "invoice_date":"2019-01-16",
+  "price":"99.03",
+  "provider":"Dell Poland",
+  "depreciation_rate":"25.00",
+  "force_depreciation":false,
+  "depreciation_end_date":null,
+  "buyout_date":"2023-02-16",
+  "task_url":null,
+  "status":"new",
+  "position":2,
+  "orientation":"front",
+  "slot_no":"",
+  "firmware_version":"1.1.1",
+  "bios_version":"2.2.1",
+  "source":"salvaged",
+  "delivery_date":null,
+  "production_year":null,
+  "production_use_date":null,
+  "parent":null,
+  "model":{
+    "id":15,
+    "url":"http://ralph-demo.allegro.tech/api/assetmodels/15/?format=json",
+    "ui_url":"http://ralph-demo.allegro.tech/assets/assetmodel/15/",
+    "name":"DL380p",
+    "created":"2019-01-31T10:52:57.553384",
+    "modified":"2019-10-18T18:57:21.612655",
+    "type":"data center",
+    "power_consumption":0,
+    "height_of_device":10.0,
+    "cores_count":0,
+    "visualization_layout_front":"2 rows x 8 columns",
+    "visualization_layout_back":"4 rows x 2 columns",
+    "has_parent":false,
+    "manufacturer":{
+      "id":1,
+      "url":"http://ralph-demo.allegro.tech/api/manufacturers/1/?format=json",
+      "ui_url":"http://ralph-demo.allegro.tech/assets/manufacturer/1/",
+      "name":"Dell",
+      "created":"2019-01-31T10:52:56.677868",
+      "modified":"2019-09-25T11:05:30.554986",
+      "manufacturer_kind":"http://ralph-demo.allegro.tech/api/manufacturer-kind/1/?format=json"},
+      "category":{
+        "id":14,
+        "url":"http://ralph-demo.allegro.tech/api/categories/14/?format=json",
+        "ui_url":"http://ralph-demo.allegro.tech/assets/category/14/",
+        "name":"Database Machine",
+        "created":"2019-01-31T10:52:57.544950",
+        "modified":"2019-01-31T10:52:57.544969",
+        "code":"",
+        "imei_required":false,
+        "allow_deployment":false,
+        "show_buyout_date":false,
+        "default_depreciation_rate":"25.00",
+        "lft":20,
+        "rght":21,
+        "tree_id":13,
+        "level":1,
+        "parent":"http://ralph-demo.allegro.tech/api/categories/12/?format=json"}
+  },
+  "budget_info":{"id":2,
+  "url":"http://ralph-demo.allegro.tech/api/budget-info/2/?format=json",
+  "ui_url":"http://ralph-demo.allegro.tech/assets/budgetinfo/2/",
+  "name":"Django team",
+  "created":"2019-01-31T10:52:56.719041",
+  "modified":"2019-01-31T10:52:56.719060"
+  },
+  "property_of":{
+    "id":2,
+    "url":"http://ralph-demo.allegro.tech/api/assetholders/2/?format=json",
+    "ui_url":"http://ralph-demo.allegro.tech/assets/assetholder/2/",
+    "name":"Cisco",
+    "created":"2019-01-31T10:52:57.573238",
+    "modified":"2019-09-03T14:24:58.654711"
+  },
+  "connections":[]
+}

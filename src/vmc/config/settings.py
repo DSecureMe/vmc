@@ -57,6 +57,7 @@ INTERNAL_APPS = [
     'vmc.vulnerabilities',
     'vmc.nessus',
     'vmc.knowledge_base',
+    'vmc.ralph'
 ]
 
 THIRD_PARTY_APPS = [
@@ -206,17 +207,12 @@ LOGGING = {
             'handlers': ['console'],
             'level': 'INFO',
         },
-        'nessus': {
-            'handlers': ['console'],
-            'level': 'INFO',
-        },
-        'knowledge_base': {
-            'handlers': ['console'],
-            'level': 'INFO',
-        },
-        'notifications': {
-            'handlers': ['console'],
-            'level': 'INFO',
-        }
-    },
+    }
 }
+
+for app in INTERNAL_APPS:
+    app_label = app.replace('vmc.', '')
+    LOGGING['loggers'][app_label] = {
+            'handlers': ['console'],
+            'level': 'DEBUG' if DEBUG else 'INFO',
+    }

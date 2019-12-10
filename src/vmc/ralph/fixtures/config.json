@@ -1,0 +1,14 @@
+[
+  {
+    "model": "ralph.config",
+    "pk": 1,
+    "fields": {
+      "name": "Test Ralph Config",
+      "url": "http://test",
+      "username": "ralph",
+      "password": "ralph",
+      "created_date": "2019-12-07T16:20:31.540Z",
+      "modified_date": "2019-12-07T16:20:31.540Z"
+    }
+  }
+]

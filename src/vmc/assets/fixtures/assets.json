@@ -16,6 +16,7 @@
     "fields": {
       "ip_address": "10.10.10.1",
       "mac_address": "AA:BB:CC:DD:EE:FF",
+      "cmdb_id": 1,
       "os": "Windows",
       "created_date": "2019-03-06T22:37:31.540Z",
       "modified_date": "2019-03-06T22:37:31.540Z",
@@ -30,6 +31,7 @@
     "fields": {
       "ip_address": "10.10.10.2",
       "mac_address": "AA:BB:CC:DD:EE:FF",
+      "cmdb_id": 2,
       "os": "Linux",
       "created_date": "2019-03-06T22:37:31.540Z",
       "modified_date": "2019-03-06T22:37:31.540Z",

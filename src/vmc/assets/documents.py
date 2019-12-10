@@ -31,6 +31,9 @@ class AssetDocument(Document):
     confidentiality_requirement = fields.KeywordField()
     integrity_requirement = fields.KeywordField()
     availability_requirement = fields.KeywordField()
+    business_owner = fields.KeywordField()
+    technical_owner = fields.KeywordField()
+    hostname = fields.KeywordField()
 
     class Index:
         name = 'asset'

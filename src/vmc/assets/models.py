@@ -21,6 +21,7 @@
 from decimal import Decimal
 
 from django.db import models
+from simple_history.models import HistoricalRecords
 
 from vmc.common.enum import TupleValueEnum
 from vmc.common.models import BaseModel, TupleValueField
@@ -44,9 +45,13 @@ class Port(BaseModel):
 
 class Asset(BaseModel):
     ip_address = models.CharField(max_length=16)
+    cmdb_id = models.PositiveIntegerField(blank=True, null=True)
     mac_address = models.CharField(max_length=17, blank=True)
     os = models.CharField(max_length=128, blank=True)
-    responsible_person = models.EmailField(blank=True, null=True)
+    business_owner = models.CharField(blank=True, null=True, max_length=128)
+    technical_owner = models.CharField(blank=True, null=True, max_length=128)
+    hostname = models.CharField(max_length=128)
+    history = HistoricalRecords()
     confidentiality_requirement = TupleValueField(
         choice_type=Impact,
         choices=Impact.choices(),
