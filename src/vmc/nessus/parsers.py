@@ -42,11 +42,8 @@ class AssetFactory:
 
     @staticmethod
     def create(item: RestrictedElement) -> Asset:
-        os = get_value(item.find(".//tag[@name='operating-system']"))
         asset, _ = Asset.objects.get_or_create(
             ip_address=item.find(".//tag[@name='host-ip']").text,
-            mac_address=get_value(item.find(".//tag[@name='mac-address']")),
-            os=os if os else 'Unknown'
         )
         return asset
 
@@ -59,26 +56,27 @@ class ReportParser:
         for host in iter_elements_by_name(xml_root, 'ReportHost'):
             for item in host.iter('ReportItem'):
                 asset = AssetFactory.create(host)
-                cve_id = get_value(item.find('cve'))
 
-                if item.get('severity') != ReportParser.INFO and cve_id:
-                    cve, _ = Cve.objects.get_or_create(id=cve_id)
-                    port_number = item.get('port')
+                for cve in item.findall('cve'):
+                    cve_id = get_value(cve)
+                    if item.get('severity') != ReportParser.INFO and cve_id:
+                        cve, _ = Cve.objects.get_or_create(id=cve_id)
+                        port_number = item.get('port')
 
-                    if port_number != 0:
-                        port, _ = Port.objects.get_or_create(
-                            number=port_number,
-                            svc_name=item.get('svc_name'),
-                            protocol=item.get('protocol')
+                        if port_number != 0:
+                            port, _ = Port.objects.get_or_create(
+                                number=port_number,
+                                svc_name=item.get('svc_name'),
+                                protocol=item.get('protocol')
+                            )
+                        else:
+                            port = None
+
+                        Vulnerability.objects.create(
+                            asset=asset,
+                            cve=cve,
+                            port=port,
+                            description=get_value(item.find('description')),
+                            solution=get_value(item.find('solution')),
+                            exploit_available=True if get_value(item.find('exploit_available')) == 'true' else False
                         )
-                    else:
-                        port = None
-
-                    Vulnerability.objects.create(
-                        asset=asset,
-                        cve=cve,
-                        port=port,
-                        description=get_value(item.find('description')),
-                        solution=get_value(item.find('solution')),
-                        exploit_available=True if get_value(item.find('exploit_available')) == 'true' else False
-                    )

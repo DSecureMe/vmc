@@ -25,7 +25,7 @@ from django.test import TestCase
 from vmc.assets.models import Asset, Port
 from vmc.nessus.api import Nessus
 from vmc.nessus.models import Config
-from vmc.nessus.tasks import get_trash_folder_id, cleanup_assets, update, update_data
+from vmc.nessus.tasks import get_trash_folder_id, update, update_data
 from vmc.vulnerabilities.models import Vulnerability
 
 from vmc.common.tests import get_fixture_location
@@ -92,23 +92,6 @@ class GetTrashFolderIdTest(TestCase):
         self.assertIsNone(get_trash_folder_id({'folders': [{'type': 'foo', 'id': 2}]}))
 
 
-class CleanupAssetsTest(TestCase):
-    fixtures = ['assets.json']
-
-    def test_call_cleanup_assets(self):
-        self.assertEqual(Asset.objects.count(), 2)
-        self.assertEqual(Port.objects.count(), 1)
-        cleanup_assets()
-        self.assertEqual(Asset.objects.count(), 0)
-        self.assertEqual(Port.objects.count(), 0)
-        self.assertEqual(Vulnerability.objects.count(), 0)
-
-    def test_call_twice(self):
-        cleanup_assets()
-        cleanup_assets()
-        self.assertEqual(Asset.objects.count(), 0)
-
-
 class UpdateTest(TestCase):
     fixtures = ['assets.json', 'config.json']
 
@@ -132,7 +115,7 @@ class UpdateTest(TestCase):
             ]}
 
         update(scanner_api=self.scanner_api)
-        self.assertEqual(Asset.objects.count(), 0)
+        self.assertEqual(Asset.objects.count(), 2)
         self.scanner_api.assert_called_once_with(Config.objects.first())
         update_data_mock.delay.assert_not_called()
 
@@ -147,7 +130,7 @@ class UpdateTest(TestCase):
         }
 
         update(scanner_api=self.scanner_api)
-        update_data_mock.delay.assert_has_calls([
+        update_data_mock.assert_has_calls([
             call(config_pk=1, scan_id=2),
             call(config_pk=1, scan_id=4)
         ], any_order=True)
@@ -173,7 +156,6 @@ class UpdateDataTest(TestCase):
 
         vuln = Vulnerability.objects.filter(asset__ip_address='10.0.2.15').first()
         self.assertEqual(vuln.asset.ip_address, '10.0.2.15')
-        self.assertEqual(vuln.asset.os, 'Linux Kernel 3.10.0-957.5.1.el7.x86_64 on CentOS Linux release 7.6.1810 (Core)')
         self.assertEqual(vuln.port.number, 22)
         self.assertEqual(vuln.port.svc_name, 'ssh')
         self.assertEqual(vuln.port.protocol, 'tcp')

@@ -26,7 +26,6 @@ from typing import Dict
 
 from celery import shared_task
 
-from vmc.assets.models import Asset, Port
 from vmc.nessus.api import Nessus
 from vmc.nessus.models import Config
 from vmc.nessus.parsers import ReportParser
@@ -58,18 +57,9 @@ def update_data(config_pk: int, scan_id: int, scaner_api=Nessus):  # pylint: dis
         LOGGER.error('Unable to download nessus file')
 
 
-def cleanup_assets():
-    LOGGER.info('Removing all host and ports')
-    Vulnerability.objects.all().delete()
-    Asset.objects.all().delete()
-    Port.objects.all().delete()
-    LOGGER.info('All host and ports removed')
-
-
 @shared_task
 def update(scanner_api=Nessus):
-    cleanup_assets()
-
+    Vulnerability.objects.all().delete()
     for config in Config.objects.all():
         con = scanner_api(config)
         scan_list = con.get_scan_list()
@@ -80,6 +70,6 @@ def update(scanner_api=Nessus):
             for scan in scan_list['scans']:
                 if scan['folder_id'] != trash_folder_id:
                     LOGGER.debug('scan_id %d scan_name %s from %s' , scan['id'], scan['name'], config.name)
-                    update_data.delay(config_pk=config.pk, scan_id=int(scan['id']))
+                    update_data(config_pk=config.pk, scan_id=int(scan['id']))
         else:
             LOGGER.info('Scan list is empty')
