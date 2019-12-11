@@ -100,14 +100,11 @@ class Ralph:
 
         result = r.text
         if 'detail' in json.dumps(result):
-            #raise AssetIdException('Requested asset doesn\'t exist: {}'.format(host_id))
             return 'Such asset doesn\'t exist'
         return result
 
     def get_all_assets(self) -> list:
-
         new_assets = []
-        frmt = '%Y-%m-%dT%H:%M:%S.%f'
 
         headers = {
             'Authorization': 'Token ' + self.get_token()
@@ -135,7 +132,7 @@ class Ralph:
                 asset_list = j_response['results']
                 new_assets.extend(asset_list)
 
-                LOGGER.debug('Next API page: {}'.format(j_response['next']))
+                LOGGER.debug('Next API page: %s', j_response['next'])
                 if j_response['next'] is None:
                     break
                 else:
@@ -145,4 +142,3 @@ class Ralph:
         else:
             raise NoAssetsInDb('Count from API call was: {}'.format(j_response['count']))
         return new_assets
-

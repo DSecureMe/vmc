@@ -23,12 +23,12 @@ from unittest.mock import patch, Mock, MagicMock
 from django.test import TestCase
 
 from vmc.assets.models import Asset, Port
-from vmc.ralph.api import Ralph, AssetIdException, extract_data
+from vmc.ralph.api import Ralph, AssetIdException
 from vmc.ralph.models import Config
 import json
 from vmc.common.tests import get_fixture_location
 
-from vmc.ralph.tasks import load_asset, load_all_assets
+from vmc.ralph.tasks import load_all_assets
 
 
 class ResponseMock:
@@ -78,18 +78,6 @@ class RalphTest(TestCase):
         result = self.uut.get_host_data_by_id('a')
         self.assertEqual(result, 'Such asset doesn\'t exist')
 
-    def test_call_extract_data(self):
-        with open(get_fixture_location(__file__, 'host_response.json')) as f:
-            j = f.read()
-        api_response = json.loads(j)
-        results = extract_data(api_response)
-        assert_list = [
-            {'ip_address': '10.0.0.25', 'cmdb_id': 62, 'mac_address': '02:44:AA:BB:77:99', 'os': 'Windows Server 2003', 'business_owner': 'vmc-demo-admin', 'technical_owner': 'vmc-demo-admin', 'hostname': 'ralph1.allegro.pl', 'created_date': '2019-01-31T10:52:57.553384', 'modified_date': '2019-10-18T18:57:21.612655', 'confidentiality_requirement': 'H', 'integrity_requirement': 'N', 'availability_requirement': 'N'},
-            {'ip_address': '10.0.0.23', 'cmdb_id': 62, 'mac_address': '12:34:56:67:77:99', 'os': 'Windows Server 2003', 'business_owner': 'vmc-demo-admin', 'technical_owner': 'vmc-demo-admin', 'hostname': 'ralph1.allegro.pl', 'created_date': '2019-01-31T10:52:57.553384', 'modified_date': '2019-10-18T18:57:21.612655', 'confidentiality_requirement': 'H', 'integrity_requirement': 'N', 'availability_requirement': 'N'}
-        ]
-
-        self.assertEqual(results, assert_list)
-
     @patch('vmc.ralph.api.requests')
     def test_call_get_all_assets(self, request_mock):
 
@@ -117,14 +105,3 @@ class LoadAllAssetsTest(TestCase):
         mock_api().get_all_assets.return_value = [self.hosts]
         load_all_assets()
         self.assertEqual(2, Asset.objects.count())
-
-
-class LoadAssetTest(TestCase):
-
-    def setUp(self):
-        self.mock_asset = {'ip_address': '10.0.0.23', 'cmdb_id': 62, 'mac_address': '12:34:56:67:77:99', 'os': 'Windows Server 2003', 'business_owner': 'VMC ADMIN', 'technical_owner': 'VMC ADMIN', 'created_date': '2019-01-31T10:52:57.553384', 'modified_date': '2019-10-18T18:57:21.612655', 'confidentiality_requirement': 'H', 'integrity_requirement': 'N', 'availability_requirement': 'N'}
-
-    def test_call(self):
-
-        result = load_asset(self.mock_asset)
-        self.assertTrue(result)

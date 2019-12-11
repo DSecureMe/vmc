@@ -38,8 +38,6 @@ def load_all_assets():
 
         for asset in all_assets:
             AssetFactory.process(asset)
-            c
     except Exception as ex:
         LOGGER.error(ex)
     LOGGER.info('Finish loading data from ralph')
-
