@@ -34,6 +34,8 @@ class AssetDocument(Document):
     business_owner = fields.KeywordField()
     technical_owner = fields.KeywordField()
     hostname = fields.KeywordField()
+    created_date = fields.DateField()
+    modified_date = fields.DateField()
 
     class Index:
         name = 'asset'

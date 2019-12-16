@@ -75,6 +75,8 @@ class VulnerabilityDocument(Document):
 
     environmental_score_v2 = fields.FloatField()
     environmental_score_v3 = fields.FloatField()
+    created_date = fields.DateField()
+    modified_date = fields.DateField()
 
     class Index:
         name = 'vulnerability'

@@ -149,6 +149,8 @@ class CweDocument(Document):
     weakness_abstraction = fields.KeywordField()
     description = fields.KeywordField()
     extended_description = fields.KeywordField()
+    created_date = fields.DateField()
+    modified_date = fields.DateField()
 
     class Index:
         name = 'cwe'
@@ -160,6 +162,8 @@ class CweDocument(Document):
 @registry.register_document
 class ExploitDocument(Document):
     id = fields.KeywordField()
+    created_date = fields.DateField()
+    modified_date = fields.DateField()
 
     class Index:
         name = 'exploit'
