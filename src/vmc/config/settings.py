@@ -211,8 +211,7 @@ LOGGING = {
 }
 
 for app in INTERNAL_APPS:
-    app_label = app.replace('vmc.', '')
-    LOGGING['loggers'][app_label] = {
+    LOGGING['loggers'][app] = {
             'handlers': ['console'],
             'level': 'DEBUG' if DEBUG else 'INFO',
     }

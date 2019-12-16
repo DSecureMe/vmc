@@ -174,7 +174,7 @@ class CveFactory:
                         try:
                             setattr(cve, field, parser(item))
                         except Exception as err:
-                            logging.warning('cve id %s, field %s, err %s', cve.id, field, err)
+                            logging.debug('cve id %s, field %s, err %s', cve.id, field, err)
                 cve.save()
                 cve.cpe.set(self.get_cpe(item))
                 if created:
