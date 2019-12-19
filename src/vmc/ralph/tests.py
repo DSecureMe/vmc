@@ -18,14 +18,14 @@
  *
 """
 
-from unittest.mock import patch, Mock, MagicMock
+import json
+from unittest.mock import patch, Mock
 
 from django.test import TestCase
 
-from vmc.assets.models import Asset, Port
-from vmc.ralph.api import Ralph, AssetIdException
+from vmc.assets.models import Asset
+from vmc.ralph.api import Ralph
 from vmc.ralph.models import Config
-import json
 from vmc.common.tests import get_fixture_location
 
 from vmc.ralph.tasks import load_all_assets

@@ -22,7 +22,7 @@ from unittest.mock import patch, MagicMock, call
 
 from django.test import TestCase
 
-from vmc.assets.models import Asset, Port
+from vmc.assets.models import Asset
 from vmc.nessus.api import Nessus
 from vmc.nessus.models import Config
 from vmc.nessus.tasks import get_trash_folder_id, update, update_data
