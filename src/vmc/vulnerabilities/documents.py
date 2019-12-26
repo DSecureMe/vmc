@@ -82,7 +82,7 @@ class VulnerabilityDocument(Document):
         name = 'vulnerability'
 
     class Django:
-        model = Vulnerability
+        model = Vulnerability.history.model
         fields = [
             'description',
             'solution',

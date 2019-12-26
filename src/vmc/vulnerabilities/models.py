@@ -19,6 +19,7 @@
 """
 
 from django.db import models
+from simple_history.models import HistoricalRecords
 
 from vmc.assets.models import Port, Asset
 from vmc.common.models import BaseModel
@@ -32,6 +33,7 @@ class Vulnerability(BaseModel):
     description = models.TextField()
     solution = models.TextField(null=True, blank=True)
     exploit_available = models.BooleanField(default=False)
+    history = HistoricalRecords()
 
     @property
     def get_asset(self):
