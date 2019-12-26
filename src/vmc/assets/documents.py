@@ -41,7 +41,7 @@ class AssetDocument(Document):
         name = 'asset'
 
     class Django:
-        model = Asset
+        model = Asset.history.model
 
     @staticmethod
     def prepare_confidentiality_requirement(instance) -> str:

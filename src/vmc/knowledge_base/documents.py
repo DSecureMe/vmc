@@ -66,7 +66,7 @@ class CveDocument(Document):
         name = 'cve'
 
     class Django:
-        model = Cve
+        model = Cve.history.model
         related_models = [Cwe, Cpe, Exploit]
 
     @staticmethod
