@@ -55,6 +55,13 @@ class Cpe(models.Model):
 class Exploit(BaseModel):
     id = models.PositiveIntegerField(primary_key=True)
 
+    @property
+    def url(self):
+        return self.__str__()
+
+    def __str__(self) -> str:
+        return 'https://www.exploit-db.com/exploits/{}'.format(self.id)
+
 
 class Cve(models.Model):
     id = models.CharField(max_length=16, primary_key=True)
@@ -63,92 +70,112 @@ class Cve(models.Model):
     summary = models.TextField(null=True, blank=True)
     references = models.TextField(null=True, blank=True)
     cwe = models.ForeignKey(Cwe, null=True, blank=True, on_delete=models.DO_NOTHING)
-    cpe = models.ManyToManyField(Cpe)
+    cpe = models.ManyToManyField(Cpe,  blank=True)
     published_date = models.DateTimeField(null=True, blank=True)
     last_modified_date = models.DateTimeField(null=True, blank=True)
     access_vector_v2 = TupleValueField(
         choices=metrics.AccessVectorV2.choices(),
         default=metrics.AccessVectorV2.LOCAL.value,
         choice_type=metrics.AccessVectorV2,
-        max_length=1
+        max_length=1,
+        null=True,
+        blank=True
     )
     access_complexity_v2 = TupleValueField(
         choices=metrics.AccessComplexityV2.choices(),
         default=metrics.AccessComplexityV2.LOW.value,
         choice_type=metrics.AccessComplexityV2,
-        max_length=1
+        max_length=1,
+        null=True,
+        blank=True
     )
     authentication_v2 = TupleValueField(
         choices=metrics.AuthenticationV2.choices(),
         default=metrics.AuthenticationV2.NONE.value,
         choice_type=metrics.AuthenticationV2,
-        max_length=1
+        max_length=1,
+        null=True,
+        blank=True
     )
     confidentiality_impact_v2 = TupleValueField(
         choices=metrics.ImpactV2.choices(),
         default=metrics.ImpactV2.NONE.value,
         choice_type=metrics.ImpactV2,
-        max_length=1
+        max_length=1,
+        null=True,
+        blank=True
     )
     integrity_impact_v2 = TupleValueField(
         choices=metrics.ImpactV2.choices(),
         default=metrics.ImpactV2.NONE.value,
         choice_type=metrics.ImpactV2,
-        max_length=1
+        max_length=1,
+        null=True,
+        blank=True
     )
     availability_impact_v2 = TupleValueField(
         choices=metrics.ImpactV2.choices(),
         default=metrics.ImpactV2.NONE.value,
         choice_type=metrics.ImpactV2,
-        max_length=1
+        max_length=1,
+        null=True,
+        blank=True
     )
     attack_vector_v3 = TupleValueField(
         choices=metrics.AttackVectorV3.choices(),
         choice_type=metrics.AttackVectorV3,
         max_length=1,
-        null=True
+        null=True,
+        blank=True
     )
     attack_complexity_v3 = TupleValueField(
         choices=metrics.AttackComplexityV3.choices(),
         choice_type=metrics.AttackComplexityV3,
         max_length=1,
-        null=True
+        null=True,
+        blank=True
     )
     privileges_required_v3 = models.CharField(
         choices=metrics.PrivilegesRequiredV3.choices(),
         max_length=1,
-        null=True
+        null=True,
+        blank=True
     )
     user_interaction_v3 = TupleValueField(
         choices=metrics.UserInteractionV3.choices(),
         choice_type=metrics.UserInteractionV3,
         max_length=1,
-        null=True
+        null=True,
+        blank=True
     )
     scope_v3 = models.CharField(
         choices=metrics.UserInteractionV3.choices(),
         max_length=1,
-        null=True
+        null=True,
+        blank=True
     )
     confidentiality_impact_v3 = TupleValueField(
         choices=metrics.ImpactV3.choices(),
         choice_type=metrics.ImpactV3,
         max_length=1,
-        null=True
+        null=True,
+        blank=True
     )
     integrity_impact_v3 = TupleValueField(
         choices=metrics.ImpactV3.choices(),
         choice_type=metrics.ImpactV3,
         max_length=1,
-        null=True
+        null=True,
+        blank=True
     )
     availability_impact_v3 = TupleValueField(
         choices=metrics.ImpactV3.choices(),
         choice_type=metrics.ImpactV3,
         max_length=1,
-        null=True
+        null=True,
+        blank=True
     )
-    exploits = models.ManyToManyField(Exploit)
+    exploits = models.ManyToManyField(Exploit, blank=True)
     history = HistoricalRecords()
 
     def get_privileges_required_v3_value(self) -> float:

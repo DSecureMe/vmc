@@ -29,7 +29,6 @@ class CveDocument(Document):
     base_score_v2 = fields.IntegerField()
     base_score_v3 = fields.IntegerField()
     summary = fields.KeywordField()
-    exploits = fields.IntegerField()
     access_vector_v2 = fields.KeywordField()
     access_complexity_v2 = fields.KeywordField()
     authentication_v2 = fields.KeywordField()
@@ -47,6 +46,12 @@ class CveDocument(Document):
     published_date = fields.DateField()
     last_modified_date = fields.DateField()
 
+    exploits = fields.ObjectField(
+        properties={
+            'id': fields.KeywordField(),
+            'url': fields.KeywordField()
+        }
+    )
     cwe = fields.ObjectField(
         properties={
             'id': fields.KeywordField(),
@@ -66,12 +71,8 @@ class CveDocument(Document):
         name = 'cve'
 
     class Django:
-        model = Cve.history.model
+        model = Cve
         related_models = [Cwe, Cpe, Exploit]
-
-    @staticmethod
-    def prepare_exploits(instance):
-        return instance.exploits.count()
 
     @staticmethod
     def prepare_access_vector_v2(instance):
@@ -156,12 +157,13 @@ class CweDocument(Document):
         name = 'cwe'
 
     class Django:
-        model = Cwe
+        model = Cwe.history.model
 
 
 @registry.register_document
 class ExploitDocument(Document):
     id = fields.KeywordField()
+    url = fields.KeywordField()
     created_date = fields.DateField()
     modified_date = fields.DateField()
 
@@ -170,3 +172,7 @@ class ExploitDocument(Document):
 
     class Django:
         model = Exploit
+
+    @staticmethod
+    def prepare_url(instance):
+        return instance.__str__()

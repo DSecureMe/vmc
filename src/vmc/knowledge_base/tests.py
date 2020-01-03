@@ -343,6 +343,11 @@ class UpdateExploitsTaskTest(TestCase):
         self.assertEqual(cve.exploits.count(), 1)
         self.assertIsNotNone(cve.exploits.get(id='44904'))
 
+        cve = models.Cve.objects.get(id='CVE-2018-12326')
+        self.assertEqual(cve.exploits.count(), 1)
+        self.assertIsNotNone(cve.exploits.get(id='44904'))
+        self.assertEqual(models.Cve.history.count(), 1)
+
 
 class AdminPanelTest(LiveServerTestCase):
     fixtures = ['users.json']
