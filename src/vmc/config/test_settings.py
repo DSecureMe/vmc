@@ -61,6 +61,19 @@ THIRD_PARTY_APPS = [
     'simple_history',
 ]
 
+
+def elastic_configured():
+    return os.environ.get('ELASTICSEARCH_URL', None)
+
+
+if elastic_configured():
+    THIRD_PARTY_APPS.append('django_elasticsearch_dsl')
+    ELASTICSEARCH_DSL = {
+        'default': {
+            'hosts': os.environ.get('ELASTICSEARCH_URL', None),
+        },
+    }
+
 INSTALLED_APPS = THIRD_PARTY_APPS + INTERNAL_APPS
 
 FIXTURE_DIRS = [os.path.join(app, 'fixtures') for app in INTERNAL_APPS]
