@@ -82,6 +82,9 @@ class AssetDocumentTest(TestCase):
         self.assertEqual(uut.business_owner, 'test-business_owner')
         self.assertEqual(uut.technical_owner, 'test-technical_owner')
         self.assertEqual(uut.hostname, 'test-hostname')
+        self.assertTrue(uut.created_date)
+        self.assertTrue(uut.modified_date)
+        prev_date = uut.modified_date
 
         self.change_imported_object(hostname='test-hostname2')
         search = AssetDocument.search().filter("term", ip_address="10.10.10.1").execute()
@@ -89,6 +92,7 @@ class AssetDocumentTest(TestCase):
 
         uut = search.hits[1]
         self.assertEqual(uut.hostname, 'test-hostname2')
+        self.assertNotEqual(uut.modified_date, prev_date)
 
     @staticmethod
     def change_imported_object(hostname='test-hostname'):

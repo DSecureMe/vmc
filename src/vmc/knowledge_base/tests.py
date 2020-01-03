@@ -20,13 +20,16 @@
 
 import json
 from decimal import Decimal
+from unittest import skipIf
 from unittest.mock import patch
 
 from django.contrib.auth.models import User
 from django.core.cache import cache
 from django.test import TestCase, LiveServerTestCase
 from parameterized import parameterized
+from vmc.knowledge_base.documents import ExploitDocument, CveDocument, CweDocument
 
+from vmc.config.test_settings import elastic_configured
 from vmc.knowledge_base.cache import NotificationCache
 from vmc.knowledge_base.factories import CveFactory, CWEFactory, CpeFactory
 from vmc.knowledge_base import models
@@ -73,6 +76,7 @@ class CWEFactoryTest(TestCase):
     def tearDownClass(cls):
         super().tearDownClass()
         cache.clear()
+        models.Cwe.objects.all().delete()
 
 
 class CpeFactoryTest(TestCase):
@@ -278,6 +282,10 @@ class UpdateCweTaskTest(TestCase):
 
         self.assertEqual(models.Cwe.objects.count(), 0)
 
+    @classmethod
+    def tearDownClass(cls):
+        models.Cwe.objects.all().delete()
+
 
 class UpdateCpeTaskTest(TestCase):
 
@@ -377,3 +385,92 @@ class AdminPanelTest(LiveServerTestCase):
 
     def tearDown(self):
         self.client.logout()
+
+
+@skipIf(not elastic_configured(), 'Skip if elasticsearch is not configured')
+class CveDocumentTest(TestCase):
+
+    def test_model_class_added(self):
+        self.assertEqual(CveDocument.django.model, models.Cve)
+
+    def test_document_index_name(self):
+        self.assertEqual(CveDocument.Index.name, 'cve')
+
+
+@skipIf(not elastic_configured(), 'Skip if elasticsearch is not configured')
+class CweDocumentTest(TestCase):
+    CWE_ID = 'CWE-100'
+    CWE_NAME = 'CWE-NAME'
+    CWE_STATUS = 'CWE-STATUS'
+    CWE_WEAKNESS_ABSTRACTION = 'CWE-WEAKNESS_ABSTRACTION'
+    CWE_DESC = 'CWE-DESC'
+    CWE_EXT_DESC = 'CWE-EXT-DESC'
+
+    def test_model_class_added(self):
+        self.assertEqual(CweDocument.django.model, models.Cwe.history.model)
+
+    def test_document_index_name(self):
+        self.assertEqual(CweDocument.Index.name, 'cwe')
+
+    def test_document(self):
+        cwe = self.create_cwe()
+        search = CweDocument.search().filter('match', name=CweDocumentTest.CWE_NAME).execute()
+        self.assertEqual(len(search.hits), 1)
+
+        uut = search.hits[0]
+        self.assertEqual(uut.id, CweDocumentTest.CWE_ID)
+        self.assertEqual(uut.name, CweDocumentTest.CWE_NAME)
+        self.assertEqual(uut.status, CweDocumentTest.CWE_STATUS)
+        self.assertEqual(uut.weakness_abstraction, CweDocumentTest.CWE_WEAKNESS_ABSTRACTION)
+        self.assertEqual(uut.description, CweDocumentTest.CWE_DESC)
+        self.assertEqual(uut.extended_description, CweDocumentTest.CWE_EXT_DESC)
+        self.assertTrue(uut.created_date)
+        self.assertTrue(uut.modified_date)
+        prev_date = uut.modified_date
+
+        cwe.description = 'new description'
+        cwe.save()
+
+        search = CweDocument.search().filter('match', name=CweDocumentTest.CWE_NAME).execute()
+        self.assertEqual(len(search.hits), 2)
+
+        uut = search.hits[1]
+        self.assertEqual(uut.description, 'new description')
+        self.assertNotEqual(uut.modified_date, prev_date)
+        self.assertEqual(uut.id, CweDocumentTest.CWE_ID)
+
+    @staticmethod
+    def create_cwe() -> models.Cwe:
+        return models.Cwe.objects.create(
+            id=CweDocumentTest.CWE_ID,
+            name=CweDocumentTest.CWE_NAME,
+            status=CweDocumentTest.CWE_STATUS,
+            weakness_abstraction=CweDocumentTest.CWE_WEAKNESS_ABSTRACTION,
+            description=CweDocumentTest.CWE_DESC,
+            extended_description=CweDocumentTest.CWE_EXT_DESC
+        )
+
+
+@skipIf(not elastic_configured(), 'Skip if elasticsearch is not configured')
+class ExploitDocumentTest(TestCase):
+
+    def test_model_class_added(self):
+        self.assertEqual(ExploitDocument.django.model, models.Exploit)
+
+    def test_document_index_name(self):
+        self.assertEqual(ExploitDocument.Index.name, 'exploit')
+
+    def test_document(self):
+        self.create_exploit()
+        search = ExploitDocument.search().filter('term', id=1).execute()
+        self.assertEqual(len(search.hits), 1)
+
+        uut = search.hits[0]
+        self.assertEqual(uut.id, 1)
+        self.assertEqual(uut.url, 'https://www.exploit-db.com/exploits/1')
+        self.assertTrue(uut.created_date)
+        self.assertTrue(uut.modified_date)
+
+    @staticmethod
+    def create_exploit() -> models.Exploit:
+        return models.Exploit.objects.create(id=1)
