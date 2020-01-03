@@ -41,6 +41,7 @@ ALLOWED_HOSTS = ['*']
 # Application definition
 
 INTERNAL_APPS = [
+    'vmc',
     'vmc.common',
     'vmc.assets',
     'vmc.vulnerabilities',

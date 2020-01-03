@@ -23,6 +23,7 @@ from unittest.mock import patch, Mock
 
 from django.test import TestCase
 
+from vmc.ralph.apps import RalphConfig
 from vmc.assets.models import Asset
 from vmc.ralph.api import Ralph
 from vmc.ralph.models import Config
@@ -39,6 +40,12 @@ class ResponseMock:
 
     def json(self):
         return self.text
+
+
+class RalphConfigTest(TestCase):
+
+    def test_name(self):
+        self.assertEqual(RalphConfig.name, 'vmc.ralph')
 
 
 class RalphTest(TestCase):

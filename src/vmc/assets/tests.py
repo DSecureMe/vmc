@@ -20,10 +20,18 @@
 
 from unittest import skipIf
 from django.test import TestCase
+from vmc.assets.apps import AssetsConfig
+
 from vmc.assets.documents import AssetDocument
 
 from vmc.config.test_settings import elastic_configured
 from vmc.assets.models import Port, Asset, Impact
+
+
+class AssetsConfigTest(TestCase):
+
+    def test_name(self):
+        self.assertEqual(AssetsConfig.name, 'vmc.assets')
 
 
 class PortTest(TestCase):

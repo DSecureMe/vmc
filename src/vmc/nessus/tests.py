@@ -21,6 +21,7 @@
 from unittest.mock import patch, MagicMock, call
 
 from django.test import TestCase
+from vmc.nessus.apps import NessusConfig
 
 from vmc.assets.models import Asset
 from vmc.nessus.api import Nessus
@@ -39,6 +40,12 @@ class ResponseMock:
 
     def json(self):
         return self.text
+
+
+class NessusConfigTest(TestCase):
+
+    def test_name(self):
+        self.assertEqual(NessusConfig.name, 'vmc.nessus')
 
 
 class NessusTest(TestCase):

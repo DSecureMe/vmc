@@ -20,11 +20,18 @@
 
 from django.test import TestCase
 from parameterized import parameterized
+from vmc.vulnerabilities.apps import VulnerabilitiesConfig
 
 from vmc.assets import models as as_models
 from vmc.knowledge_base import models as nvd_models
 from vmc.knowledge_base import metrics
 from vmc.vulnerabilities.utils import environmental_score_v2, environmental_score_v3
+
+
+class VulnerabilitiesConfigTest(TestCase):
+
+    def test_name(self):
+        self.assertEqual(VulnerabilitiesConfig.name, 'vmc.vulnerabilities')
 
 
 class CalculateEnvironmentalScore(TestCase):
