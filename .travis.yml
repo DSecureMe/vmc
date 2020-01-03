@@ -2,8 +2,6 @@ language: python
 python:
   - "3.6"
   - "3.7"
-env:
-  - ELASTICSEARCH_URL='127.0.0.1:9200'
 services:
   - elasticsearch
 before_install:
@@ -13,6 +11,6 @@ install:
 before_script:
   - sleep 30
 script:
-  - tox
+  - tox -e travis
 after_success:
   - codecov --token="$CODECOV_TOKEN"
