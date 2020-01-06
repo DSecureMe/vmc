@@ -39,21 +39,6 @@ class Migration(migrations.Migration):
             bases=(models.Model, vmc.common.models.ModelDiffMixin),
         ),
         migrations.CreateModel(
-            name='Port',
-            fields=[
-                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('created_date', models.DateTimeField(auto_now_add=True)),
-                ('modified_date', models.DateTimeField(auto_now=True)),
-                ('number', models.PositiveIntegerField()),
-                ('svc_name', models.CharField(max_length=32)),
-                ('protocol', models.CharField(max_length=3)),
-            ],
-            options={
-                'abstract': False,
-            },
-            bases=(models.Model, vmc.common.models.ModelDiffMixin),
-        ),
-        migrations.CreateModel(
             name='HistoricalAsset',
             fields=[
                 ('id', models.IntegerField(auto_created=True, blank=True, db_index=True, verbose_name='ID')),

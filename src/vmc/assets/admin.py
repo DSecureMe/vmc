@@ -21,7 +21,7 @@
 from django.contrib import admin
 from simple_history.admin import SimpleHistoryAdmin
 
-from vmc.assets.models import Asset, Port
+from vmc.assets.models import Asset
 
 
 class AssetAdmin(SimpleHistoryAdmin):
@@ -33,9 +33,4 @@ class AssetAdmin(SimpleHistoryAdmin):
                     'availability_requirement')
 
 
-class PortAdmin(admin.ModelAdmin):
-    list_display = ('number', 'svc_name', 'protocol')
-
-
 admin.site.register(Asset, AssetAdmin)
-admin.site.register(Port, PortAdmin)

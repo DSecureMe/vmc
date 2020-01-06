@@ -21,7 +21,7 @@
 from django_elasticsearch_dsl import Document, fields
 from django_elasticsearch_dsl.registries import registry
 
-from vmc.assets.models import Asset, Port
+from vmc.assets.models import Asset
 from vmc.knowledge_base.models import Cve
 from vmc.vulnerabilities.models import Vulnerability
 from vmc.vulnerabilities.utils import environmental_score_v2, environmental_score_v3
@@ -65,14 +65,9 @@ class VulnerabilityDocument(Document):
         }
     )
 
-    port = fields.ObjectField(
-        properties={
-            'number': fields.KeywordField(),
-            'svc_name': fields.KeywordField(),
-            'protocol': fields.KeywordField()
-        }
-    )
-
+    port = fields.KeywordField()
+    svc_name = fields.KeywordField()
+    protocol = fields.KeywordField()
     environmental_score_v2 = fields.FloatField()
     environmental_score_v3 = fields.FloatField()
     created_date = fields.DateField()
@@ -90,18 +85,17 @@ class VulnerabilityDocument(Document):
         ]
         related_models = [
             Asset,
-            Port,
             Cve
         ]
 
     def get_queryset(self):
         return super(VulnerabilityDocument, self).get_queryset().select_related(
-            'asset', 'cve', 'port'
+            'asset', 'cve'
         )
 
     @staticmethod
     def get_instances_from_related(related_instance):
-        if isinstance(related_instance, (Asset, Cve, Port)):
+        if isinstance(related_instance, (Asset, Cve)):
             return related_instance.vulnerability_set.all()
         return related_instance.vulenrability
 

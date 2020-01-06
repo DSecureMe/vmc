@@ -21,7 +21,8 @@
 import json
 from unittest.mock import patch, Mock
 
-from django.test import TestCase
+from django.contrib.auth.models import User
+from django.test import TestCase, LiveServerTestCase
 
 from vmc.ralph.apps import RalphConfig
 from vmc.assets.models import Asset
@@ -112,3 +113,23 @@ class LoadAllAssetsTest(TestCase):
         mock_api().get_all_assets.return_value = [self.hosts]
         load_all_assets()
         self.assertEqual(2, Asset.objects.count())
+
+
+class AdminPanelTest(LiveServerTestCase):
+    fixtures = ['users.json', 'config.json']
+
+    def setUp(self):
+        super().setUp()
+        self.client.force_login(User.objects.get(username='admin'))
+
+    def test_button_exists(self):
+        self.assertContains(self.client.get('/admin/ralph/config/'), 'ralph-import')
+
+    @patch('vmc.ralph.admin.load_all_assets')
+    def test_call_update_cve(self, load_all_assets):
+        response = self.client.get('/admin/ralph/config/import', follow=True)
+        load_all_assets.delay.assert_called_once()
+        self.assertContains(response, 'Importing started.')
+
+    def tearDown(self):
+        self.client.logout()

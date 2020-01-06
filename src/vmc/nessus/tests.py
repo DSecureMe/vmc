@@ -20,7 +20,9 @@
 
 from unittest.mock import patch, MagicMock, call
 
-from django.test import TestCase
+from django.contrib.auth.models import User
+from django.test import TestCase, LiveServerTestCase
+from parameterized import parameterized
 from vmc.nessus.apps import NessusConfig
 
 from vmc.assets.models import Asset
@@ -137,7 +139,7 @@ class UpdateTest(TestCase):
         }
 
         update(scanner_api=self.scanner_api)
-        update_data_mock.assert_has_calls([
+        update_data_mock.delay.assert_has_calls([
             call(config_pk=1, scan_id=2),
             call(config_pk=1, scan_id=4)
         ], any_order=True)
@@ -163,10 +165,30 @@ class UpdateDataTest(TestCase):
 
         vuln = Vulnerability.objects.filter(asset__ip_address='10.0.2.15').first()
         self.assertEqual(vuln.asset.ip_address, '10.0.2.15')
-        self.assertEqual(vuln.port.number, 22)
-        self.assertEqual(vuln.port.svc_name, 'ssh')
-        self.assertEqual(vuln.port.protocol, 'tcp')
+        self.assertEqual(vuln.port, 22)
+        self.assertEqual(vuln.svc_name, 'ssh')
+        self.assertEqual(vuln.protocol, 'tcp')
         self.assertEqual(vuln.cve.id, 'CVE-2008-5161')
         self.assertEqual(vuln.solution, 'Contact the vendor or consult product documentation to disable CBC mode '
                                         'cipher encryption, and enable CTR or GCM cipher mode encryption.')
         self.assertFalse(vuln.exploit_available)
+
+
+class AdminPanelTest(LiveServerTestCase):
+    fixtures = ['users.json', 'config.json']
+
+    def setUp(self):
+        super().setUp()
+        self.client.force_login(User.objects.get(username='admin'))
+
+    def test_button_exists(self):
+        self.assertContains(self.client.get('/admin/nessus/config/'), 'nessus-import')
+
+    @patch('vmc.nessus.admin.update')
+    def test_call_update_cve(self, update):
+        response = self.client.get('/admin/nessus/config/import', follow=True)
+        update.delay.assert_called_once()
+        self.assertContains(response, 'Importing started.')
+
+    def tearDown(self):
+        self.client.logout()

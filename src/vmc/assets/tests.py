@@ -27,24 +27,13 @@ from vmc.assets.apps import AssetsConfig
 from vmc.assets.documents import AssetDocument
 
 from vmc.config.test_settings import elastic_configured
-from vmc.assets.models import Port, Asset, Impact
+from vmc.assets.models import Asset, Impact
 
 
 class AssetsConfigTest(TestCase):
 
     def test_name(self):
         self.assertEqual(AssetsConfig.name, 'vmc.assets')
-
-
-class PortTest(TestCase):
-    fixtures = ['assets.json']
-
-    @classmethod
-    def setUpTestData(cls):
-        cls.uut = Port.objects.get(pk=1)
-
-    def test_str_call(self):
-        self.assertEqual(self.uut.__str__(), "22")
 
 
 class AssetTest(TestCase):

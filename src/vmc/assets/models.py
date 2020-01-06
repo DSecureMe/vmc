@@ -34,15 +34,6 @@ class Impact(TupleValueEnum):
     NOT_DEFINED = ('N', Decimal('1.0'))
 
 
-class Port(BaseModel):
-    number = models.PositiveIntegerField()
-    svc_name = models.CharField(max_length=32)
-    protocol = models.CharField(max_length=3)
-
-    def __str__(self):
-        return str(self.number)
-
-
 class Asset(BaseModel):
     ip_address = models.CharField(max_length=16)
     cmdb_id = models.PositiveIntegerField(blank=True, null=True)
