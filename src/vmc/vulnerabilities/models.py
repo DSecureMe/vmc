@@ -27,8 +27,8 @@ from vmc.knowledge_base.models import Cve
 
 
 class Vulnerability(BaseModel):
-    asset = models.ForeignKey(Asset, on_delete=models.DO_NOTHING, null=True)
-    cve = models.ForeignKey(Cve, on_delete=models.DO_NOTHING, null=True)
+    asset = models.ForeignKey(Asset, on_delete=models.CASCADE, null=True)
+    cve = models.ForeignKey(Cve, on_delete=models.CASCADE, null=True)
     description = models.TextField()
     solution = models.TextField(null=True, blank=True)
     exploit_available = models.BooleanField(default=False)

@@ -22,7 +22,6 @@ from unittest.mock import patch, MagicMock, call
 
 from django.contrib.auth.models import User
 from django.test import TestCase, LiveServerTestCase
-from parameterized import parameterized
 from vmc.nessus.apps import NessusConfig
 
 from vmc.assets.models import Asset
