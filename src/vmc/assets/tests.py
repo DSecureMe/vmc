@@ -20,6 +20,8 @@
 
 from unittest import skipIf
 from django.test import TestCase
+from django_elasticsearch_dsl.test import ESTestCase
+
 from vmc.assets.apps import AssetsConfig
 
 from vmc.assets.documents import AssetDocument
@@ -68,7 +70,7 @@ class AssetTest(TestCase):
 
 
 @skipIf(not elastic_configured(), 'Skip if elasticsearch is not configured')
-class AssetDocumentTest(TestCase):
+class AssetDocumentTest(ESTestCase, TestCase):
     fixtures = ['assets.json']
 
     def test_model_class_added(self):

@@ -26,6 +26,7 @@ from unittest.mock import patch
 from django.contrib.auth.models import User
 from django.core.cache import cache
 from django.test import TestCase, LiveServerTestCase
+from django_elasticsearch_dsl.test import ESTestCase
 from parameterized import parameterized
 from vmc.knowledge_base.documents import ExploitDocument, CveDocument, CweDocument
 
@@ -43,8 +44,7 @@ from vmc.common.tests import get_fixture_location
 class CWEFactoryTest(TestCase):
 
     @classmethod
-    def setUpClass(cls):
-        super().setUpClass()
+    def setUpTestData(cls):
         with open(get_fixture_location(__file__, 'cwec_v2.12.xml')) as handle:
             CWEFactory.process(handle)
 
@@ -72,18 +72,11 @@ class CWEFactoryTest(TestCase):
         cwe.status = 'aaaa'
         self.assertTrue(cwe.has_changed)
 
-    @classmethod
-    def tearDownClass(cls):
-        super().tearDownClass()
-        cache.clear()
-        models.Cwe.objects.all().delete()
-
 
 class CpeFactoryTest(TestCase):
 
     @classmethod
-    def setUpClass(cls):
-        super().setUpClass()
+    def setUpTestData(cls):
         with open(get_fixture_location(__file__, 'official-cpe-dictionary_v2.2.xml')) as handle:
             CpeFactory.process(handle)
 
@@ -115,33 +108,25 @@ class CpeFactoryTest(TestCase):
             }
         ])
 
-    @classmethod
-    def tearDownClass(cls):
-        super().tearDownClass()
-        cache.clear()
-
 
 class NotificationCacheTest(TestCase):
 
-    def tearDown(self):
-        NotificationCache.clear()
-
-    def update_cache(self):
+    def test_update_cache(self):
         with open(get_fixture_location(__file__, 'nvdcve-1.0-2017.json')) as handle:
-            CveFactory.process(handle)
+            CveFactory().process(handle)
 
-        self.assertEqual(NotificationCache.get(), [('CVE-2017-0002', True), ('CVE-2017-0008', True)])
+        self.assertListEqual(NotificationCache.get(), [('CVE-2017-0008', True), ('CVE-2017-0002', True)])
 
-    def not_updated_cve(self):
+    def test_not_updated_cve(self):
         with open(get_fixture_location(__file__, 'nvdcve-1.0-2017.json')) as handle:
-            CveFactory.process(handle)
+            CveFactory().process(handle)
         NotificationCache.clear()
 
         with open(get_fixture_location(__file__, 'nvdcve-1.0-2017.json')) as handle:
-            CveFactory.process(handle)
+            CveFactory().process(handle)
         self.assertEqual(NotificationCache.get(), [])
 
-    def initial_update_test(self):
+    def test_initial_update_test(self):
         NotificationCache.initial_update(not models.Cve.objects.exists())
         self.assertTrue(NotificationCache.is_initial_update())
 
@@ -149,8 +134,7 @@ class NotificationCacheTest(TestCase):
 class CveFactoryTest(TestCase):
 
     @classmethod
-    def setUpClass(cls):
-        super().setUpClass()
+    def setUpTestData(cls):
         cls.uut = CveFactory()
         with open(get_fixture_location(__file__, 'nvdcve-1.0-2017.json')) as handle:
             cls.uut.process(handle)
@@ -282,10 +266,6 @@ class UpdateCweTaskTest(TestCase):
 
         self.assertEqual(models.Cwe.objects.count(), 0)
 
-    @classmethod
-    def tearDownClass(cls):
-        models.Cwe.objects.all().delete()
-
 
 class UpdateCpeTaskTest(TestCase):
 
@@ -336,8 +316,7 @@ class UpdateCveTaskTest(TestCase):
 class UpdateExploitsTaskTest(TestCase):
 
     @classmethod
-    def setUpClass(cls):
-        super().setUpClass()
+    def setUpTestData(cls):
         with open(get_fixture_location(__file__, 'via4.json')) as handle:
             cls.data = handle.read()
 
@@ -388,17 +367,85 @@ class AdminPanelTest(LiveServerTestCase):
 
 
 @skipIf(not elastic_configured(), 'Skip if elasticsearch is not configured')
-class CveDocumentTest(TestCase):
+class CveDocumentTest(ESTestCase, TestCase):
 
     def test_model_class_added(self):
-        self.assertEqual(CveDocument.django.model, models.Cve)
+        self.assertEqual(CveDocument.Django.model, models.Cve)
 
     def test_document_index_name(self):
         self.assertEqual(CveDocument.Index.name, 'cve')
 
+    def test_related_models(self):
+        self.assertEqual(CveDocument.Django.related_models, [models.Cwe, models.Cpe, models.Exploit])
+
+    def test_document(self):
+        cve = CveDocumentTest.create_cve()
+        search = CveDocument.search().filter('term', id=cve.id).execute()
+        self.assertEqual(len(search.hits), 1)
+
+        uut = search.hits[0]
+        self.assertEqual(uut.id, cve.id)
+        self.assertEqual(uut.base_score_v2, cve.base_score_v2)
+        self.assertEqual(uut.base_score_v3, cve.base_score_v3)
+        self.assertEqual(uut.summary, cve.summary)
+        self.assertEqual(uut.access_vector_v2, cve.get_access_vector_v2_display())
+        self.assertEqual(uut.access_complexity_v2, cve.get_access_complexity_v2_display())
+        self.assertEqual(uut.authentication_v2, cve.get_authentication_v2_display())
+        self.assertEqual(uut.confidentiality_impact_v2, cve.get_confidentiality_impact_v2_display())
+        self.assertEqual(uut.integrity_impact_v2, cve.get_integrity_impact_v2_display())
+        self.assertEqual(uut.availability_impact_v2, cve.get_availability_impact_v2_display())
+
+        self.assertEqual(uut.attack_vector_v3, cve.get_attack_vector_v3_display())
+        self.assertEqual(uut.attack_complexity_v3, cve.get_attack_complexity_v3_display())
+        self.assertEqual(uut.privileges_required_v3, cve.get_privileges_required_v3_display())
+        self.assertEqual(uut.user_interaction_v3, cve.get_user_interaction_v3_display())
+        self.assertEqual(uut.scope_v3, cve.get_scope_v3_display())
+        self.assertEqual(uut.confidentiality_impact_v3, cve.get_confidentiality_impact_v3_display())
+        self.assertEqual(uut.integrity_impact_v3, cve.get_integrity_impact_v3_display())
+        self.assertEqual(uut.availability_impact_v3, cve.get_availability_impact_v3_display())
+
+        self.assertEqual(uut.cwe.id, cve.cwe.id)
+        self.assertEqual(uut.cwe.name, cve.cwe.name)
+        self.assertEqual(uut.cwe.description, cve.cwe.description)
+
+        self.assertEqual(len(uut.exploits), cve.exploits.count())
+        self.assertEqual(uut.exploits[0].id, cve.exploits.first().id)
+        self.assertEqual(uut.exploits[0].url, cve.exploits.first().url)
+
+    @staticmethod
+    def create_cve() -> models.Cve:
+        cve = models.Cve.objects.create(
+            id='CVE-2017-0002',
+            cwe=CweDocumentTest.create_cwe(),
+            base_score_v2=3.1,
+            base_score_v3=3.2,
+            summary='SUMMARY',
+            access_vector_v2=metrics.AccessComplexityV2.LOW.value,
+            access_complexity_v2=metrics.AccessComplexityV2.HIGH.value,
+            authentication_v2=metrics.AuthenticationV2.SINGLE.value,
+            confidentiality_impact_v2=metrics.ImpactV2.NONE.value,
+            integrity_impact_v2=metrics.ImpactV2.PARTIAL.value,
+            availability_impact_v2=metrics.ImpactV2.COMPLETE.value,
+            attack_vector_v3=metrics.AttackVectorV3.LOCAL.value,
+            attack_complexity_v3=metrics.AttackComplexityV3.LOW.value,
+            privileges_required_v3=metrics.PrivilegesRequiredV3.HIGH.value,
+            user_interaction_v3=metrics.UserInteractionV3.REQUIRED.value,
+            scope_v3=metrics.ScopeV3.CHANGED.value,
+            confidentiality_impact_v3=metrics.ImpactV3.HIGH.value,
+            integrity_impact_v3=metrics.ImpactV3.LOW.value,
+            availability_impact_v3=metrics.ImpactV3.NONE.value,
+        )
+        cve.exploits.add(ExploitDocumentTest.create_exploit())
+        return cve
+
+    @classmethod
+    def tearDownClass(cls):
+        super().tearDownClass()
+        cache.clear()
+
 
 @skipIf(not elastic_configured(), 'Skip if elasticsearch is not configured')
-class CweDocumentTest(TestCase):
+class CweDocumentTest(ESTestCase, TestCase):
     CWE_ID = 'CWE-100'
     CWE_NAME = 'CWE-NAME'
     CWE_STATUS = 'CWE-STATUS'
@@ -407,14 +454,14 @@ class CweDocumentTest(TestCase):
     CWE_EXT_DESC = 'CWE-EXT-DESC'
 
     def test_model_class_added(self):
-        self.assertEqual(CweDocument.django.model, models.Cwe.history.model)
+        self.assertEqual(CweDocument.Django.model, models.Cwe.history.model)
 
     def test_document_index_name(self):
         self.assertEqual(CweDocument.Index.name, 'cwe')
 
     def test_document(self):
         cwe = self.create_cwe()
-        search = CweDocument.search().filter('match', name=CweDocumentTest.CWE_NAME).execute()
+        search = CweDocument.search().filter('term', id=CweDocumentTest.CWE_ID).execute()
         self.assertEqual(len(search.hits), 1)
 
         uut = search.hits[0]
@@ -431,7 +478,7 @@ class CweDocumentTest(TestCase):
         cwe.description = 'new description'
         cwe.save()
 
-        search = CweDocument.search().filter('match', name=CweDocumentTest.CWE_NAME).execute()
+        search = CweDocument.search().filter('term', id=CweDocumentTest.CWE_ID).execute()
         self.assertEqual(len(search.hits), 2)
 
         uut = search.hits[1]
@@ -452,7 +499,7 @@ class CweDocumentTest(TestCase):
 
 
 @skipIf(not elastic_configured(), 'Skip if elasticsearch is not configured')
-class ExploitDocumentTest(TestCase):
+class ExploitDocumentTest(ESTestCase, TestCase):
 
     def test_model_class_added(self):
         self.assertEqual(ExploitDocument.django.model, models.Exploit)

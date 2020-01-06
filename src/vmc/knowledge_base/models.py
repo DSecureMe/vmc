@@ -40,7 +40,7 @@ class Cwe(BaseModel):
 
 
 class Cpe(models.Model):
-    name = models.CharField(max_length=255, primary_key=True)
+    name = models.CharField(max_length=255)
     vendor = models.CharField(max_length=255, blank=True, null=True)
     title = models.CharField(max_length=255, blank=True, null=True)
     references = models.TextField(null=True, blank=True)

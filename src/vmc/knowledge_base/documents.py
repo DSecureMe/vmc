@@ -26,8 +26,8 @@ from vmc.knowledge_base.models import Cve, Cpe, Cwe, Exploit
 @registry.register_document
 class CveDocument(Document):
     id = fields.KeywordField()
-    base_score_v2 = fields.IntegerField()
-    base_score_v3 = fields.IntegerField()
+    base_score_v2 = fields.FloatField()
+    base_score_v3 = fields.FloatField()
     summary = fields.KeywordField()
     access_vector_v2 = fields.KeywordField()
     access_complexity_v2 = fields.KeywordField()

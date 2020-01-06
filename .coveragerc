@@ -5,3 +5,4 @@ source =
 omit =
     vmc/__main__.py
     vmc/config/*
+    vmc/*tests*.py
