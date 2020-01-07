@@ -12,11 +12,8 @@ before_install:
   - sudo service elasticsearch start
   - sudo service elasticsearch status
 install:
-  - pip install tox-travis codecov codacy-coverage
+  - pip install tox-travis
 before_script:
   - sleep 30
 script:
   - tox -e travis
-after_success:
-  - codecov --token="$CODECOV_TOKEN"
-  - python-codacy-coverage

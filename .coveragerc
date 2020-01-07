@@ -1,8 +1,0 @@
-[run]
-branch = True
-source =
-    vmc/
-omit =
-    vmc/__main__.py
-    vmc/config/*
-    vmc/*tests*.py
