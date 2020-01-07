@@ -38,11 +38,6 @@ class Command(BaseCommand):
 
             if settings.DEBUG:
                 call_command(
-                    'loaddata',
-                    *[Command._get_init_file_path()],
-                    **options
-                )
-                call_command(
                     'runserver',
                     addrport='0.0.0.0:8080',
                     use_reloader=False,
