@@ -12,5 +12,5 @@ defusedxml==0.6.0
 django-celery-results==1.0.4
 django-simple-history==2.7.3
 pyyaml==5.1.2
-#mysqlclient==1.4.4
+mysqlclient==1.4.4
 gunicorn==19.9.0

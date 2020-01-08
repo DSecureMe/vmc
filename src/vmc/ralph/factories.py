@@ -22,6 +22,7 @@ from vmc.assets.models import Asset, Impact
 
 class AssetFactory:
     FIELD_LIST = [field.name for field in Asset._meta.get_fields() if field]
+    IMPACT = {'LOW': 'L', 'MEDIUM': 'M', 'HIGH': 'H', 'NOT_DEFINED': 'N'}
 
     @staticmethod
     def process(item: dict) -> None:
@@ -77,20 +78,20 @@ class AssetFactory:
     @staticmethod
     def confidentiality_requirement(item: dict, _) -> str:
         try:
-            return item['custom_fields']['confidentiality']
+            return AssetFactory.IMPACT[item['custom_fields']['confidentiality']]
         except KeyError:
             return Impact.NOT_DEFINED.value
 
     @staticmethod
     def integrity_requirement(item: dict, _) -> str:
         try:
-            return item['custom_fields']['integrity']
+            return AssetFactory.IMPACT[item['custom_fields']['integrity']]
         except KeyError:
             return Impact.NOT_DEFINED.value
 
     @staticmethod
     def availability_requirement(item: dict, _) -> str:
         try:
-            return item['custom_fields']['availability']
+            return AssetFactory.IMPACT[item['custom_fields']['availability']]
         except KeyError:
             return Impact.NOT_DEFINED.value
