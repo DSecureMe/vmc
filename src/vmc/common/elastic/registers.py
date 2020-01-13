@@ -17,9 +17,8 @@
  * under the License.
  */
 """
-from collections import defaultdict
 
-from django.core.exceptions import ImproperlyConfigured
+from collections import defaultdict
 
 
 class DocumentRegistry:
@@ -29,13 +28,7 @@ class DocumentRegistry:
 
     def register_document(self, document):
         index_meta = getattr(document, 'Index')
-
-        if not index_meta:
-            message = "You must declare the Django class inside {}".format(document.__name__)
-            raise ImproperlyConfigured(message)
-
         self.documents.update({index_meta.name: document})
-
         return document
 
     def get_documents(self):

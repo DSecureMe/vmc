@@ -21,6 +21,7 @@
 from unittest import skipIf
 
 from django.test import TestCase
+from elasticsearch_dsl import Search
 from parameterized import parameterized
 from vmc.knowledge_base.documents import CveDocument
 
@@ -35,9 +36,9 @@ from vmc.knowledge_base import metrics
 from vmc.vulnerabilities.utils import environmental_score_v2, environmental_score_v3
 
 
-def create_cve() -> CveDocument:
-    return CveDocument(
-        id='CVE-2017-0002',
+def create_cve(cve_id='CVE-2017-0002') -> CveDocument:
+    cve = CveDocument(
+        id=cve_id,
         base_score_v2=6.8,
         access_vector_v2=metrics.AccessVectorV2.NETWORK,
         access_complexity_v2=metrics.AccessComplexityV2.MEDIUM,
@@ -55,11 +56,13 @@ def create_cve() -> CveDocument:
         integrity_impact_v3=metrics.ImpactV3.HIGH,
         availability_impact_v3=metrics.ImpactV3.HIGH
     )
+    cve.save(refresh=True)
+    return cve
 
 
-def create_asset() -> AssetDocument:
-    return AssetDocument(
-        ip_address='10.10.10.10',
+def create_asset(ip_address='10.10.10.10') -> AssetDocument:
+    asset = AssetDocument(
+        ip_address=ip_address,
         mac_address='mac_address',
         os='OS',
         business_owner='business_owner',
@@ -69,6 +72,8 @@ def create_asset() -> AssetDocument:
         integrity_requirement=AssetImpact.LOW,
         availability_requirement=AssetImpact.LOW
     )
+    asset.save(refresh=True)
+    return asset
 
 
 class VulnerabilitiesConfigTest(TestCase):
@@ -77,12 +82,13 @@ class VulnerabilitiesConfigTest(TestCase):
         self.assertEqual(VulnerabilitiesConfig.name, 'vmc.vulnerabilities')
 
 
-class CalculateEnvironmentalScore(TestCase):
+@skipIf(not elastic_configured(), 'Skip if elasticsearch is not configured')
+class CalculateEnvironmentalScore(ESTestCase, TestCase):
 
-    @classmethod
-    def setUpTestData(cls):
-        cls.cve = create_cve()
-        cls.asset = create_asset()
+    def setUp(self):
+        super().setUp()
+        self.cve = create_cve()
+        self.asset = create_asset()
 
     def change_scope(self, scope):
         self.cve.scope_v3 = scope.value
@@ -125,13 +131,16 @@ class CalculateEnvironmentalScore(TestCase):
 @skipIf(not elastic_configured(), 'Skip if elasticsearch is not configured')
 class VulnerabilityDocumentTest(ESTestCase, TestCase):
 
+    def setUp(self):
+        super().setUp()
+        self.cve = create_cve()
+        self.asset = create_asset()
+
     @classmethod
-    def create_vulnerability(cls):
-        cls.cve = create_cve()
-        cls.asset = create_asset()
+    def create_vulnerability(cls, asset, cve):
         cls.vulnerability = VulnerabilityDocument(
-            asset=cls.asset,
-            cve=cls.cve,
+            asset=asset,
+            cve=cve,
             description='description',
             solution='solution',
             port=22,
@@ -144,7 +153,7 @@ class VulnerabilityDocumentTest(ESTestCase, TestCase):
         self.assertEqual(VulnerabilityDocument.Index.name, 'vulnerability')
 
     def test_document_fields(self):
-        self.create_vulnerability()
+        self.create_vulnerability(self.asset, self.cve)
         search = VulnerabilityDocument.search().filter('term', port=self.vulnerability.port).execute()
         self.assertEqual(len(search.hits), 1)
 
@@ -181,3 +190,79 @@ class VulnerabilityDocumentTest(ESTestCase, TestCase):
 
         self.assertEqual(uut.environmental_score_v2, 4.9)
         self.assertEqual(uut.environmental_score_v3, 6.9)
+
+    def test_asset_updated(self):
+        self.create_vulnerability(self.asset, self.cve)
+        self.create_vulnerability(self.asset, self.cve)
+        self.create_vulnerability(self.asset, self.cve)
+
+        self.cve_2 = create_cve('CVE-2017-0003')
+        self.create_vulnerability(self.asset, self.cve_2)
+        self.create_vulnerability(self.asset, self.cve_2)
+        self.create_vulnerability(self.asset, self.cve_2)
+        self.assertEqual(Search().index(VulnerabilityDocument.Index.name).count(), 6)
+
+        self.asset.confidentiality_requirement = AssetImpact.HIGH
+        self.asset.save(refresh=True)
+
+        self.assertEqual(Search().index(VulnerabilityDocument.Index.name).count(), 8)
+
+        result = VulnerabilityDocument.search().filter(
+            'term', asset__ip_address=self.asset.ip_address).sort('-modified_date').filter(
+            'term', cve__id=self.cve.id).execute()
+
+        self.assertEqual(len(result.hits), 4)
+        self.assertEqual(result.hits[0].asset.confidentiality_requirement, self.asset.confidentiality_requirement)
+        self.assertEqual(result.hits[0].change_reason, 'Asset Updated')
+        self.assertEqual(result.hits[0].environmental_score_v2, 6.4)
+        self.assertEqual(result.hits[0].environmental_score_v3, 8.8)
+        self.assertTrue(result.hits[0].modified_date > result.hits[1].modified_date)
+
+        result = VulnerabilityDocument.search().filter(
+            'term', asset__ip_address=self.asset.ip_address).sort('-modified_date').filter(
+            'term', cve__id=self.cve_2.id).execute()
+
+        self.assertEqual(len(result.hits), 4)
+        self.assertEqual(result.hits[0].asset.confidentiality_requirement, self.asset.confidentiality_requirement)
+        self.assertEqual(result.hits[0].change_reason, 'Asset Updated')
+        self.assertEqual(result.hits[0].environmental_score_v2, 6.4)
+        self.assertEqual(result.hits[0].environmental_score_v3, 8.8)
+        self.assertTrue(result.hits[0].modified_date > result.hits[1].modified_date)
+
+    def test_cve_updated(self):
+        self.create_vulnerability(self.asset, self.cve)
+        self.create_vulnerability(self.asset, self.cve)
+        self.create_vulnerability(self.asset, self.cve)
+
+        self.asset_2 = create_asset('10.10.10.11')
+        self.create_vulnerability(self.asset_2, self.cve)
+        self.create_vulnerability(self.asset_2, self.cve)
+        self.create_vulnerability(self.asset_2, self.cve)
+        self.assertEqual(Search().index(VulnerabilityDocument.Index.name).count(), 6)
+
+        self.cve.access_vector_v2 = metrics.AccessVectorV2.LOCAL
+        self.cve.save(refresh=True)
+
+        self.assertEqual(Search().index(VulnerabilityDocument.Index.name).count(), 8)
+
+        result = VulnerabilityDocument.search().filter(
+            'term', asset__ip_address=self.asset.ip_address).sort('-modified_date').filter(
+            'term', cve__id=self.cve.id).execute()
+
+        self.assertEqual(len(result.hits), 4)
+        self.assertEqual(result.hits[0].cve.access_vector_v2, self.cve.access_vector_v2)
+        self.assertEqual(result.hits[0].change_reason, 'CVE Updated')
+        self.assertEqual(result.hits[0].environmental_score_v2, 2.5)
+        self.assertEqual(result.hits[0].environmental_score_v3, 6.9)
+        self.assertTrue(result.hits[0].modified_date > result.hits[1].modified_date)
+
+        result = VulnerabilityDocument.search().filter(
+            'term', asset__ip_address=self.asset_2.ip_address).sort('-modified_date').filter(
+            'term', cve__id=self.cve.id).execute()
+
+        self.assertEqual(len(result.hits), 4)
+        self.assertEqual(result.hits[0].cve.access_vector_v2, self.cve.access_vector_v2)
+        self.assertEqual(result.hits[0].change_reason, 'CVE Updated')
+        self.assertEqual(result.hits[0].environmental_score_v2, 2.5)
+        self.assertEqual(result.hits[0].environmental_score_v3, 6.9)
+        self.assertTrue(result.hits[0].modified_date > result.hits[1].modified_date)
