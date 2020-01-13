@@ -17,7 +17,7 @@
  * under the License.
  *
 """
-from unittest import skipIf, skip
+from unittest import skipIf
 from unittest.mock import patch, MagicMock, call
 
 from django.contrib.auth.models import User
@@ -150,8 +150,7 @@ class UpdateTest(ESTestCase, TestCase):
         ], any_order=True)
 
 
-#skipIf(not elastic_configured(), 'Skip if elasticsearch is not configured')
-@skip
+@skipIf(not elastic_configured(), 'Skip if elasticsearch is not configured')
 class UpdateDataTest(ESTestCase, TestCase):
     fixtures = ['config.json']
 
@@ -180,7 +179,6 @@ class UpdateDataTest(ESTestCase, TestCase):
         self.assertEqual(vuln.hits[0].cve.id, 'CVE-2008-5161')
         self.assertEqual(vuln.hits[0].solution, 'Contact the vendor or consult product documentation to disable CBC mode '
                                         'cipher encryption, and enable CTR or GCM cipher mode encryption.')
-        #self.assertFalse(vuln.exploit_available)
 
 
 class AdminPanelTest(LiveServerTestCase):

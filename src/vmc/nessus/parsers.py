@@ -47,7 +47,7 @@ class AssetFactory:
         if result.hits:
             return result.hits[0]
         asset = AssetDocument(ip_address=ip_address)
-        asset.save()
+        asset.save(refresh=True)
         return asset
 
 
@@ -73,7 +73,6 @@ class ReportParser:
                             port_number = None
                             svc_name = None
                             protocol = None
-
                         VulnerabilityDocument(
                             asset=asset,
                             cve=cve,
