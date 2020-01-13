@@ -69,7 +69,7 @@ def update(scanner_api=Nessus):
 
             for scan in scan_list['scans']:
                 if scan['folder_id'] != trash_folder_id:
-                    LOGGER.debug('scan_id %d scan_name %s from %s' , scan['id'], scan['name'], config.name)
-                    update_data(config_pk=config.pk, scan_id=int(scan['id']))
+                    LOGGER.debug('scan_id %d scan_name %s from %s', scan['id'], scan['name'], config.name)
+                    update_data.delay(config_pk=config.pk, scan_id=int(scan['id']))
         else:
             LOGGER.info('Scan list is empty')

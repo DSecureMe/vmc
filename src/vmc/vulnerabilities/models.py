@@ -19,19 +19,23 @@
 """
 
 from django.db import models
+from simple_history.models import HistoricalRecords
 
-from vmc.assets.models import Port, Asset
+from vmc.assets.models import Asset
 from vmc.common.models import BaseModel
 from vmc.knowledge_base.models import Cve
 
 
 class Vulnerability(BaseModel):
-    asset = models.ForeignKey(Asset, on_delete=models.DO_NOTHING, null=True)
-    cve = models.ForeignKey(Cve, on_delete=models.DO_NOTHING, null=True)
-    port = models.ForeignKey(Port, on_delete=models.CASCADE, null=True, blank=True)
+    asset = models.ForeignKey(Asset, on_delete=models.CASCADE, null=True)
+    cve = models.ForeignKey(Cve, on_delete=models.CASCADE, null=True)
     description = models.TextField()
     solution = models.TextField(null=True, blank=True)
     exploit_available = models.BooleanField(default=False)
+    history = HistoricalRecords()
+    port = models.PositiveIntegerField(null=True, blank=True)
+    svc_name = models.CharField(max_length=32, null=True, blank=True)
+    protocol = models.CharField(max_length=3, null=True, blank=True)
 
     @property
     def get_asset(self):
@@ -46,8 +50,8 @@ class Vulnerability(BaseModel):
         return self.cve.base_score_v2
 
     @property
-    def get_port(self):
+    def get_port(self) -> str:
         return str(self.port)
 
     def __str__(self):
-        return 'Asset: {}, Port: {}, CVE: {}'.format(self.asset.ip_address, self.port.number, self.cve.id)
+        return 'Asset: {}, Port: {}, CVE: {}'.format(self.asset.ip_address, self.port, self.cve.id)

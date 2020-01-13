@@ -17,11 +17,12 @@
  * under the License.
  */
 """
-from vmc.assets.models import Asset
+from vmc.assets.models import Asset, Impact
 
 
 class AssetFactory:
     FIELD_LIST = [field.name for field in Asset._meta.get_fields() if field]
+    IMPACT = {'LOW': 'L', 'MEDIUM': 'M', 'HIGH': 'H', 'NOT_DEFINED': 'N'}
 
     @staticmethod
     def process(item: dict) -> None:
@@ -40,7 +41,7 @@ class AssetFactory:
             try:
                 if parser:
                     setattr(asset, field, parser(item, iface))
-            except KeyError:
+            except (KeyError, IndexError):
                 setattr(asset, field, 'UNKNOWN')
         if asset.has_changed:
             asset.save()
@@ -76,12 +77,21 @@ class AssetFactory:
 
     @staticmethod
     def confidentiality_requirement(item: dict, _) -> str:
-        return item['custom_fields']['confidentiality']
+        try:
+            return AssetFactory.IMPACT[item['custom_fields']['confidentiality']]
+        except KeyError:
+            return Impact.NOT_DEFINED.value
 
     @staticmethod
     def integrity_requirement(item: dict, _) -> str:
-        return item['custom_fields']['integrity']
+        try:
+            return AssetFactory.IMPACT[item['custom_fields']['integrity']]
+        except KeyError:
+            return Impact.NOT_DEFINED.value
 
     @staticmethod
     def availability_requirement(item: dict, _) -> str:
-        return item['custom_fields']['availability']
+        try:
+            return AssetFactory.IMPACT[item['custom_fields']['availability']]
+        except KeyError:
+            return Impact.NOT_DEFINED.value

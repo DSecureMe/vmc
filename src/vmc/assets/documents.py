@@ -28,9 +28,9 @@ from vmc.assets.models import Asset
 class AssetDocument(Document):
     ip_address = fields.KeywordField()
     os = fields.KeywordField()
-    confidentiality_requirement = fields.KeywordField()
-    integrity_requirement = fields.KeywordField()
-    availability_requirement = fields.KeywordField()
+    confidentiality_requirement = fields.KeywordField(attr='get_confidentiality_requirement_display')
+    integrity_requirement = fields.KeywordField(attr='get_integrity_requirement_display')
+    availability_requirement = fields.KeywordField(attr='get_availability_requirement_display')
     business_owner = fields.KeywordField()
     technical_owner = fields.KeywordField()
     hostname = fields.KeywordField()
@@ -41,16 +41,4 @@ class AssetDocument(Document):
         name = 'asset'
 
     class Django:
-        model = Asset
-
-    @staticmethod
-    def prepare_confidentiality_requirement(instance) -> str:
-        return instance.get_confidentiality_requirement_display()
-
-    @staticmethod
-    def prepare_integrity_requirement(instance) -> str:
-        return instance.get_integrity_requirement_display()
-
-    @staticmethod
-    def prepare_availability_requirement(instance) -> str:
-        return instance.get_availability_requirement_display()
+        model = Asset.history.model

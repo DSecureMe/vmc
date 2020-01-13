@@ -1,4 +1,4 @@
-<!--
+"""
  * Licensed to DSecure.me under one or more contributor
  * license agreements. See the NOTICE file distributed with
  * this work for additional information regarding copyright
@@ -15,15 +15,13 @@
  * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
- *
--->
+ */
+"""
+from django.test import TestCase
+from vmc.apps import VMCConfig
 
-{% extends "admin/change_list.html" %}
-{% load i18n admin_static %}
 
-{% block object-tools-items %}
-{{ block.super }}
-<li>
-    <a id="ralph-import" href="{% url 'admin:ralph-import' %}" class="btn btn-high btn-success">Import</a>
-</li>
-{% endblock %}
+class VMCConfigTest(TestCase):
+
+    def test_name(self):
+        self.assertEqual(VMCConfig.name, 'vmc')

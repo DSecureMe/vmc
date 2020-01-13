@@ -346,7 +346,8 @@ class ExploitFactory:
                 exploit_list.append(e)
 
             cve, _ = models.Cve.objects.get_or_create(id=key)
-            cve.exploits.set(exploit_list)
+            if set(cve.exploits.all().values_list('id', flat=True)) != exploit_list:
+                cve.exploits.set(exploit_list)
 
         except KeyError:
             pass

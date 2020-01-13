@@ -1,16 +1,5 @@
 [
   {
-    "model": "assets.port",
-    "pk": 1,
-    "fields": {
-      "number": 22,
-      "svc_name": "ssh",
-      "protocol": "tcp",
-      "created_date": "2019-03-06T22:37:31.540Z",
-      "modified_date": "2019-03-06T22:37:31.540Z"
-    }
-  },
-  {
     "model": "assets.asset",
     "pk": 1,
     "fields": {
@@ -20,6 +9,9 @@
       "os": "Windows",
       "created_date": "2019-03-06T22:37:31.540Z",
       "modified_date": "2019-03-06T22:37:31.540Z",
+      "business_owner": "test-business_owner",
+      "technical_owner": "test-technical_owner",
+      "hostname": "test-hostname",
       "confidentiality_requirement": "N",
       "integrity_requirement": "N",
       "availability_requirement": "N"

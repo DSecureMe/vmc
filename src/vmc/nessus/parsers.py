@@ -22,7 +22,7 @@ import logging
 
 from defusedxml.lxml import RestrictedElement
 
-from vmc.assets.models import Asset, Port
+from vmc.assets.models import Asset
 from vmc.common.xml import iter_elements_by_name
 from vmc.knowledge_base.models import Cve
 from vmc.vulnerabilities.models import Vulnerability
@@ -64,18 +64,19 @@ class ReportParser:
                         port_number = item.get('port')
 
                         if port_number != 0:
-                            port, _ = Port.objects.get_or_create(
-                                number=port_number,
-                                svc_name=item.get('svc_name'),
-                                protocol=item.get('protocol')
-                            )
+                            svc_name = item.get('svc_name')
+                            protocol = item.get('protocol')
                         else:
-                            port = None
+                            port_number = None
+                            svc_name = None
+                            protocol = None
 
                         Vulnerability.objects.create(
                             asset=asset,
                             cve=cve,
-                            port=port,
+                            port=port_number,
+                            svc_name=svc_name,
+                            protocol=protocol,
                             description=get_value(item.find('description')),
                             solution=get_value(item.find('solution')),
                             exploit_available=True if get_value(item.find('exploit_available')) == 'true' else False
