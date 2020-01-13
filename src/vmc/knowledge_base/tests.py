@@ -19,7 +19,7 @@
 """
 
 from decimal import Decimal
-from unittest import skipIf, skip
+from unittest import skipIf
 from unittest.mock import patch
 
 from django.contrib.auth.models import User

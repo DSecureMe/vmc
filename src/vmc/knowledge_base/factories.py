@@ -51,7 +51,7 @@ class CWEFactory:
         if old.hits and cwe.has_changed(old.hits[0]):
             cwe.created_date = old.hits[0].created_date
             cwe.save(refresh=True)
-        else:
+        elif not old.hits:
             cwe.save(refresh=True)
 
     @staticmethod
@@ -290,7 +290,7 @@ class ExploitFactory:
             if result.hits:
                 result.hits[0].exploits = []
                 for exp_id in value['refmap']['exploit-db']:
-                    result.hits[0].exploits.append(ExploitDocument.create(id=exp_id))
+                    result.hits[0].exploits.append(ExploitDocument.create(exp_id=exp_id))
                     result.hits[0].save(refresh=True)
         except KeyError:
             pass

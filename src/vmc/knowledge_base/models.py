@@ -21,5 +21,5 @@
 from django.db import models
 
 
-class Dummy(models.Model):  # FIXME: remove
+class Cve(models.Model):  # FIXME: remove
     pass

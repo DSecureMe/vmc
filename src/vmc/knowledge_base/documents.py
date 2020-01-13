@@ -46,9 +46,9 @@ class ExploitDocument(InnerDoc):
         name = 'exploit'
 
     @staticmethod
-    def create(id: int):
-        url = 'https://www.exploit-db.com/exploits/{}'.format(id)
-        return ExploitDocument(id=id, url=url)
+    def create(exp_id: int):
+        url = 'https://www.exploit-db.com/exploits/{}'.format(exp_id)
+        return ExploitDocument(id=exp_id, url=url)
 
 
 class CpeDocument(InnerDoc):

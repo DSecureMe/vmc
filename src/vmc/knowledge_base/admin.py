@@ -22,7 +22,7 @@ from django.contrib import admin
 from django.http import HttpResponseRedirect
 from django.urls import path
 
-from vmc.knowledge_base.models import Dummy
+from vmc.knowledge_base.models import Cve
 from vmc.knowledge_base.tasks import update_cve_cwe
 
 
@@ -46,4 +46,4 @@ class CveAdmin(admin.ModelAdmin):
         return HttpResponseRedirect("../")
 
 
-admin.site.register(Dummy, CveAdmin)
+admin.site.register(Cve, CveAdmin)

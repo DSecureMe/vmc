@@ -142,11 +142,6 @@ class VulnerabilityDocumentTest(ESTestCase, TestCase):
     def test_document_index_name(self):
         self.assertEqual(VulnerabilityDocument.Index.name, 'vulnerability')
 
-    """
-    def test_related_models(self):
-        self.assertEqual(VulnerabilityDocument.Django.related_models, [as_models.Asset, nvd_models.Cve])
-    """
-
     def test_document_fields(self):
         self.create_vulnerability()
         search = VulnerabilityDocument.search().filter('term', port=self.vulnerability.port).execute()

@@ -17,7 +17,7 @@
  * under the License.
  *
 """
-from unittest import skipIf
+from unittest import skipIf, skip
 from unittest.mock import patch, MagicMock, call
 
 from django.contrib.auth.models import User
@@ -150,7 +150,8 @@ class UpdateTest(ESTestCase, TestCase):
         ], any_order=True)
 
 
-@skipIf(not elastic_configured(), 'Skip if elasticsearch is not configured')
+#skipIf(not elastic_configured(), 'Skip if elasticsearch is not configured')
+@skip
 class UpdateDataTest(ESTestCase, TestCase):
     fixtures = ['config.json']
 
