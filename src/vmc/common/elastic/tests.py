@@ -15,16 +15,23 @@
  * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
- *
+ */
 """
+from elasticsearch_dsl.connections import connections
 
-from django.contrib import admin
-
-from vmc.vulnerabilities.models import Vulnerability
-
-
-class VulnerabilityAdmin(admin.ModelAdmin):
-    list_display = ('get_asset', 'get_entry_cve', 'get_entry_base_score_v2', 'get_port')
+from vmc.common.elastic.registers import registry
 
 
-admin.site.register(Vulnerability, VulnerabilityAdmin)
+class ESTestCase(object):
+
+    def setUp(self):
+        for doc in registry.get_documents():
+            doc.init()
+
+        super(ESTestCase, self).setUp()
+
+    def tearDown(self):
+        client = connections.get_connection()
+        for doc in registry.get_documents():
+            client.indices.delete(doc.Index.name, ignore=404)
+        super(ESTestCase, self).tearDown()

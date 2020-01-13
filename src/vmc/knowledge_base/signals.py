@@ -15,20 +15,29 @@
  * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
- *
+ */
 """
+from django.dispatch import receiver
+from vmc.knowledge_base.documents import CweDocument, CveDocument
 
-from django.dispatch import Signal
-from django.db.models.signals import post_save
-
-from vmc.knowledge_base.cache import NotificationCache
-from vmc.knowledge_base.models import Cve
-
-knowledge_base_update_finished = Signal(providing_args=["cves"])
+from vmc.common.elastic.signals import post_save
 
 
-def _cve_saved(**kwargs):
-    NotificationCache.set(kwargs['instance'].id, kwargs['created'])
-
-
-post_save.connect(_cve_saved, sender=Cve)
+@receiver(post_save)
+def update_cve(**kwargs):
+    if isinstance(kwargs['instance'], CweDocument):
+        s = CveDocument.search().filter('term', cwe__id=kwargs['instance'].id).extra(
+            collapse={
+                'field': 'id', 'inner_hits': {
+                    'name': 'most_recent',
+                    'size': 1,
+                    'sort': [{'modified_date': 'desc'}]
+                }
+            }
+        )
+        response = s.execute()
+        for cve in response.hits:
+            new_cve = cve.clone()
+            new_cve.cwe = kwargs['instance']
+            new_cve.change_reason = 'CWE Updated'
+            new_cve.save(refresh=True)

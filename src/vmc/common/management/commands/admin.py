@@ -24,17 +24,24 @@ from django.conf import settings
 from django.core.management import call_command
 from django.core.management.base import BaseCommand
 
-from vmc.common.management.commands._common import wait_for_db_ready, wait_for_rabbit_ready
+from vmc.common.elastic.registers import registry
+from vmc.common.management.commands._common import wait_for_db_ready, wait_for_rabbit_ready, wait_for_es_ready
 
 
 class Command(BaseCommand):
     help = 'Runs Admin Panel for VMC'
 
+    requires_migrations_checks = False
+    requires_system_checks = False
+
     def handle(self, *args, **options):
         self.stdout.write("Starting VMC Admin Panel")
 
-        if wait_for_db_ready() and wait_for_rabbit_ready():
+        if wait_for_db_ready() and wait_for_rabbit_ready() and wait_for_es_ready():
             call_command('migrate', *args, **options)
+
+            for document in registry.get_documents():
+                document.init()
 
             if settings.DEBUG:
                 call_command(
@@ -51,8 +58,3 @@ class Command(BaseCommand):
         else:
             self.stdout.write("Unable to start VMC Admin Panel")
             exit(1)
-
-    @staticmethod
-    def _get_init_file_path() -> str:
-        import vmc
-        return os.path.join(os.path.dirname(vmc.__file__), 'config', 'data', 'init.json')

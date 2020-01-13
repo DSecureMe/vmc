@@ -15,14 +15,5 @@
  * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
- *
+ */
 """
-
-from django.apps import AppConfig
-
-
-class VulnerabilitiesConfig(AppConfig):
-    name = 'vmc.vulnerabilities'
-
-    def ready(self):
-        import vmc.vulnerabilities.signals

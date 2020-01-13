@@ -15,22 +15,8 @@
  * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
- *
+ */
 """
+from django.dispatch import Signal
 
-from django.contrib import admin
-from simple_history.admin import SimpleHistoryAdmin
-
-from vmc.assets.models import Asset
-
-
-class AssetAdmin(SimpleHistoryAdmin):
-    list_display = ('ip_address',
-                    'mac_address',
-                    'os',
-                    'confidentiality_requirement',
-                    'integrity_requirement',
-                    'availability_requirement')
-
-
-admin.site.register(Asset, AssetAdmin)
+post_save = Signal(providing_args=['instance', 'created'])

@@ -28,14 +28,11 @@ from datetime import datetime
 from celery import shared_task, group
 
 from vmc.common.utils import get_file
-from vmc.knowledge_base.cache import NotificationCache
-from vmc.knowledge_base.factories import CveFactory, CWEFactory, CpeFactory, ExploitFactory
-from vmc.knowledge_base.models import Cve
-from vmc.knowledge_base.signals import knowledge_base_update_finished
+from vmc.knowledge_base.factories import CveFactory, CWEFactory, ExploitFactory
+
 
 START_YEAR = 2002
 CVE_NVD_URL = 'https://nvd.nist.gov/feeds/json/cve/1.0/nvdcve-1.0-{}.json.gz'
-CPE_NVD_URL = 'https://nvd.nist.gov/feeds/xml/cpe/dictionary/official-cpe-dictionary_v2.3.xml.zip'
 CWE_MITRE_URL = 'https://cwe.mitre.org/data/xml/cwec_v2.12.xml.zip'
 VIA4_URL = 'https://www.cve-search.org/feeds/via4.json'
 
@@ -59,32 +56,14 @@ def update_cwe():
 
 
 @shared_task
-def update_cpe():
-    try:
-        LOGGER.info('Updating cpe, download file')
-        file = get_file(CPE_NVD_URL)
-        if file:
-            LOGGER.info('File downloaded, parsing')
-            CpeFactory.process(file)
-            file.close()
-            LOGGER.info('Cpe update done.')
-        else:
-            LOGGER.info('Unable to download file for cpe')
-    except Exception as ex:
-        LOGGER.error(ex)
-
-
-@shared_task
 def update_cve(year: int):
     try:
         LOGGER.info('Trying to get file for %d year', year)
         file = get_file(CVE_NVD_URL.format(year))
         if file:
             LOGGER.info('File downloaded for %d year, parsing...', year)
-            factory = CveFactory()
-            factory.process(file)
+            CveFactory.process(file)
             file.close()
-            LOGGER.info('CVS update for %d done, updated: %d, created: %d', year, factory.updated, factory.created)
         else:
             LOGGER.info('Unable to download file for %d year', year)
     except Exception as ex:
@@ -107,20 +86,9 @@ def update_exploits():
 
 
 @shared_task
-def send_notifications():
-    LOGGER.info("All update done")
-    cves = NotificationCache.get()
-    if not NotificationCache.is_initial_update() and cves:
-        knowledge_base_update_finished.send(sender=None, cves=cves)
-        NotificationCache.clear()
-
-
-@shared_task
 def update_cve_cwe():
-    NotificationCache.initial_update(not Cve.objects.exists())
     (
-        update_cwe.si() |
         group(update_cve.si(year) for year in range(START_YEAR, datetime.now().year + 1)) |
-        update_exploits.si() |
-        send_notifications.si()
+        update_cwe.si() |
+        update_exploits.si()
     )()

@@ -18,101 +18,78 @@
  *
 """
 
-from django_elasticsearch_dsl import Document, fields
-from django_elasticsearch_dsl.registries import registry
-from vmc.knowledge_base.models import Cve, Cpe, Cwe, Exploit
+from elasticsearch_dsl import InnerDoc, Date, Keyword, Float, Nested, Object
+
+from vmc.knowledge_base import metrics
+from vmc.common.elastic.registers import registry
+from vmc.common.elastic.documents import Document, TupleValueField, EnumField
 
 
-@registry.register_document
-class CveDocument(Document):
-    id = fields.KeywordField()
-    base_score_v2 = fields.FloatField()
-    base_score_v3 = fields.FloatField()
-    summary = fields.KeywordField()
-    access_vector_v2 = fields.KeywordField(attr='get_access_vector_v2_display')
-    access_complexity_v2 = fields.KeywordField(attr='get_access_complexity_v2_display')
-    authentication_v2 = fields.KeywordField(attr='get_authentication_v2_display')
-    confidentiality_impact_v2 = fields.KeywordField(attr='get_confidentiality_impact_v2_display')
-    integrity_impact_v2 = fields.KeywordField(attr='get_integrity_impact_v2_display')
-    availability_impact_v2 = fields.KeywordField(attr='get_availability_impact_v2_display')
-    attack_vector_v3 = fields.KeywordField(attr='get_attack_vector_v3_display')
-    attack_complexity_v3 = fields.KeywordField(attr='get_attack_complexity_v3_display')
-    privileges_required_v3 = fields.KeywordField(attr='get_privileges_required_v3_display')
-    user_interaction_v3 = fields.KeywordField(attr='get_user_interaction_v3_display')
-    scope_v3 = fields.KeywordField(attr='get_scope_v3_display')
-    confidentiality_impact_v3 = fields.KeywordField(attr='get_confidentiality_impact_v3_display')
-    integrity_impact_v3 = fields.KeywordField(attr='get_integrity_impact_v3_display')
-    availability_impact_v3 = fields.KeywordField(attr='get_availability_impact_v3_display')
-    published_date = fields.DateField()
-    last_modified_date = fields.DateField()
-
-    exploits = fields.ObjectField(
-        properties={
-            'id': fields.KeywordField(),
-            'url': fields.KeywordField()
-        }
-    )
-    cwe = fields.ObjectField(
-        properties={
-            'id': fields.KeywordField(),
-            'name': fields.KeywordField(),
-            'description': fields.KeywordField()
-        }
-    )
-
-    cpe = fields.ObjectField(
-        properties={
-            'vendor': fields.KeywordField(),
-            'name': fields.KeywordField(),
-        }
-    )
-
-    class Index:
-        name = 'cve'
-
-    class Django:
-        model = Cve
-        related_models = [Cwe, Cpe, Exploit]
-
-    def get_queryset(self):
-        return super(CveDocument, self).get_queryset().select_related(
-            'cwe',
-        )
-
-    @staticmethod
-    def get_instances_from_related(related_instance):
-        if isinstance(related_instance, (Cwe, Cpe, Exploit)):
-            return related_instance.cve_set.all()
-        return None
-
-
-@registry.register_document
-class CweDocument(Document):
-    id = fields.KeywordField()
-    name = fields.KeywordField()
-    status = fields.KeywordField()
-    weakness_abstraction = fields.KeywordField()
-    description = fields.KeywordField()
-    extended_description = fields.KeywordField()
-    created_date = fields.DateField()
-    modified_date = fields.DateField()
-
-    class Index:
-        name = 'cwe'
-
-    class Django:
-        model = Cwe.history.model
-
-
-@registry.register_document
-class ExploitDocument(Document):
-    id = fields.KeywordField()
-    url = fields.KeywordField(attr='url')
-    created_date = fields.DateField()
-    modified_date = fields.DateField()
+class ExploitInnerDoc(InnerDoc):
+    id = Keyword()
+    url = Keyword()
 
     class Index:
         name = 'exploit'
 
-    class Django:
-        model = Exploit
+    @staticmethod
+    def create(exp_id: int):
+        url = 'https://www.exploit-db.com/exploits/{}'.format(exp_id)
+        return ExploitInnerDoc(id=exp_id, url=url)
+
+
+class CpeInnerDoc(InnerDoc):
+    name = Keyword()
+    vendor = Keyword()
+
+
+class CweInnerDoc(InnerDoc):
+    id = Keyword()
+    name = Keyword()
+    status = Keyword()
+    weakness_abstraction = Keyword()
+    description = Keyword()
+    extended_description = Keyword()
+
+
+class CveInnerDoc(InnerDoc):
+    id = Keyword()
+    base_score_v2 = Float()
+    base_score_v3 = Float()
+    summary = Keyword()
+    access_vector_v2 = TupleValueField(choice_type=metrics.AccessVectorV2)
+    access_complexity_v2 = TupleValueField(choice_type=metrics.AccessComplexityV2)
+    authentication_v2 = TupleValueField(choice_type=metrics.AuthenticationV2)
+    confidentiality_impact_v2 = TupleValueField(choice_type=metrics.ImpactV2)
+    integrity_impact_v2 = TupleValueField(choice_type=metrics.ImpactV2)
+    availability_impact_v2 = TupleValueField(choice_type=metrics.ImpactV2)
+    attack_vector_v3 = TupleValueField(choice_type=metrics.AttackVectorV3)
+    attack_complexity_v3 = TupleValueField(choice_type=metrics.AttackComplexityV3)
+    privileges_required_v3 = EnumField(choice_type=metrics.PrivilegesRequiredV3)
+    user_interaction_v3 = TupleValueField(choice_type=metrics.UserInteractionV3)
+    scope_v3 = EnumField(choice_type=metrics.ScopeV3)
+    confidentiality_impact_v3 = TupleValueField(choice_type=metrics.ImpactV3)
+    integrity_impact_v3 = TupleValueField(choice_type=metrics.ImpactV3)
+    availability_impact_v3 = TupleValueField(choice_type=metrics.ImpactV3)
+    published_date = Date()
+    last_modified_date = Date()
+
+    exploits = Nested(ExploitInnerDoc)
+    cpe = Nested(CpeInnerDoc)
+    cwe = Object(CweInnerDoc)
+
+    def get_privileges_required_v3_value(self) -> float:
+        scope = metrics.ScopeV3(self.scope_v3)
+        return float(metrics.PrivilegesRequiredV3(self.privileges_required_v3).value_with_scope(scope))
+
+
+@registry.register_document
+class CweDocument(CweInnerDoc, Document):
+    class Index:
+        name = 'cwe'
+
+
+@registry.register_document
+class CveDocument(CveInnerDoc, Document):
+    class Index:
+        name = 'cve'
