@@ -21,8 +21,6 @@
 import decimal
 
 from vmc.knowledge_base.metrics import ScopeV3
-from vmc.knowledge_base.models import Cve
-from vmc.assets.models import Asset
 from vmc.knowledge_base.utils import exploitability_v2, impact_v2, f_impact_v2
 
 TARGET_DISTRIBUTION_NOT_DEFINED_V2 = 1.0
@@ -44,14 +42,14 @@ def target_distribution_v2() -> float:
     return TARGET_DISTRIBUTION_NOT_DEFINED_V2
 
 
-def adjusted_impact_v2(cve: Cve, asset: Asset) -> float:
+def adjusted_impact_v2(cve, asset) -> float:
     return min(10, 10.41 *
-               (1 - (1 - cve.get_confidentiality_impact_v2_value() * asset.get_confidentiality_requirement_value()) *
-                (1 - cve.get_integrity_impact_v2_value() * asset.get_integrity_requirement_value()) *
-                (1 - cve.get_availability_impact_v2_value() * asset.get_availability_requirement_value())))
+               (1 - (1 - cve.confidentiality_impact_v2.second_value * asset.confidentiality_requirement.second_value) *
+                (1 - cve.integrity_impact_v2.second_value * asset.integrity_requirement.second_value) *
+                (1 - cve.availability_impact_v2.second_value * asset.availability_requirement.second_value)))
 
 
-def adjusted_base_v2(cve: Cve, asset: Asset) -> float:
+def adjusted_base_v2(cve, asset) -> float:
     ai = adjusted_impact_v2(cve, asset)
     return round(((0.6 * ai) + (0.4 * exploitability_v2(cve)) - 1.5) * f_impact_v2(impact_v2(cve)), 1)
 
@@ -68,33 +66,33 @@ def temporal_exploitability_v2() -> float:
     return TEMPORAL_EXPLOITABILITY_NOT_DEFINED_V2
 
 
-def adjusted_temporal_score_v2(cve: Cve, asset: Asset) -> float:
+def adjusted_temporal_score_v2(cve, asset) -> float:
     return round(adjusted_base_v2(cve, asset) *
                  temporal_exploitability_v2() *
                  temporal_remediation_level_v2() *
                  temporal_report_confidence_v2(), 1)
 
 
-def environmental_score_v2(cve: Cve, asset: Asset) -> float:
+def environmental_score_v2(cve, asset) -> float:
     at = adjusted_temporal_score_v2(cve, asset)
     return round((at + (10 - at) * collateral_damage_potential_v2()) * target_distribution_v2(), 1)
 
 
-def exploitability_v3(cve: Cve) -> float:
+def exploitability_v3(cve) -> float:
     return 8.22 * \
-           cve.get_attack_vector_v3_value() * \
-           cve.get_attack_complexity_v3_value() * \
+           cve.attack_vector_v3.second_value * \
+           cve.attack_complexity_v3.second_value * \
            cve.get_privileges_required_v3_value() * \
-           cve.get_user_interaction_v3_value()
+           cve.user_interaction_v3.second_value
 
 
-def impact_sub_score_base_v3(cve: Cve, asset: Asset) -> float:
-    return min((1 - (1 - cve.get_confidentiality_impact_v3_value() * asset.get_confidentiality_requirement_value()) *
-                (1 - cve.get_integrity_impact_v3_value() * asset.get_integrity_requirement_value()) *
-                (1 - cve.get_availability_impact_v3_value() * asset.get_availability_requirement_value())), 0.915)
+def impact_sub_score_base_v3(cve, asset) -> float:
+    return min((1 - (1 - cve.confidentiality_impact_v3.second_value * asset.confidentiality_requirement.second_value) *
+                (1 - cve.integrity_impact_v3.second_value * asset.integrity_requirement.second_value) *
+                (1 - cve.availability_impact_v3.second_value * asset.availability_requirement.second_value)), 0.915)
 
 
-def impact_sub_score_v3(cve: Cve, asset: Asset) -> float:
+def impact_sub_score_v3(cve, asset) -> float:
     isc = impact_sub_score_base_v3(cve, asset)
     if ScopeV3(cve.scope_v3) == ScopeV3.UNCHANGED:
         return 6.42 * isc
@@ -113,7 +111,7 @@ def report_confidence_v3() -> float:
     return REPORT_CONFIDENCE_NOT_DEFINED_V3
 
 
-def environmental_score_v3(cve: Cve, asset: Asset) -> float:
+def environmental_score_v3(cve, asset) -> float:
     isc = impact_sub_score_v3(cve, asset)
     exploitability = exploitability_v3(cve)
 

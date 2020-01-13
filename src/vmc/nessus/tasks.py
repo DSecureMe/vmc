@@ -29,7 +29,6 @@ from celery import shared_task
 from vmc.nessus.api import Nessus
 from vmc.nessus.models import Config
 from vmc.nessus.parsers import ReportParser
-from vmc.vulnerabilities.models import Vulnerability
 
 TRASH_FOLDER_TYPE = 'trash'
 LOGGER = logging.getLogger(__name__)
@@ -59,7 +58,6 @@ def update_data(config_pk: int, scan_id: int, scaner_api=Nessus):  # pylint: dis
 
 @shared_task
 def update(scanner_api=Nessus):
-    Vulnerability.objects.all().delete()
     for config in Config.objects.all():
         con = scanner_api(config)
         scan_list = con.get_scan_list()

@@ -15,20 +15,5 @@
  * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
- *
+ */
 """
-
-from django.dispatch import Signal
-from django.db.models.signals import post_save
-
-from vmc.knowledge_base.cache import NotificationCache
-from vmc.knowledge_base.models import Cve
-
-knowledge_base_update_finished = Signal(providing_args=["cves"])
-
-
-def _cve_saved(**kwargs):
-    NotificationCache.set(kwargs['instance'].id, kwargs['created'])
-
-
-post_save.connect(_cve_saved, sender=Cve)

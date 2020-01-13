@@ -17,44 +17,56 @@
  * under the License.
  *
 """
+
 from unittest import skipIf
 
 from django.test import TestCase
-from django_elasticsearch_dsl.test import ESTestCase
 from parameterized import parameterized
 
-from vmc.vulnerabilities.models import Vulnerability
-
-from vmc.vulnerabilities.documents import VulnerabilityDocument
+from vmc.common.elastic.tests import ESTestCase
+from vmc.assets.documents import Impact as AssetImpact
+from vmc.vulnerabilities.documents import VulnerabilityDocument, CveDocument, AssetDocument
 
 from vmc.config.test_settings import elastic_configured
 from vmc.vulnerabilities.apps import VulnerabilitiesConfig
 
-from vmc.assets import models as as_models
-from vmc.knowledge_base import models as nvd_models
 from vmc.knowledge_base import metrics
 from vmc.vulnerabilities.utils import environmental_score_v2, environmental_score_v3
 
 
-def create_cve() -> nvd_models.Cve:
-    return nvd_models.Cve.objects.create(
+def create_cve() -> CveDocument:
+    return CveDocument(
         id='CVE-2017-0002',
         base_score_v2=6.8,
-        access_vector_v2=metrics.AccessVectorV2.NETWORK.value,
-        access_complexity_v2=metrics.AccessComplexityV2.MEDIUM.value,
-        authentication_v2=metrics.AuthenticationV2.NONE.value,
-        confidentiality_impact_v2=metrics.ImpactV2.PARTIAL.value,
-        integrity_impact_v2=metrics.ImpactV2.PARTIAL.value,
-        availability_impact_v2=metrics.ImpactV2.PARTIAL.value,
+        access_vector_v2=metrics.AccessVectorV2.NETWORK,
+        access_complexity_v2=metrics.AccessComplexityV2.MEDIUM,
+        authentication_v2=metrics.AuthenticationV2.NONE,
+        confidentiality_impact_v2=metrics.ImpactV2.PARTIAL,
+        integrity_impact_v2=metrics.ImpactV2.PARTIAL,
+        availability_impact_v2=metrics.ImpactV2.PARTIAL,
         base_score_v3=8.8,
-        attack_vector_v3=metrics.AttackVectorV3.NETWORK.value,
-        attack_complexity_v3=metrics.AttackComplexityV3.LOW.value,
-        privileges_required_v3=metrics.PrivilegesRequiredV3.NONE.value,
-        user_interaction_v3=metrics.UserInteractionV3.REQUIRED.value,
-        scope_v3=metrics.ScopeV3.UNCHANGED.value,
-        confidentiality_impact_v3=metrics.ImpactV3.HIGH.value,
-        integrity_impact_v3=metrics.ImpactV3.HIGH.value,
-        availability_impact_v3=metrics.ImpactV3.HIGH.value
+        attack_vector_v3=metrics.AttackVectorV3.NETWORK,
+        attack_complexity_v3=metrics.AttackComplexityV3.LOW,
+        privileges_required_v3=metrics.PrivilegesRequiredV3.NONE,
+        user_interaction_v3=metrics.UserInteractionV3.REQUIRED,
+        scope_v3=metrics.ScopeV3.UNCHANGED,
+        confidentiality_impact_v3=metrics.ImpactV3.HIGH,
+        integrity_impact_v3=metrics.ImpactV3.HIGH,
+        availability_impact_v3=metrics.ImpactV3.HIGH
+    )
+
+
+def create_asset() -> AssetDocument:
+    return AssetDocument(
+        ip_address='10.10.10.10',
+        mac_address='mac_address',
+        os='OS',
+        business_owner='business_owner',
+        technical_owner='technical_owner',
+        hostname='HOSTNAME',
+        confidentiality_requirement=AssetImpact.LOW,
+        integrity_requirement=AssetImpact.LOW,
+        availability_requirement=AssetImpact.LOW
     )
 
 
@@ -69,43 +81,39 @@ class CalculateEnvironmentalScore(TestCase):
     @classmethod
     def setUpTestData(cls):
         cls.cve = create_cve()
-        cls.asset = None
-
-    def prepare_asset(self, cr, ir, ar):
-        self.asset = as_models.Asset.objects.create(
-            ip_address='10.10.10.10',
-            confidentiality_requirement=cr.value,
-            integrity_requirement=ir.value,
-            availability_requirement=ar.value
-        )
+        cls.asset = create_asset()
 
     def change_scope(self, scope):
         self.cve.scope_v3 = scope.value
-        self.cve.save()
+
+    def prepare_asset(self, cr, ir, ar):
+        self.asset.confidentiality_requirement = cr
+        self.asset.integrity_requirement = ir
+        self.asset.availability_requirement = ar
 
     @parameterized.expand([
-        (as_models.Impact.LOW, as_models.Impact.LOW, as_models.Impact.LOW, 4.9),
-        (as_models.Impact.MEDIUM, as_models.Impact.LOW, as_models.Impact.LOW, 5.7),
-        (as_models.Impact.LOW, as_models.Impact.MEDIUM, as_models.Impact.LOW, 5.7),
-        (as_models.Impact.LOW, as_models.Impact.LOW, as_models.Impact.MEDIUM, 5.7),
-        (as_models.Impact.MEDIUM, as_models.Impact.MEDIUM, as_models.Impact.LOW, 6.3),
-        (as_models.Impact.MEDIUM, as_models.Impact.MEDIUM, as_models.Impact.MEDIUM, 6.8),
-        (as_models.Impact.HIGH, as_models.Impact.HIGH, as_models.Impact.HIGH, 8.2),
-        (as_models.Impact.NOT_DEFINED, as_models.Impact.HIGH, as_models.Impact.LOW, 6.9),
+        (AssetImpact.LOW, AssetImpact.LOW, AssetImpact.LOW, 4.9),
+        (AssetImpact.MEDIUM, AssetImpact.LOW, AssetImpact.LOW, 5.7),
+        (AssetImpact.LOW, AssetImpact.MEDIUM, AssetImpact.LOW, 5.7),
+        (AssetImpact.LOW, AssetImpact.LOW, AssetImpact.MEDIUM, 5.7),
+        (AssetImpact.MEDIUM, AssetImpact.MEDIUM, AssetImpact.LOW, 6.3),
+        (AssetImpact.MEDIUM, AssetImpact.MEDIUM, AssetImpact.MEDIUM, 6.8),
+        (AssetImpact.HIGH, AssetImpact.HIGH, AssetImpact.HIGH, 8.2),
+        (AssetImpact.NOT_DEFINED, AssetImpact.HIGH, AssetImpact.LOW, 6.9),
     ])
     def test_environmental_score_v2(self, cr, ir, ar, expected):
         self.prepare_asset(cr, ir, ar)
         self.assertEqual(environmental_score_v2(self.cve, self.asset), expected)
 
     @parameterized.expand([
-        (metrics.ScopeV3.UNCHANGED, as_models.Impact.LOW, as_models.Impact.LOW, as_models.Impact.LOW, 6.9),
-        (metrics.ScopeV3.CHANGED, as_models.Impact.MEDIUM, as_models.Impact.LOW, as_models.Impact.LOW, 9.1),
-        (metrics.ScopeV3.UNCHANGED, as_models.Impact.LOW, as_models.Impact.MEDIUM, as_models.Impact.LOW, 7.8),
-        (metrics.ScopeV3.CHANGED, as_models.Impact.LOW, as_models.Impact.LOW, as_models.Impact.MEDIUM, 9.1),
-        (metrics.ScopeV3.UNCHANGED, as_models.Impact.MEDIUM, as_models.Impact.MEDIUM, as_models.Impact.LOW, 8.4),
-        (metrics.ScopeV3.CHANGED, as_models.Impact.MEDIUM, as_models.Impact.MEDIUM, as_models.Impact.MEDIUM, 9.6),
-        (metrics.ScopeV3.UNCHANGED, as_models.Impact.HIGH, as_models.Impact.HIGH, as_models.Impact.HIGH, 8.8),
-        (metrics.ScopeV3.CHANGED, as_models.Impact.NOT_DEFINED, as_models.Impact.HIGH, as_models.Impact.LOW, 9.6),
+        (metrics.ScopeV3.UNCHANGED, AssetImpact.LOW, AssetImpact.LOW, AssetImpact.LOW, 6.9),
+        (metrics.ScopeV3.CHANGED, AssetImpact.MEDIUM, AssetImpact.LOW, AssetImpact.LOW, 9.1),
+        (metrics.ScopeV3.UNCHANGED, AssetImpact.LOW, AssetImpact.MEDIUM, AssetImpact.LOW, 7.8),
+        (metrics.ScopeV3.CHANGED, AssetImpact.LOW, AssetImpact.LOW, AssetImpact.MEDIUM, 9.1),
+        (metrics.ScopeV3.UNCHANGED, AssetImpact.MEDIUM, AssetImpact.MEDIUM, AssetImpact.LOW, 8.4),
+        (metrics.ScopeV3.CHANGED, AssetImpact.MEDIUM, AssetImpact.MEDIUM, AssetImpact.MEDIUM, 9.6),
+        (metrics.ScopeV3.UNCHANGED, AssetImpact.HIGH, AssetImpact.HIGH, AssetImpact.HIGH, 8.8),
+        (metrics.ScopeV3.CHANGED, AssetImpact.NOT_DEFINED, AssetImpact.HIGH, AssetImpact.LOW, 9.6),
     ])
     def test_environmental_score_v3(self, scope, cr, ir, ar, expected):
         self.prepare_asset(cr, ir, ar)
@@ -119,36 +127,25 @@ class VulnerabilityDocumentTest(ESTestCase, TestCase):
     @classmethod
     def create_vulnerability(cls):
         cls.cve = create_cve()
-        cls.asset = as_models.Asset.objects.create(
-            ip_address='10.10.10.10',
-            mac_address='mac_address',
-            os='OS',
-            business_owner='business_owner',
-            technical_owner='technical_owner',
-            hostname='HOSTNAME',
-            confidentiality_requirement=as_models.Impact.LOW.value,
-            integrity_requirement=as_models.Impact.LOW.value,
-            availability_requirement=as_models.Impact.LOW.value
-        )
-        cls.vulnerability = Vulnerability.objects.create(
+        cls.asset = create_asset()
+        cls.vulnerability = VulnerabilityDocument(
             asset=cls.asset,
             cve=cls.cve,
             description='description',
             solution='solution',
-            exploit_available=False,
             port=22,
             svc_name='ssh',
             protocol='tcp'
         )
-
-    def test_model_class_added(self):
-        self.assertEqual(VulnerabilityDocument.Django.model, Vulnerability)
+        cls.vulnerability.save(refresh=True)
 
     def test_document_index_name(self):
         self.assertEqual(VulnerabilityDocument.Index.name, 'vulnerability')
 
+    """
     def test_related_models(self):
         self.assertEqual(VulnerabilityDocument.Django.related_models, [as_models.Asset, nvd_models.Cve])
+    """
 
     def test_document_fields(self):
         self.create_vulnerability()
@@ -157,30 +154,30 @@ class VulnerabilityDocumentTest(ESTestCase, TestCase):
 
         uut = search.hits[0]
         self.assertEqual(uut.cve.id, self.vulnerability.cve.id)
-        self.assertEqual(uut.cve.base_score_v2, self.vulnerability.cve.base_score_v2)
-        self.assertEqual(uut.cve.base_score_v3, self.vulnerability.cve.base_score_v3)
-        self.assertEqual(uut.cve.summary, self.vulnerability.cve.summary)
-        self.assertEqual(uut.cve.access_vector_v2, self.vulnerability.cve.get_access_vector_v2_display())
-        self.assertEqual(uut.cve.access_complexity_v2, self.vulnerability.cve.get_access_complexity_v2_display())
-        self.assertEqual(uut.cve.authentication_v2, self.vulnerability.cve.get_authentication_v2_display())
-        self.assertEqual(uut.cve.confidentiality_impact_v2, self.vulnerability.cve.get_confidentiality_impact_v2_display())
-        self.assertEqual(uut.cve.integrity_impact_v2, self.vulnerability.cve.get_integrity_impact_v2_display())
-        self.assertEqual(uut.cve.availability_impact_v2, self.vulnerability.cve.get_availability_impact_v2_display())
-        self.assertEqual(uut.cve.attack_vector_v3, self.vulnerability.cve.get_attack_vector_v3_display())
-        self.assertEqual(uut.cve.attack_complexity_v3, self.vulnerability.cve.get_attack_complexity_v3_display())
-        self.assertEqual(uut.cve.privileges_required_v3, self.vulnerability.cve.get_privileges_required_v3_display())
-        self.assertEqual(uut.cve.user_interaction_v3, self.vulnerability.cve.get_user_interaction_v3_display())
-        self.assertEqual(uut.cve.scope_v3, self.vulnerability.cve.get_scope_v3_display())
-        self.assertEqual(uut.cve.confidentiality_impact_v3, self.vulnerability.cve.get_confidentiality_impact_v3_display())
-        self.assertEqual(uut.cve.integrity_impact_v3, self.vulnerability.cve.get_integrity_impact_v3_display())
-        self.assertEqual(uut.cve.availability_impact_v3, self.vulnerability.cve.get_availability_impact_v3_display())
+        self.assertEqual(uut.cve.base_score_v2, self.cve.base_score_v2)
+        self.assertEqual(uut.cve.base_score_v3, self.cve.base_score_v3)
+        self.assertEqual(uut.cve.summary, self.cve.summary)
+        self.assertEqual(uut.cve.access_vector_v2, self.cve.access_vector_v2)
+        self.assertEqual(uut.cve.access_complexity_v2, self.cve.access_complexity_v2)
+        self.assertEqual(uut.cve.authentication_v2, self.cve.authentication_v2)
+        self.assertEqual(uut.cve.confidentiality_impact_v2, self.cve.confidentiality_impact_v2)
+        self.assertEqual(uut.cve.integrity_impact_v2, self.cve.integrity_impact_v2)
+        self.assertEqual(uut.cve.availability_impact_v2, self.cve.availability_impact_v2)
+        self.assertEqual(uut.cve.attack_vector_v3, self.cve.attack_vector_v3)
+        self.assertEqual(uut.cve.attack_complexity_v3, self.cve.attack_complexity_v3)
+        self.assertEqual(uut.cve.privileges_required_v3, self.cve.privileges_required_v3)
+        self.assertEqual(uut.cve.user_interaction_v3, self.cve.user_interaction_v3)
+        self.assertEqual(uut.cve.scope_v3, self.cve.scope_v3)
+        self.assertEqual(uut.cve.confidentiality_impact_v3, self.cve.confidentiality_impact_v3)
+        self.assertEqual(uut.cve.integrity_impact_v3, self.cve.integrity_impact_v3)
+        self.assertEqual(uut.cve.availability_impact_v3, self.cve.availability_impact_v3)
 
-        self.assertEqual(uut.asset.ip_address, self.vulnerability.asset.ip_address)
-        self.assertEqual(uut.asset.mac_address, self.vulnerability.asset.mac_address)
+        self.assertEqual(uut.asset.ip_address, self.asset.ip_address)
+        self.assertEqual(uut.asset.mac_address, self.asset.mac_address)
         self.assertEqual(uut.asset.os, self.vulnerability.asset.os)
-        self.assertEqual(uut.asset.confidentiality_requirement, self.vulnerability.asset.get_confidentiality_requirement_display())
-        self.assertEqual(uut.asset.integrity_requirement, self.vulnerability.asset.get_integrity_requirement_display())
-        self.assertEqual(uut.asset.availability_requirement, self.vulnerability.asset.get_availability_requirement_display())
+        self.assertEqual(uut.asset.confidentiality_requirement, self.asset.confidentiality_requirement)
+        self.assertEqual(uut.asset.integrity_requirement, self.asset.integrity_requirement)
+        self.assertEqual(uut.asset.availability_requirement, self.asset.availability_requirement)
 
         self.assertEqual(uut.port, self.vulnerability.port)
         self.assertEqual(uut.svc_name, self.vulnerability.svc_name)

@@ -15,16 +15,8 @@
  * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
- *
+ */
 """
+from django.dispatch import Signal
 
-from django.contrib import admin
-
-from vmc.vulnerabilities.models import Vulnerability
-
-
-class VulnerabilityAdmin(admin.ModelAdmin):
-    list_display = ('get_asset', 'get_entry_cve', 'get_entry_base_score_v2', 'get_port')
-
-
-admin.site.register(Vulnerability, VulnerabilityAdmin)
+post_save = Signal(providing_args=['document', 'created'])

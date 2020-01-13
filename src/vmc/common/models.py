@@ -89,5 +89,5 @@ class TupleValueField(models.CharField):
     def _get_field_value(self, model: BaseModel) -> [str, float]:
         value = getattr(model, self.attname)
         if value and self.choice_type:
-            return self.choice_type(value).float
+            return self.choice_type(value).second_value
         return value

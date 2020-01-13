@@ -15,12 +15,31 @@
  * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
- *
+ */
 """
+from collections import defaultdict
 
-from django.apps import AppConfig
+from django.core.exceptions import ImproperlyConfigured
 
 
-class KnowledgeBaseConfig(AppConfig):
-    name = 'vmc.knowledge_base'
-    verbose_name = 'Knowledge Base'
+class DocumentRegistry:
+
+    def __init__(self):
+        self.documents = defaultdict()
+
+    def register_document(self, document):
+        index_meta = getattr(document, 'Index')
+
+        if not index_meta:
+            message = "You must declare the Django class inside {}".format(document.__name__)
+            raise ImproperlyConfigured(message)
+
+        self.documents.update({index_meta.name: document})
+
+        return document
+
+    def get_documents(self):
+        return self.documents.values()
+
+
+registry = DocumentRegistry()

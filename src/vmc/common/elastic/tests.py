@@ -15,22 +15,23 @@
  * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
- *
+ */
 """
+from elasticsearch_dsl.connections import connections
 
-from django.contrib import admin
-from simple_history.admin import SimpleHistoryAdmin
-
-from vmc.assets.models import Asset
+from vmc.common.elastic.registers import registry
 
 
-class AssetAdmin(SimpleHistoryAdmin):
-    list_display = ('ip_address',
-                    'mac_address',
-                    'os',
-                    'confidentiality_requirement',
-                    'integrity_requirement',
-                    'availability_requirement')
+class ESTestCase(object):
 
+    def setUp(self):
+        for doc in registry.get_documents():
+            doc.init()
 
-admin.site.register(Asset, AssetAdmin)
+        super(ESTestCase, self).setUp()
+
+    def tearDown(self):
+        client = connections.get_connection()
+        for doc in registry.get_documents():
+            client.indices.delete(doc.Index.name, ignore=404)
+        super(ESTestCase, self).tearDown()

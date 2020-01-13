@@ -19,16 +19,21 @@
 """
 
 import json
+from unittest import skipIf
 from unittest.mock import patch, Mock
 
 from django.contrib.auth.models import User
 from django.test import TestCase, LiveServerTestCase
+from elasticsearch_dsl import Search
+
+from vmc.config.test_settings import elastic_configured
+from vmc.assets.documents import AssetDocument
 
 from vmc.ralph.apps import RalphConfig
-from vmc.assets.models import Asset
 from vmc.ralph.api import Ralph
 from vmc.ralph.models import Config
 from vmc.common.tests import get_fixture_location
+from vmc.common.elastic.tests import ESTestCase
 
 from vmc.ralph.tasks import load_all_assets
 
@@ -101,9 +106,11 @@ class RalphTest(TestCase):
         self.assertEqual(len(result), 1)
 
 
-class LoadAllAssetsTest(TestCase):
+@skipIf(not elastic_configured(), 'Skip if elasticsearch is not configured')
+class LoadAllAssetsTest(ESTestCase, TestCase):
 
     def setUp(self) -> None:
+        super().setUp()
         with open(get_fixture_location(__file__, 'host_response.json')) as f:
             self.hosts = json.loads(f.read())
 
@@ -112,7 +119,9 @@ class LoadAllAssetsTest(TestCase):
 
         mock_api().get_all_assets.return_value = [self.hosts]
         load_all_assets()
-        self.assertEqual(2, Asset.objects.count())
+        self.assertEqual(AssetDocument.search().filter('term', ip_address='10.0.0.23').count(), 1)
+        self.assertEqual(AssetDocument.search().filter('term', ip_address='10.0.0.25').count(), 1)
+        self.assertEqual(2, Search().index(AssetDocument.Index.name).count())
 
 
 class AdminPanelTest(LiveServerTestCase):
