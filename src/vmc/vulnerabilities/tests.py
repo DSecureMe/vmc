@@ -22,10 +22,11 @@ from unittest import skipIf
 
 from django.test import TestCase
 from parameterized import parameterized
+from vmc.knowledge_base.documents import CveDocument
 
 from vmc.common.elastic.tests import ESTestCase
-from vmc.assets.documents import Impact as AssetImpact
-from vmc.vulnerabilities.documents import VulnerabilityDocument, CveDocument, AssetDocument
+from vmc.assets.documents import Impact as AssetImpact, AssetDocument
+from vmc.vulnerabilities.documents import VulnerabilityDocument
 
 from vmc.config.test_settings import elastic_configured
 from vmc.vulnerabilities.apps import VulnerabilitiesConfig

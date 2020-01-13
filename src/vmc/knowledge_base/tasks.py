@@ -88,7 +88,7 @@ def update_exploits():
 @shared_task
 def update_cve_cwe():
     (
-        update_cwe.si() |
         group(update_cve.si(year) for year in range(START_YEAR, datetime.now().year + 1)) |
+        update_cwe.si() |
         update_exploits.si()
     )()

@@ -19,7 +19,7 @@
 """
 from decimal import Decimal
 
-from elasticsearch_dsl import Date, Keyword
+from elasticsearch_dsl import Date, Keyword, InnerDoc
 from vmc.common.enum import TupleValueEnum
 
 from vmc.common.elastic.documents import Document, TupleValueField
@@ -33,8 +33,7 @@ class Impact(TupleValueEnum):
     NOT_DEFINED = ('N', Decimal('1.0'))
 
 
-@registry.register_document
-class AssetDocument(Document):
+class AssetInnerDoc(InnerDoc):
     ip_address = Keyword()
     os = Keyword()
     cmdb_id = Keyword()
@@ -48,6 +47,9 @@ class AssetDocument(Document):
     modified_date = Date()
     change_reason = Keyword()
 
+
+@registry.register_document
+class AssetDocument(AssetInnerDoc, Document):
     class Index:
         name = 'asset'
 

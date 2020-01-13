@@ -24,3 +24,6 @@ from django.apps import AppConfig
 class KnowledgeBaseConfig(AppConfig):
     name = 'vmc.knowledge_base'
     verbose_name = 'Knowledge Base'
+
+    def ready(self):
+        import vmc.knowledge_base.signals

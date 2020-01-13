@@ -17,6 +17,18 @@
  * under the License.
  */
 """
-from django.dispatch import Signal
+from django.dispatch import receiver
+from vmc.knowledge_base.documents import CweDocument, CveDocument
 
-post_save = Signal(providing_args=['instance', 'created'])
+from vmc.common.elastic.signals import post_save
+
+
+@receiver(post_save)
+def update_cve(**kwargs):
+    if isinstance(kwargs['instance'], CweDocument):
+        result = CveDocument.search().filter('term', cwe__id=kwargs['instance'].id).execute()
+        for hit in result.hits:
+            cve = hit.clone()
+            cve.cwe = kwargs['instance']
+            cve.change_reason = 'CWE Updated'
+            cve.save(refresh=True)

@@ -24,7 +24,7 @@ from datetime import datetime
 
 from defusedxml.lxml import RestrictedElement
 from django.utils.dateparse import parse_datetime
-from vmc.knowledge_base.documents import CweDocument, CveDocument, CpeDocument, ExploitDocument
+from vmc.knowledge_base.documents import CweDocument, CveDocument, CpeInnerDoc, ExploitInnerDoc
 
 from vmc.common.xml import iter_elements_by_name
 from vmc.knowledge_base import metrics
@@ -90,13 +90,22 @@ class CWEFactory:
         text = item.text.replace('\n', '')
         return ' '.join(text.split())
 
+    @staticmethod
+    def get(cwe_id: str) -> CweDocument:
+        old = CweDocument.search().filter('term', id=cwe_id).sort('-modified_date')[0].execute()
+        if old.hits:
+            return old.hits[0]
+        cwe = CweDocument(id=cwe_id)
+        cwe.save(refresh=True)
+        return cwe
+
 
 class CpeFactory:
     VENDOR = 1
 
     @staticmethod
-    def get(name: str) -> CpeDocument:
-        return CpeDocument(name=name, vendor=CpeFactory.get_field(name.replace('cpe:2.3:', ''), CpeFactory.VENDOR))
+    def get(name: str) -> CpeInnerDoc:
+        return CpeInnerDoc(name=name, vendor=CpeFactory.get_field(name.replace('cpe:2.3:', ''), CpeFactory.VENDOR))
 
     @staticmethod
     def get_field(soft: str, idx: int) -> [str, None]:
@@ -111,7 +120,7 @@ class CveFactory:
     def process(handle):
         data = json.load(handle)
         for obj in data['CVE_Items']:
-            CveFactory.create(obj)  # FIXME: bulk create
+            CveFactory.create(obj)
 
     @staticmethod
     def create(item: dict):
@@ -179,6 +188,13 @@ class CveFactory:
                 'url': ref['url']
             })
         return json.dumps(objs)
+
+    @staticmethod
+    def cwe(item: dict) -> CweDocument:
+        for problemtype_data in item['cve']['problemtype']['problemtype_data']:
+            for desc in problemtype_data['description']:
+                if desc['lang'] == 'en':
+                    return CWEFactory.get(desc['value'])
 
     @staticmethod
     def get_cpe(item: dict) -> list:
@@ -285,12 +301,14 @@ class ExploitFactory:
     @staticmethod
     def create(key: str, value: dict) -> None:
         try:
-            # FIXME: create new cve ?
             result = CveDocument.search().filter('term', id=key).sort('-last_modified_date')[0].execute()
             if result.hits:
-                result.hits[0].exploits = []
-                for exp_id in value['refmap']['exploit-db']:
-                    result.hits[0].exploits.append(ExploitDocument.create(exp_id=exp_id))
+                # FIXME: create new cve ?
+                result = CveDocument.search().filter('term', id=key).sort('-last_modified_date')[0].execute()
+                if result.hits:
+                    result.hits[0].exploits = []
+                    for exp_id in value['refmap']['exploit-db']:
+                        result.hits[0].exploits.append(ExploitInnerDoc.create(exp_id=exp_id))
                     result.hits[0].save(refresh=True)
         except KeyError:
             pass

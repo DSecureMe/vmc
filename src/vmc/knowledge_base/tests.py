@@ -67,6 +67,12 @@ class CWEFactoryTest(ESTestCase, TestCase):
                          "browsers that support the flag will not reveal the contents of the cookie to a third party "
                          "via client-side script executed via XSS.")
 
+    def test_should_not_update(self):
+        self.assertEqual(Search().index(CweDocument.Index.name).count(), 2)
+        with open(get_fixture_location(__file__, 'cwec_v2.12.xml')) as handle:
+            CWEFactory.process(handle)
+        self.assertEqual(Search().index(CweDocument.Index.name).count(), 2)
+
 
 @skipIf(not elastic_configured(), 'Skip if elasticsearch is not configured')
 class CveFactoryTest(ESTestCase, TestCase):
@@ -108,6 +114,7 @@ class CveFactoryTest(ESTestCase, TestCase):
         self.assertEquals(str(cve.published_date), '2017-03-17 00:59:00+00:00')
         self.assertEquals(str(cve.last_modified_date), '2017-07-12 01:29:00+00:00')
 
+        self.assertEqual(cve.cwe.id, 'CWE-200')
         self.assertEqual(len(cve.cpe), 3)
         self.assertEqual(cve.cpe, [
             {'name': 'cpe:2.3:a:microsoft:internet_explorer:9:*:*:*:*:*:*:*', 'vendor': 'microsoft'},
@@ -142,6 +149,23 @@ class CveFactoryTest(ESTestCase, TestCase):
             CveFactory.process(handle)
 
         self.assertEqual(CveDocument.search().filter('term', id='CVE-2017-0002').count(), 2)
+
+    def test_cwe_update(self):
+        cwe = CweDocument.search().filter('term', id='CWE-200').execute().hits[0]
+        cwe.name = 'Changed'
+        cwe.save(refresh=True)
+
+        cve = CveDocument.search().filter('term', id='CVE-2017-0008').sort('-modified_date').execute().hits
+        self.assertEqual(len(cve), 2)
+        self.assertEqual(cve[0].cwe.name, 'Changed')
+        self.assertEqual(cve[0].change_reason, 'CWE Updated')
+
+    def test_should_not_update(self):
+        self.assertEqual(Search().index(CveDocument.Index.name).count(), 2)
+        with open(get_fixture_location(__file__, 'nvdcve-1.0-2017.json')) as handle:
+            CveFactory.process(handle)
+
+        self.assertEqual(Search().index(CveDocument.Index.name).count(), 2)
 
     def test_calculate_base_score(self):
         for cve in CveDocument.search():

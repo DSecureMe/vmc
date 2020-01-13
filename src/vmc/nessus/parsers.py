@@ -26,8 +26,6 @@ from vmc.vulnerabilities.documents import VulnerabilityDocument
 from vmc.assets.documents import AssetDocument
 from vmc.common.xml import iter_elements_by_name
 from vmc.knowledge_base.documents import CveDocument
-from vmc.vulnerabilities.documents import CveDocument as VCveDocument
-from vmc.vulnerabilities.documents import AssetDocument as VAssetDocument
 
 
 LOGGER = logging.getLogger(__name__)
@@ -43,12 +41,14 @@ def get_value(item: RestrictedElement) -> str:
 class AssetFactory:
 
     @staticmethod
-    def create(item: RestrictedElement) -> VAssetDocument:
+    def create(item: RestrictedElement) -> AssetDocument:
         ip_address = item.find(".//tag[@name='host-ip']").text
         result = AssetDocument.search().filter('term', ip_address=ip_address).sort('-modified_date').execute()
         if result.hits:
-            return VAssetDocument(result.hits[0])
-        return VAssetDocument(AssetDocument(ip_address=ip_address).save(refresh=True))
+            return result.hits[0]
+        asset = AssetDocument(ip_address=ip_address)
+        asset.save()
+        return asset
 
 
 class ReportParser:
@@ -86,8 +86,10 @@ class ReportParser:
                         ).save(refresh=True)
 
     @staticmethod
-    def get_or_create_cve(cve_id: str) -> VCveDocument:
+    def get_or_create_cve(cve_id: str) -> CveDocument:
         result = CveDocument.search().filter('term', id=cve_id).sort('-modified_date').execute()
         if result.hits:
-            return VCveDocument(result.hits[0])
-        return VCveDocument(CveDocument(id=cve_id).save(refresh=True))
+            return result.hits[0]
+        cve = CveDocument(id=cve_id)
+        cve.save(refresh=True)
+        return cve

@@ -25,20 +25,7 @@ from vmc.common.elastic.registers import registry
 from vmc.common.elastic.documents import Document, TupleValueField, EnumField
 
 
-@registry.register_document
-class CweDocument(Document):
-    id = Keyword()
-    name = Keyword()
-    status = Keyword()
-    weakness_abstraction = Keyword()
-    description = Keyword()
-    extended_description = Keyword()
-
-    class Index:
-        name = 'cwe'
-
-
-class ExploitDocument(InnerDoc):
+class ExploitInnerDoc(InnerDoc):
     id = Keyword()
     url = Keyword()
 
@@ -48,16 +35,24 @@ class ExploitDocument(InnerDoc):
     @staticmethod
     def create(exp_id: int):
         url = 'https://www.exploit-db.com/exploits/{}'.format(exp_id)
-        return ExploitDocument(id=exp_id, url=url)
+        return ExploitInnerDoc(id=exp_id, url=url)
 
 
-class CpeDocument(InnerDoc):
+class CpeInnerDoc(InnerDoc):
     name = Keyword()
     vendor = Keyword()
 
 
-@registry.register_document
-class CveDocument(Document):
+class CweInnerDoc(InnerDoc):
+    id = Keyword()
+    name = Keyword()
+    status = Keyword()
+    weakness_abstraction = Keyword()
+    description = Keyword()
+    extended_description = Keyword()
+
+
+class CveInnerDoc(InnerDoc):
     id = Keyword()
     base_score_v2 = Float()
     base_score_v3 = Float()
@@ -79,12 +74,22 @@ class CveDocument(Document):
     published_date = Date()
     last_modified_date = Date()
 
-    exploits = Nested(ExploitDocument)
-    cpe = Nested(CpeDocument)
-
-    class Index:
-        name = 'cve'
+    exploits = Nested(ExploitInnerDoc)
+    cpe = Nested(CpeInnerDoc)
+    cwe = Object(CweInnerDoc)
 
     def get_privileges_required_v3_value(self) -> float:
         scope = metrics.ScopeV3(self.scope_v3)
         return float(metrics.PrivilegesRequiredV3(self.privileges_required_v3).value_with_scope(scope))
+
+
+@registry.register_document
+class CweDocument(CweInnerDoc, Document):
+    class Index:
+        name = 'cwe'
+
+
+@registry.register_document
+class CveDocument(CveInnerDoc, Document):
+    class Index:
+        name = 'cve'

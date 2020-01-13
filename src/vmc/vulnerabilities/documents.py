@@ -18,62 +18,15 @@
  *
 """
 
-from elasticsearch_dsl import Nested, Integer, Keyword, Object, Float, Date, InnerDoc
+from elasticsearch_dsl import Integer, Keyword, Object, Float
 
-from vmc.assets.documents import Impact
-from vmc.knowledge_base import metrics
-from vmc.common.elastic.documents import TupleValueField
+from vmc.assets.documents import AssetInnerDoc
 
-from vmc.common.elastic.documents import Document, EnumField
+from vmc.common.elastic.documents import Document
 from vmc.common.elastic.registers import registry
-from vmc.knowledge_base.documents import ExploitDocument, CpeDocument
+from vmc.knowledge_base.documents import CveInnerDoc
 
 from vmc.vulnerabilities.utils import environmental_score_v2, environmental_score_v3
-
-
-class CveDocument(InnerDoc):
-    id = Keyword()
-    base_score_v2 = Float()
-    base_score_v3 = Float()
-    summary = Keyword()
-    access_vector_v2 = TupleValueField(choice_type=metrics.AccessVectorV2)
-    access_complexity_v2 = TupleValueField(choice_type=metrics.AccessComplexityV2)
-    authentication_v2 = TupleValueField(choice_type=metrics.AuthenticationV2)
-    confidentiality_impact_v2 = TupleValueField(choice_type=metrics.ImpactV2)
-    integrity_impact_v2 = TupleValueField(choice_type=metrics.ImpactV2)
-    availability_impact_v2 = TupleValueField(choice_type=metrics.ImpactV2)
-    attack_vector_v3 = TupleValueField(choice_type=metrics.AttackVectorV3)
-    attack_complexity_v3 = TupleValueField(choice_type=metrics.AttackComplexityV3)
-    privileges_required_v3 = EnumField(choice_type=metrics.PrivilegesRequiredV3)
-    user_interaction_v3 = TupleValueField(choice_type=metrics.UserInteractionV3)
-    scope_v3 = EnumField(choice_type=metrics.ScopeV3)
-    confidentiality_impact_v3 = TupleValueField(choice_type=metrics.ImpactV3)
-    integrity_impact_v3 = TupleValueField(choice_type=metrics.ImpactV3)
-    availability_impact_v3 = TupleValueField(choice_type=metrics.ImpactV3)
-    published_date = Date()
-    last_modified_date = Date()
-
-    exploits = Nested(ExploitDocument)
-    cpe = Nested(CpeDocument)
-
-    def get_privileges_required_v3_value(self) -> float:
-        scope = metrics.ScopeV3(self.scope_v3)
-        return float(metrics.PrivilegesRequiredV3(self.privileges_required_v3).value_with_scope(scope))
-
-
-class AssetDocument(InnerDoc):
-    ip_address = Keyword()
-    os = Keyword()
-    cmdb_id = Keyword()
-    confidentiality_requirement = TupleValueField(choice_type=Impact)
-    integrity_requirement = TupleValueField(choice_type=Impact)
-    availability_requirement = TupleValueField(choice_type=Impact)
-    business_owner = Keyword()
-    technical_owner = Keyword()
-    hostname = Keyword()
-    created_date = Date()
-    modified_date = Date()
-    change_reason = Keyword()
 
 
 @registry.register_document
@@ -85,8 +38,8 @@ class VulnerabilityDocument(Document):
     solution = Keyword()
     environmental_score_v2 = Float()
     environmental_score_v3 = Float()
-    cve = Object(CveDocument)
-    asset = Object(AssetDocument)
+    cve = Object(CveInnerDoc)
+    asset = Object(AssetInnerDoc)
 
     class Index:
         name = 'vulnerability'

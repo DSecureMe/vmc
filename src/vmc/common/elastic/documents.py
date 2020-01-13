@@ -81,7 +81,7 @@ class Document(ESDocument):
             self.created_date = now()
         self.modified_date = now()
         obj = super().save(** kwargs)
-        post_save.send(sender=self, kwargs=[self, created])
+        post_save.send(sender=type(self), instance=self, created=created)
         return obj
 
     def has_changed(self, other):
@@ -89,6 +89,19 @@ class Document(ESDocument):
             if name not in Document.BASE_DOCUMENT_FIELDS and getattr(self, name) != getattr(other, name):
                 return True
         return False
+
+    def __hash__(self):
+        return id(self)
+
+    def clone(self, without_fields: list = None):
+        if not without_fields:
+            without_fields = []
+
+        new_obj = self.__class__()
+        for name in self.get_fields_name():
+            if name not in without_fields and getattr(self, name, None):
+                setattr(new_obj, name, getattr(self, name))
+        return new_obj
 
     @classmethod
     def get_fields_name(cls):
