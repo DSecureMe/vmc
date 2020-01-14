@@ -17,6 +17,8 @@
  * under the License.
  */
 """
+from elasticsearch_dsl import Q
+
 from vmc.assets.documents import AssetDocument, Impact
 
 
@@ -39,8 +41,8 @@ class AssetFactory:
                 setattr(asset, field, 'UNKNOWN')
 
         old_asset = AssetDocument.search().filter(
-            'term', ip_address=AssetFactory.ip_address(item, iface)).filter(
-                'term', cmdb_id=AssetFactory.cmdb_id(item, iface)).sort('-modified_date')[0].execute()
+            Q('term', ip_address=AssetFactory.ip_address(item, iface)) &
+            Q('term', cmdb_id=AssetFactory.cmdb_id(item, iface))).sort('-modified_date')[0].execute()
         if not old_asset.hits:
             asset.save(refresh=True)
         elif asset.has_changed(old_asset.hits[0]):
@@ -79,22 +81,22 @@ class AssetFactory:
         return item['hostname']
 
     @staticmethod
-    def confidentiality_requirement(item: dict, _) -> str:
+    def confidentiality_requirement(item: dict, _) -> Impact:
         try:
-            return Impact(item['custom_fields']['confidentiality']).name
+            return Impact(item['custom_fields']['confidentiality'])
         except KeyError:
-            return Impact.NOT_DEFINED.name
+            return Impact.NOT_DEFINED
 
     @staticmethod
-    def integrity_requirement(item: dict, _) -> str:
+    def integrity_requirement(item: dict, _) -> Impact:
         try:
-            return Impact(item['custom_fields']['integrity']).name
+            return Impact(item['custom_fields']['integrity'])
         except KeyError:
-            return Impact.NOT_DEFINED.name
+            return Impact.NOT_DEFINED
 
     @staticmethod
-    def availability_requirement(item: dict, _) -> str:
+    def availability_requirement(item: dict, _) -> Impact:
         try:
-            return Impact(item['custom_fields']['availability']).name
+            return Impact(item['custom_fields']['availability'])
         except KeyError:
-            return Impact.NOT_DEFINED.name
+            return Impact.NOT_DEFINED

@@ -114,14 +114,17 @@ class LoadAllAssetsTest(ESTestCase, TestCase):
         with open(get_fixture_location(__file__, 'host_response.json')) as f:
             self.hosts = json.loads(f.read())
 
-    @patch('vmc.ralph.tasks.Ralph')
-    def test_call(self, mock_api):
-
+    def update_assets(self, mock_api):
         mock_api().get_all_assets.return_value = [self.hosts]
         load_all_assets()
         self.assertEqual(AssetDocument.search().filter('term', ip_address='10.0.0.23').count(), 1)
         self.assertEqual(AssetDocument.search().filter('term', ip_address='10.0.0.25').count(), 1)
         self.assertEqual(2, Search().index(AssetDocument.Index.name).count())
+
+    @patch('vmc.ralph.tasks.Ralph')
+    def test_call(self, mock_api):
+        self.update_assets(mock_api)
+        self.update_assets(mock_api)
 
 
 class AdminPanelTest(LiveServerTestCase):
