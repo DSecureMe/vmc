@@ -74,8 +74,8 @@ class CveInnerDoc(InnerDoc):
     published_date = Date()
     last_modified_date = Date()
 
-    exploits = Nested(ExploitInnerDoc)
-    cpe = Nested(CpeInnerDoc)
+    exploits = Nested(ExploitInnerDoc, include_in_parent=True)
+    cpe = Nested(CpeInnerDoc, include_in_parent=True)
     cwe = Object(CweInnerDoc)
 
     def get_privileges_required_v3_value(self) -> float:
