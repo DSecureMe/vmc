@@ -235,6 +235,9 @@ class UpdateExploitsTaskTest(ESTestCase, TestCase):
 
     def setUp(self):
         super().setUp()
+        self.load_data()
+
+    def load_data(self):
         with open(get_fixture_location(__file__, 'nvdcve-1.0-2017.json')) as handle:
             CveFactory.process(handle)
         with open(get_fixture_location(__file__, 'via4.json')) as handle:
@@ -242,11 +245,22 @@ class UpdateExploitsTaskTest(ESTestCase, TestCase):
 
     @patch('vmc.knowledge_base.tasks.get_file')
     def test_call_update_exploits(self, get_file):
+        self.assertEqual(Search().index(CveDocument.Index.name).count(), 2)
         get_file.return_value = self.data
         update_exploits()
         get_file.assert_called_once_with('https://www.cve-search.org/feeds/via4.json')
 
+        self.assertEqual(Search().index(CveDocument.Index.name).count(), 2)
+
         cve = CveDocument.search().filter('term', id='CVE-2017-0008').sort('-modified_date').execute().hits[0]
+        prev_modified_date = cve.modified_date
+        self.assertEqual(len(cve.exploits), 1)
+        self.assertEqual(cve.exploits, [{'id': '44904', 'url': 'https://www.exploit-db.com/exploits/44904'}])
+
+        update_exploits()
+        self.assertEqual(Search().index(CveDocument.Index.name).count(), 2)
+        cve = CveDocument.search().filter('term', id='CVE-2017-0008').sort('-modified_date').execute().hits[0]
+        self.assertEqual(cve.modified_date, prev_modified_date)
         self.assertEqual(len(cve.exploits), 1)
         self.assertEqual(cve.exploits, [{'id': '44904', 'url': 'https://www.exploit-db.com/exploits/44904'}])
 

@@ -301,14 +301,16 @@ class ExploitFactory:
     @staticmethod
     def create(key: str, value: dict) -> None:
         try:
-            result = CveDocument.search().filter('term', id=key).sort('-last_modified_date')[0].execute()
-            if result.hits:
-                # FIXME: create new cve ?
-                result = CveDocument.search().filter('term', id=key).sort('-last_modified_date')[0].execute()
-                if result.hits:
-                    result.hits[0].exploits = []
-                    for exp_id in value['refmap']['exploit-db']:
-                        result.hits[0].exploits.append(ExploitInnerDoc.create(exp_id=exp_id))
-                    result.hits[0].save(refresh=True)
+            exploits = []
+            for exp_id in value['refmap']['exploit-db']:
+                exploits.append(ExploitInnerDoc.create(exp_id=exp_id))
+
         except KeyError:
             pass
+
+        else:
+            result = CveDocument.search().filter('term', id=key).sort('-last_modified_date')[0].execute()
+            if result.hits and result.hits[0].exploits != exploits:
+                result.hits[0].exploits = exploits
+                result.hits[0].save(refresh=True)
+

@@ -69,7 +69,7 @@ class EnumField(CustomField):
 
 
 class Document(ESDocument):
-    BASE_DOCUMENT_FIELDS = ['created_date', 'modified_date', 'change_reason', 'BASE_DOCUMENT_FIELDS']
+    BASE_DOCUMENT_FIELDS = ['_id', 'created_date', 'modified_date', 'change_reason', 'BASE_DOCUMENT_FIELDS']
     created_date = Date()
     modified_date = Date()
     change_reason = Keyword()
