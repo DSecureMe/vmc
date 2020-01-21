@@ -64,6 +64,7 @@ def update_cve(year: int):
             LOGGER.info('File downloaded for %d year, parsing...', year)
             CveFactory.process(file)
             file.close()
+            LOGGER.info('Parsing for %d, done.', year)
         else:
             LOGGER.info('Unable to download file for %d year', year)
     except Exception as ex:
