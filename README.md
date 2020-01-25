@@ -25,7 +25,7 @@ You can install VMC either on your machine or use elegant [docker solution](http
 
 # Details
 ## Documentation
-We’ve made separate repository with guides and documentation available [here](https://github.com/DSecureMe/vmcDocs).
+We’ve made separate repository with guides and documentation available [here](https://github.com/DSecureMe/vmc-docs).
 ## Architecture
 In simple words VMC requires data about detections from your scanner, information about assets and updates about CVE. Thanks to that VMC can live update your focus to the most emerging threats for your assets.
 ## License
