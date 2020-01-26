@@ -15,16 +15,13 @@
  * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
- *
+ */
 """
-
-from django.contrib import admin
-
-from vmc.vulnerabilities.models import Vulnerability
+from django.test import TestCase
+from vmc.apps import VMCConfig
 
 
-class VulnerabilityAdmin(admin.ModelAdmin):
-    list_display = ('get_asset', 'get_entry_cve', 'get_entry_base_score_v2', 'get_port')
+class VMCConfigTest(TestCase):
 
-
-admin.site.register(Vulnerability, VulnerabilityAdmin)
+    def test_name(self):
+        self.assertEqual(VMCConfig.name, 'vmc')

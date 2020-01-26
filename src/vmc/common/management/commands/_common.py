@@ -22,6 +22,7 @@ import time
 import socket
 import yaml
 from pathlib import Path
+from urllib.parse import urlparse
 
 CFG = None
 
@@ -85,3 +86,9 @@ def wait_for_rabbit_ready():
         get_config('rabbitmq.port', 5672),
         get_config('rabbitmq.host', 'localhost')
     )
+
+
+def wait_for_es_ready():
+    es_config = get_config('elasticsearch.hosts', ["http://elasticsearch:9200"])
+    es_config = urlparse(es_config[0])
+    return wait_for_port(es_config.port, es_config.hostname)

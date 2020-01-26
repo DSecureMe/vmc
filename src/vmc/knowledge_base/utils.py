@@ -20,39 +20,40 @@
 
 import decimal
 
+from vmc.knowledge_base.documents import CveDocument
+
 from vmc.knowledge_base.metrics import ScopeV3
-from vmc.knowledge_base.models import Cve
 
 
-def impact_v2(cve: Cve) -> float:
-    return 10.41 * (1 - (1 - cve.get_confidentiality_impact_v2_value()) *
-                    (1 - cve.get_integrity_impact_v2_value()) *
-                    (1 - cve.get_availability_impact_v2_value()))
+def impact_v2(cve: CveDocument) -> float:
+    return 10.41 * (1 - (1 - cve.confidentiality_impact_v2.second_value) *
+                    (1 - cve.integrity_impact_v2.second_value) *
+                    (1 - cve.availability_impact_v2.second_value))
 
 
-def exploitability_v2(cve: Cve) -> float:
-    return 20 * cve.get_access_vector_v2_value() * \
-           cve.get_access_complexity_v2_value() * \
-           cve.get_authentication_v2_value()
+def exploitability_v2(cve: CveDocument) -> float:
+    return 20 * cve.access_vector_v2.second_value * \
+           cve.access_complexity_v2.second_value * \
+           cve.authentication_v2.second_value
 
 
 def f_impact_v2(imp: float) -> float:
     return 0 if imp == 0 else 1.176
 
 
-def calculate_base_score_v2(cve: Cve) -> float:
+def calculate_base_score_v2(cve: CveDocument) -> float:
     return round(((0.6 * impact_v2(cve)) + (0.4 * exploitability_v2(cve)) - 1.5) * f_impact_v2(impact_v2(cve)), 1)
 
 
-def impact_sub_score_base_v3(cve: Cve) -> float:
+def impact_sub_score_base_v3(cve: CveDocument) -> float:
     return 1 - (
-            (1 - cve.get_confidentiality_impact_v3_value()) *
-            (1 - cve.get_integrity_impact_v3_value()) *
-            (1 - cve.get_availability_impact_v3_value())
+            (1 - cve.confidentiality_impact_v3.second_value) *
+            (1 - cve.integrity_impact_v3.second_value) *
+            (1 - cve.availability_impact_v3.second_value)
     )
 
 
-def impact_sub_score_v3(cve: Cve) -> float:
+def impact_sub_score_v3(cve: CveDocument) -> float:
     isc_base = impact_sub_score_base_v3(cve)
     if ScopeV3(cve.scope_v3) == ScopeV3.UNCHANGED:
         return 6.42 * isc_base
@@ -60,15 +61,15 @@ def impact_sub_score_v3(cve: Cve) -> float:
     return 7.52 * (isc_base - 0.029) - 3.25 * pow(isc_base - 0.02, 15)
 
 
-def exploitability_v3(cve: Cve) -> float:
+def exploitability_v3(cve: CveDocument) -> float:
     return 8.22 * \
-           cve.get_attack_vector_v3_value() * \
-           cve.get_attack_complexity_v3_value() * \
+           cve.attack_vector_v3.second_value * \
+           cve.attack_complexity_v3.second_value * \
            cve.get_privileges_required_v3_value() * \
-           cve.get_user_interaction_v3_value()
+           cve.user_interaction_v3.second_value
 
 
-def calculate_base_score_v3(cve: Cve) -> float:
+def calculate_base_score_v3(cve: CveDocument) -> float:
     isc = impact_sub_score_v3(cve)
     exploitability = exploitability_v3(cve)
 

@@ -18,17 +18,70 @@
  *
 """
 import os
+from decimal import Decimal
 
 from unittest import TestCase
 from unittest.mock import patch, Mock
 
 from parameterized import parameterized
+from vmc.common.enum import TupleValueEnum
+
+from vmc.common.apps import CommonConfig
+
 from vmc.common.utils import is_downloadable, get_file
 
 
 def get_fixture_location(module, name):
     os.chdir(os.path.dirname(module))
     return os.path.join(os.getcwd(), 'fixtures', name)
+
+
+class CommonConfigTest(TestCase):
+
+    def test_name(self):
+        self.assertEqual(CommonConfig.name, 'vmc.common')
+
+
+class TupleValueEnumTest(TestCase):
+    class TestEnum(TupleValueEnum):
+        LOW = ('L', Decimal('0.5'))
+        MEDIUM = ('M', Decimal('1.0'))
+        HIGH = ('H', Decimal('1.0'))
+
+    def test_call_choices(self):
+        self.assertEqual(self.TestEnum.choices(),
+                         [('L', 'LOW'), ('M', 'MEDIUM'), ('H', 'HIGH')])
+
+    @parameterized.expand([
+        (TestEnum.LOW, Decimal('0.5')),
+        (TestEnum.MEDIUM, Decimal('1.0')),
+        (TestEnum.HIGH, Decimal('1.0'))
+    ])
+    def test_call_float(self, first, second):
+        self.assertEqual(first.second_value, second)
+
+    @parameterized.expand([
+        (TestEnum.LOW, 'L'),
+        (TestEnum.MEDIUM, 'M'),
+        (TestEnum.HIGH, 'H')
+    ])
+    def test_call_float(self, first, second):
+        self.assertEqual(first.value, second)
+
+    @parameterized.expand([
+        ('L', TestEnum.LOW),
+        ('M', TestEnum.MEDIUM),
+        ('H', TestEnum.HIGH),
+        ('LOW', TestEnum.LOW),
+        ('MEDIUM', TestEnum.MEDIUM),
+        ('HIGH', TestEnum.HIGH),
+    ])
+    def test_call(self, first, second):
+        self.assertEqual(self.TestEnum(first), second)
+
+    def test_attribute_missing(self):
+        with self.assertRaises(AttributeError):
+            self.TestEnum('A')
 
 
 class UtilsTest(TestCase):

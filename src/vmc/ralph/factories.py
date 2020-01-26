@@ -17,34 +17,40 @@
  * under the License.
  */
 """
-from vmc.assets.models import Asset
+from elasticsearch_dsl import Q
+
+from vmc.assets.documents import AssetDocument, Impact
 
 
 class AssetFactory:
-    FIELD_LIST = [field.name for field in Asset._meta.get_fields() if field]
 
     @staticmethod
     def process(item: dict) -> None:
         for iface in item['ethernet']:
-            AssetFactory.create(item, iface)
+            AssetFactory.create(item, iface) # Fixme: bulk create
 
     @staticmethod
-    def create(item: dict, iface: dict) -> Asset:
-        asset, _ = Asset.objects.get_or_create(
-            cmdb_id=AssetFactory.cmdb_id(item, iface),
-            ip_address=AssetFactory.ip_address(item, iface)
-        )
-
-        for field in sorted(AssetFactory.FIELD_LIST):
+    def create(item: dict, iface: dict) -> [AssetDocument, None]:
+        asset = AssetDocument()
+        for field in AssetDocument.get_fields_name():
             parser = getattr(AssetFactory, field, None)
             try:
                 if parser:
                     setattr(asset, field, parser(item, iface))
-            except KeyError:
+            except (KeyError, IndexError):
                 setattr(asset, field, 'UNKNOWN')
-        if asset.has_changed:
-            asset.save()
-        return asset
+
+        old_asset = AssetDocument.search().filter(
+            Q('term', ip_address=AssetFactory.ip_address(item, iface)) &
+            Q('term', cmdb_id=AssetFactory.cmdb_id(item, iface))).sort('-modified_date')[0].execute()
+        if not old_asset.hits:
+            asset.save(refresh=True)
+        elif asset.has_changed(old_asset.hits[0]):
+            asset.created_date = old_asset.hits[0].created_date
+            asset.change_reason = 'Asset Update'
+            asset.save(refresh=True)
+
+        return None
 
     @staticmethod
     def cmdb_id(item: dict, _) -> int:
@@ -75,13 +81,22 @@ class AssetFactory:
         return item['hostname']
 
     @staticmethod
-    def confidentiality_requirement(item: dict, _) -> str:
-        return item['custom_fields']['confidentiality']
+    def confidentiality_requirement(item: dict, _) -> Impact:
+        try:
+            return Impact(item['custom_fields']['confidentiality'])
+        except KeyError:
+            return Impact.NOT_DEFINED
 
     @staticmethod
-    def integrity_requirement(item: dict, _) -> str:
-        return item['custom_fields']['integrity']
+    def integrity_requirement(item: dict, _) -> Impact:
+        try:
+            return Impact(item['custom_fields']['integrity'])
+        except KeyError:
+            return Impact.NOT_DEFINED
 
     @staticmethod
-    def availability_requirement(item: dict, _) -> str:
-        return item['custom_fields']['availability']
+    def availability_requirement(item: dict, _) -> Impact:
+        try:
+            return Impact(item['custom_fields']['availability'])
+        except KeyError:
+            return Impact.NOT_DEFINED

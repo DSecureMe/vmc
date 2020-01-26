@@ -20,12 +20,10 @@
 
 from django.apps import AppConfig
 
-# NOQA
-
 
 class KnowledgeBaseConfig(AppConfig):
     name = 'vmc.knowledge_base'
     verbose_name = 'Knowledge Base'
 
     def ready(self):
-        from vmc.knowledge_base import signals  # noqa pylint: disable=unused-variable
+        import vmc.knowledge_base.signals

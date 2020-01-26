@@ -18,97 +18,39 @@
  *
 """
 
-from django_elasticsearch_dsl import Document, fields
-from django_elasticsearch_dsl.registries import registry
+from elasticsearch_dsl import Integer, Keyword, Object, Float
 
-from vmc.assets.models import Asset, Port
-from vmc.knowledge_base.models import Cve
-from vmc.vulnerabilities.models import Vulnerability
+from vmc.assets.documents import AssetInnerDoc
+
+from vmc.common.elastic.documents import Document
+from vmc.common.elastic.registers import registry
+from vmc.knowledge_base.documents import CveInnerDoc
+
 from vmc.vulnerabilities.utils import environmental_score_v2, environmental_score_v3
 
 
 @registry.register_document
 class VulnerabilityDocument(Document):
-    cve = fields.ObjectField(
-        properties={
-            'id': fields.KeywordField(),
-            'base_score_v2': fields.FloatField(),
-            'base_score_v3': fields.FloatField(),
-            'summary': fields.KeywordField(),
-            'published_date': fields.KeywordField(),
-            'last_modified_date': fields.KeywordField(),
-            'access_vector_v2': fields.KeywordField(),
-            'access_complexity_v2': fields.KeywordField(),
-            'authentication_v2': fields.KeywordField(),
-            'confidentiality_impact_v2': fields.KeywordField(),
-            'integrity_impact_v2': fields.KeywordField(),
-            'availability_impact_v2': fields.KeywordField(),
-            'attack_vector_v3': fields.KeywordField(),
-            'attack_complexity_v3': fields.KeywordField(),
-            'privileges_required_v3': fields.KeywordField(),
-            'user_interaction_v3': fields.KeywordField(),
-            'scope_v3': fields.KeywordField(),
-            'confidentiality_impact_v3': fields.KeywordField(),
-            'integrity_impact_v3': fields.KeywordField(),
-            'availability_impact_v3': fields.KeywordField()
-        }
-    )
-
-    asset = fields.ObjectField(
-        properties={
-            'ip_address': fields.KeywordField(),
-            'mac_address': fields.KeywordField(),
-            'os': fields.KeywordField(),
-            'confidentiality_requirement': fields.KeywordField(),
-            'integrity_requirement': fields.KeywordField(),
-            'availability_requirement': fields.KeywordField()
-        }
-    )
-
-    port = fields.ObjectField(
-        properties={
-            'number': fields.KeywordField(),
-            'svc_name': fields.KeywordField(),
-            'protocol': fields.KeywordField()
-        }
-    )
-
-    environmental_score_v2 = fields.FloatField()
-    environmental_score_v3 = fields.FloatField()
-    created_date = fields.DateField()
-    modified_date = fields.DateField()
+    port = Integer()
+    svc_name = Keyword()
+    protocol = Keyword()
+    description = Keyword()
+    solution = Keyword()
+    environmental_score_v2 = Float()
+    environmental_score_v3 = Float()
+    cve = Object(CveInnerDoc)
+    asset = Object(AssetInnerDoc)
 
     class Index:
         name = 'vulnerability'
 
-    class Django:
-        model = Vulnerability
-        fields = [
-            'description',
-            'solution',
-            'exploit_available'
-        ]
-        related_models = [
-            Asset,
-            Port,
-            Cve
-        ]
+    def prepare_environmental_score_v2(self):
+        return environmental_score_v2(self.cve, self.asset) if self.cve.base_score_v2 else 0.0
 
-    def get_queryset(self):
-        return super(VulnerabilityDocument, self).get_queryset().select_related(
-            'asset', 'cve', 'port'
-        )
+    def prepare_environmental_score_v3(self):
+        return environmental_score_v3(self.cve, self.asset) if self.cve.base_score_v3 else 0.0
 
-    @staticmethod
-    def get_instances_from_related(related_instance):
-        if isinstance(related_instance, (Asset, Cve, Port)):
-            return related_instance.vulnerability_set.all()
-        return related_instance.vulenrability
-
-    @staticmethod
-    def prepare_environmental_score_v2(o):
-        return environmental_score_v2(o.cve, o.asset)
-
-    @staticmethod
-    def prepare_environmental_score_v3(o):
-        return environmental_score_v3(o.cve, o.asset) if o.cve.base_score_v3 else 0.0
+    def save(self, *args, **kwargs):
+        self.environmental_score_v2 = self.prepare_environmental_score_v2()
+        self.environmental_score_v3 = self.prepare_environmental_score_v3()
+        return super().save(*args, **kwargs)

@@ -17,40 +17,80 @@
  * under the License.
  *
 """
+from unittest import skipIf
 
 from django.test import TestCase
+from parameterized import parameterized
 
-from vmc.assets.models import Port, Asset, Impact
+from vmc.common.elastic.tests import ESTestCase
+from vmc.assets.apps import AssetsConfig
 
+from vmc.assets.documents import AssetDocument, Impact
 
-class PortTest(TestCase):
-    fixtures = ['assets.json']
-
-    @classmethod
-    def setUpTestData(cls):
-        cls.uut = Port.objects.get(pk=1)
-
-    def test_str_call(self):
-        self.assertEqual(self.uut.__str__(), "22")
+from vmc.config.test_settings import elastic_configured
 
 
-class AssetTest(TestCase):
-    fixtures = ['assets.json']
+class AssetsConfigTest(TestCase):
 
-    @classmethod
-    def setUpTestData(cls):
-        cls.uut = Asset.objects.get(pk=1)
+    def test_name(self):
+        self.assertEqual(AssetsConfig.name, 'vmc.assets')
 
-    def test_call(self):
-        self.assertEqual(self.uut.__str__(), "10.10.10.1")
-        self.assertEqual(self.uut.confidentiality_requirement, Impact.NOT_DEFINED.value)
-        self.assertEqual(self.uut.get_confidentiality_requirement_display(), Impact.NOT_DEFINED.name)
-        self.assertEqual(self.uut.get_confidentiality_requirement_value(), Impact.NOT_DEFINED.float)
 
-        self.assertEqual(self.uut.integrity_requirement, Impact.NOT_DEFINED.value)
-        self.assertEqual(self.uut.get_integrity_requirement_display(), Impact.NOT_DEFINED.name)
-        self.assertEqual(self.uut.get_integrity_requirement_value(), Impact.NOT_DEFINED.float)
+class ImpactTest(TestCase):
 
-        self.assertEqual(self.uut.availability_requirement, Impact.NOT_DEFINED.value)
-        self.assertEqual(self.uut.get_availability_requirement_display(), Impact.NOT_DEFINED.name)
-        self.assertEqual(self.uut.get_availability_requirement_value(), Impact.NOT_DEFINED.float)
+    @parameterized.expand([
+        (Impact.LOW, 0.5),
+        (Impact.MEDIUM, 1.0),
+        (Impact.HIGH, 1.51),
+        (Impact.NOT_DEFINED, 1.0)
+    ])
+    def test_values(self, first, second):
+        self.assertEqual(first.second_value, second)
+
+    @parameterized.expand([
+        (Impact.LOW, 'LOW'),
+        (Impact.MEDIUM, 'MEDIUM'),
+        (Impact.HIGH, 'HIGH'),
+        (Impact.NOT_DEFINED, 'NOT_DEFINED')
+    ])
+    def test_values_str(self, first, second):
+        self.assertEqual(first.name, second)
+
+
+@skipIf(not elastic_configured(), 'Skip if elasticsearch is not configured')
+class AssetDocumentTest(ESTestCase, TestCase):
+
+    def test_document_index_name(self):
+        self.assertEqual(AssetDocument.Index.name, 'asset')
+
+    def test_document(self):
+        AssetDocument(
+            ip_address='10.10.10.1',
+            os='Windows',
+            cmdb_id='1',
+            confidentiality_requirement='NOT_DEFINED',
+            integrity_requirement='NOT_DEFINED',
+            availability_requirement='NOT_DEFINED',
+            business_owner='test-business_owner',
+            technical_owner='test-technical_owner',
+            hostname='test-hostname',
+            change_reason='create'
+        ).save(refresh=True)
+
+        result = AssetDocument.search().filter('term', ip_address='10.10.10.1').execute()
+        self.assertEqual(len(result.hits), 1)
+
+        uut = result.hits[0]
+        self.assertEqual(uut.os, 'Windows')
+        self.assertEqual(uut.confidentiality_requirement.name, Impact.NOT_DEFINED.name)
+        self.assertEqual(uut.integrity_requirement.name, Impact.NOT_DEFINED.name)
+        self.assertEqual(uut.availability_requirement.name, Impact.NOT_DEFINED.name)
+        self.assertEqual(uut.confidentiality_requirement.second_value, Impact.NOT_DEFINED.second_value)
+        self.assertEqual(uut.integrity_requirement.second_value, Impact.NOT_DEFINED.second_value)
+        self.assertEqual(uut.availability_requirement.second_value, Impact.NOT_DEFINED.second_value)
+        self.assertEqual(uut.business_owner, 'test-business_owner')
+        self.assertEqual(uut.technical_owner, 'test-technical_owner')
+        self.assertEqual(uut.hostname, 'test-hostname')
+        self.assertEqual(uut.change_reason, 'create')
+        self.assertTrue(uut.created_date)
+        self.assertTrue(uut.modified_date)

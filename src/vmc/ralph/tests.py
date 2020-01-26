@@ -19,14 +19,21 @@
 """
 
 import json
+from unittest import skipIf
 from unittest.mock import patch, Mock
 
-from django.test import TestCase
+from django.contrib.auth.models import User
+from django.test import TestCase, LiveServerTestCase
+from elasticsearch_dsl import Search
 
-from vmc.assets.models import Asset
+from vmc.config.test_settings import elastic_configured
+from vmc.assets.documents import AssetDocument
+
+from vmc.ralph.apps import RalphConfig
 from vmc.ralph.api import Ralph
 from vmc.ralph.models import Config
 from vmc.common.tests import get_fixture_location
+from vmc.common.elastic.tests import ESTestCase
 
 from vmc.ralph.tasks import load_all_assets
 
@@ -39,6 +46,12 @@ class ResponseMock:
 
     def json(self):
         return self.text
+
+
+class RalphConfigTest(TestCase):
+
+    def test_name(self):
+        self.assertEqual(RalphConfig.name, 'vmc.ralph')
 
 
 class RalphTest(TestCase):
@@ -93,15 +106,42 @@ class RalphTest(TestCase):
         self.assertEqual(len(result), 1)
 
 
-class LoadAllAssetsTest(TestCase):
+@skipIf(not elastic_configured(), 'Skip if elasticsearch is not configured')
+class LoadAllAssetsTest(ESTestCase, TestCase):
 
     def setUp(self) -> None:
+        super().setUp()
         with open(get_fixture_location(__file__, 'host_response.json')) as f:
             self.hosts = json.loads(f.read())
 
-    @patch('vmc.ralph.tasks.Ralph')
-    def test_call(self, mock_api):
-
+    def update_assets(self, mock_api):
         mock_api().get_all_assets.return_value = [self.hosts]
         load_all_assets()
-        self.assertEqual(2, Asset.objects.count())
+        self.assertEqual(AssetDocument.search().filter('term', ip_address='10.0.0.23').count(), 1)
+        self.assertEqual(AssetDocument.search().filter('term', ip_address='10.0.0.25').count(), 1)
+        self.assertEqual(2, Search().index(AssetDocument.Index.name).count())
+
+    @patch('vmc.ralph.tasks.Ralph')
+    def test_call(self, mock_api):
+        self.update_assets(mock_api)
+        self.update_assets(mock_api)
+
+
+class AdminPanelTest(LiveServerTestCase):
+    fixtures = ['users.json', 'config.json']
+
+    def setUp(self):
+        super().setUp()
+        self.client.force_login(User.objects.get(username='admin'))
+
+    def test_button_exists(self):
+        self.assertContains(self.client.get('/admin/ralph/config/'), 'ralph-import')
+
+    @patch('vmc.ralph.admin.load_all_assets')
+    def test_call_update_cve(self, load_all_assets):
+        response = self.client.get('/admin/ralph/config/import', follow=True)
+        load_all_assets.delay.assert_called_once()
+        self.assertContains(response, 'Importing started.')
+
+    def tearDown(self):
+        self.client.logout()

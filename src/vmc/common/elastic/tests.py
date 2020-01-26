@@ -15,14 +15,23 @@
  * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
- *
+ */
 """
+from elasticsearch_dsl.connections import connections
 
-from django.apps import AppConfig
+from vmc.common.elastic.registers import registry
 
 
-class VulnerabilitiesConfig(AppConfig):
-    name = 'vmc.vulnerabilities'
+class ESTestCase(object):
 
-    def ready(self):
-        import vmc.vulnerabilities.signals
+    def setUp(self):
+        for doc in registry.get_documents():
+            doc.init()
+
+        super(ESTestCase, self).setUp()
+
+    def tearDown(self):
+        client = connections.get_connection()
+        for doc in registry.get_documents():
+            client.indices.delete(doc.Index.name, ignore=404)
+        super(ESTestCase, self).tearDown()

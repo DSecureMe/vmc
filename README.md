@@ -9,23 +9,23 @@
 Thanks to VMC you can focus on the most important assets from environment perspective given information about vulnerabilities and assets.
 
 VMC can present important information in brief and compact way
-![screen3](https://raw.githubusercontent.com/DSecureMe/vmc/master/images/56517124_1081640865372415_2823128148789428224_n.png)
+![screen3](https://raw.githubusercontent.com/DSecureMe/vmc/master/images/kpi_1.png)
 
-![screen4](https://raw.githubusercontent.com/DSecureMe/vmc/master/images/58590369_362012701104738_5283209682779897856_n.png)
+![screen4](https://raw.githubusercontent.com/DSecureMe/vmc/master/images/kpi_2.png)
 
 ![screen5](https://raw.githubusercontent.com/DSecureMe/vmc/master/images/67130855_394264208112259_8200620034528116736_n.png)
 
 VMC also shows live updates regarding you environemnt. It guides your focus to specific threats and assets.
 
-![screen1](https://raw.githubusercontent.com/DSecureMe/vmc/master/images/54525102_322316375302297_4724612730252689408_n.png)
+![screen1](https://raw.githubusercontent.com/DSecureMe/vmc/master/images/hive.png)
 
-![screen2](https://raw.githubusercontent.com/DSecureMe/vmc/master/images/54525980_511427642719427_3614827467690213376_n.png)
+![screen2](https://raw.githubusercontent.com/DSecureMe/vmc/master/images/alerts.png)
 
 You can install VMC either on your machine or use elegant [docker solution](https://github.com/DSecureMe/vmc-docker).
 
 # Details
 ## Documentation
-We’ve made separate repository with guides and documentation available [here](https://github.com/DSecureMe/vmcDocs).
+We’ve made separate repository with guides and documentation available [here](https://github.com/DSecureMe/vmc-docs).
 ## Architecture
 In simple words VMC requires data about detections from your scanner, information about assets and updates about CVE. Thanks to that VMC can live update your focus to the most emerging threats for your assets.
 ## License

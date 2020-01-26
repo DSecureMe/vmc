@@ -17,40 +17,39 @@
  * under the License.
  *
 """
+from decimal import Decimal
 
-from django_elasticsearch_dsl.registries import registry
-from django_elasticsearch_dsl import Document, fields
+from elasticsearch_dsl import Date, Keyword, InnerDoc
+from vmc.common.enum import TupleValueEnum
 
-from vmc.assets.models import Asset
+from vmc.common.elastic.documents import Document, TupleValueField
+from vmc.common.elastic.registers import registry
+
+
+class Impact(TupleValueEnum):
+    LOW = ('L', Decimal('0.5'))
+    MEDIUM = ('M', Decimal('1.0'))
+    HIGH = ('H', Decimal('1.51'))
+    NOT_DEFINED = ('N', Decimal('1.0'))
+
+
+class AssetInnerDoc(InnerDoc):
+    ip_address = Keyword()
+    os = Keyword()
+    cmdb_id = Keyword()
+    confidentiality_requirement = TupleValueField(choice_type=Impact)
+    integrity_requirement = TupleValueField(choice_type=Impact)
+    availability_requirement = TupleValueField(choice_type=Impact)
+    business_owner = Keyword()
+    technical_owner = Keyword()
+    hostname = Keyword()
+    created_date = Date()
+    modified_date = Date()
+    change_reason = Keyword()
 
 
 @registry.register_document
-class AssetDocument(Document):
-    ip_address = fields.KeywordField()
-    os = fields.KeywordField()
-    confidentiality_requirement = fields.KeywordField()
-    integrity_requirement = fields.KeywordField()
-    availability_requirement = fields.KeywordField()
-    business_owner = fields.KeywordField()
-    technical_owner = fields.KeywordField()
-    hostname = fields.KeywordField()
-    created_date = fields.DateField()
-    modified_date = fields.DateField()
-
+class AssetDocument(AssetInnerDoc, Document):
     class Index:
         name = 'asset'
 
-    class Django:
-        model = Asset
-
-    @staticmethod
-    def prepare_confidentiality_requirement(instance) -> str:
-        return instance.get_confidentiality_requirement_display()
-
-    @staticmethod
-    def prepare_integrity_requirement(instance) -> str:
-        return instance.get_integrity_requirement_display()
-
-    @staticmethod
-    def prepare_availability_requirement(instance) -> str:
-        return instance.get_availability_requirement_display()

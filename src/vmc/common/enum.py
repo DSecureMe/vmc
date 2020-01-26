@@ -45,5 +45,5 @@ class TupleValueEnum(Enum):
         return super().value[0]
 
     @property
-    def float(self) -> float:
+    def second_value(self) -> float:
         return float(super().value[1])

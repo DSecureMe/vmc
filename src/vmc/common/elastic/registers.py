@@ -15,14 +15,24 @@
  * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
- *
+ */
 """
 
-from django.apps import AppConfig
+from collections import defaultdict
 
 
-class VulnerabilitiesConfig(AppConfig):
-    name = 'vmc.vulnerabilities'
+class DocumentRegistry:
 
-    def ready(self):
-        import vmc.vulnerabilities.signals
+    def __init__(self):
+        self.documents = defaultdict()
+
+    def register_document(self, document):
+        index_meta = getattr(document, 'Index')
+        self.documents.update({index_meta.name: document})
+        return document
+
+    def get_documents(self):
+        return self.documents.values()
+
+
+registry = DocumentRegistry()

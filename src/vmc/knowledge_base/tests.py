@@ -18,43 +18,48 @@
  *
 """
 
-import json
 from decimal import Decimal
+from unittest import skipIf
 from unittest.mock import patch
 
 from django.contrib.auth.models import User
-from django.core.cache import cache
 from django.test import TestCase, LiveServerTestCase
+from elasticsearch_dsl import Search
 from parameterized import parameterized
 
-from vmc.knowledge_base.cache import NotificationCache
-from vmc.knowledge_base.factories import CveFactory, CWEFactory, CpeFactory
-from vmc.knowledge_base import models
+from vmc.common.elastic.tests import ESTestCase
+from vmc.config.test_settings import elastic_configured
+from vmc.knowledge_base.documents import CveDocument, CweDocument
+
+from vmc.knowledge_base.factories import CveFactory, CWEFactory
 from vmc.knowledge_base import metrics
 from vmc.knowledge_base.utils import calculate_base_score_v2, calculate_base_score_v3
-from vmc.knowledge_base.tasks import update_exploits, update_cwe, update_cpe, update_cve
+from vmc.knowledge_base.tasks import update_exploits, update_cwe, update_cve
 
 from vmc.common.tests import get_fixture_location
 
 
-class CWEFactoryTest(TestCase):
+@skipIf(not elastic_configured(), 'Skip if elasticsearch is not configured')
+class CWEFactoryTest(ESTestCase, TestCase):
 
-    @classmethod
-    def setUpClass(cls):
-        super().setUpClass()
+    def setUp(self):
+        super().setUp()
         with open(get_fixture_location(__file__, 'cwec_v2.12.xml')) as handle:
             CWEFactory.process(handle)
 
     def test_should_create_cwe_entries(self):
-        cwe = models.Cwe.objects.get(id='CWE-1004')
+        result = CweDocument.search().filter('term', id='CWE-1004').execute()
+        self.assertEqual(len(result.hits), 1)
 
-        self.assertEqual(cwe.__str__(), 'CWE-1004')
-        self.assertEquals(cwe.name, "Sensitive Cookie Without 'HttpOnly' Flag")
-        self.assertEquals(cwe.status, "Incomplete")
-        self.assertEquals(cwe.weakness_abstraction, "Variant")
-        self.assertEquals(cwe.description, "The software uses a cookie to store sensitive information, "
+        uut = result.hits[0]
+
+        self.assertEqual(uut.id, 'CWE-1004')
+        self.assertEquals(uut.name, "Sensitive Cookie Without 'HttpOnly' Flag")
+        self.assertEquals(uut.status, "Incomplete")
+        self.assertEquals(uut.weakness_abstraction, "Variant")
+        self.assertEquals(uut.description, "The software uses a cookie to store sensitive information, "
                                            "but the cookie is not marked with the HttpOnly flag.")
-        self.assertEqual(cwe.extended_description,
+        self.assertEqual(uut.extended_description,
                          "The HttpOnly flag directs compatible browsers to prevent client-side script from accessing "
                          "cookies. Including the HttpOnly flag in the Set-Cookie HTTP response header helps mitigate "
                          "the risk associated with Cross-Site Scripting (XSS) where an attacker's script code might "
@@ -62,121 +67,45 @@ class CWEFactoryTest(TestCase):
                          "browsers that support the flag will not reveal the contents of the cookie to a third party "
                          "via client-side script executed via XSS.")
 
-    def test_cwe_update(self):
-        cwe = models.Cwe.objects.get(id='CWE-1004')
-        self.assertFalse(cwe.has_changed)
-
-        cwe.status = 'aaaa'
-        self.assertTrue(cwe.has_changed)
-
-    @classmethod
-    def tearDownClass(cls):
-        super().tearDownClass()
-        cache.clear()
+    def test_should_not_update(self):
+        self.assertEqual(Search().index(CweDocument.Index.name).count(), 2)
+        with open(get_fixture_location(__file__, 'cwec_v2.12.xml')) as handle:
+            CWEFactory.process(handle)
+        self.assertEqual(Search().index(CweDocument.Index.name).count(), 2)
 
 
-class CpeFactoryTest(TestCase):
-
-    @classmethod
-    def setUpClass(cls):
-        super().setUpClass()
-        with open(get_fixture_location(__file__, 'official-cpe-dictionary_v2.2.xml')) as handle:
-            CpeFactory.process(handle)
-
-    def setUp(self) -> None:
-        self.assertEqual(models.Cpe.objects.count(), 1)
-
-    def test_cpe_str_call(self):
-        cpe = models.Cpe(name='NAME')
-        self.assertEqual(cpe.__str__(), 'NAME')
-
-        cpe.title = 'TITLE'
-        cpe.vendor = 'VENDOR'
-        self.assertEqual(cpe.__str__(), 'VENDOR TITLE')
-
-    def test_cpe(self):
-        cpe = models.Cpe.objects.get(name='cpe:2.3:a:1000guess:1000_guess:-:*:*:*:*:*:*:*')
-
-        self.assertEquals(cpe.vendor, '1000guess')
-        self.assertEquals(cpe.title, '1000 Guess')
-        self.assertEquals(json.loads(cpe.references), [
-            {
-                'name': 'Vendor',
-                'url': 'http://www.1000guess.com/'
-            },
-            {
-                'name': 'Advisory',
-                'url': 'https://medium.com/coinmonks/attack-on-pseudo-random-number-'
-                       'generator-prng-used-in-1000-guess-an-ethereum-lottery-game-7b76655f953d'
-            }
-        ])
-
-    @classmethod
-    def tearDownClass(cls):
-        super().tearDownClass()
-        cache.clear()
-
-
-class NotificationCacheTest(TestCase):
-
-    def tearDown(self):
-        NotificationCache.clear()
-
-    def update_cache(self):
-        with open(get_fixture_location(__file__, 'nvdcve-1.0-2017.json')) as handle:
-            CveFactory.process(handle)
-
-        self.assertEqual(NotificationCache.get(), [('CVE-2017-0002', True), ('CVE-2017-0008', True)])
-
-    def not_updated_cve(self):
-        with open(get_fixture_location(__file__, 'nvdcve-1.0-2017.json')) as handle:
-            CveFactory.process(handle)
-        NotificationCache.clear()
-
-        with open(get_fixture_location(__file__, 'nvdcve-1.0-2017.json')) as handle:
-            CveFactory.process(handle)
-        self.assertEqual(NotificationCache.get(), [])
-
-    def initial_update_test(self):
-        NotificationCache.initial_update(not models.Cve.objects.exists())
-        self.assertTrue(NotificationCache.is_initial_update())
-
-
-class CveFactoryTest(TestCase):
-
-    @classmethod
-    def setUpClass(cls):
-        super().setUpClass()
-        cls.uut = CveFactory()
-        with open(get_fixture_location(__file__, 'nvdcve-1.0-2017.json')) as handle:
-            cls.uut.process(handle)
+@skipIf(not elastic_configured(), 'Skip if elasticsearch is not configured')
+class CveFactoryTest(ESTestCase, TestCase):
 
     def setUp(self):
         super().setUp()
-        self.assertEqual(models.Cve.objects.count(), 2)
-        self.assertEqual(self.uut.created, 2)
+        with open(get_fixture_location(__file__, 'nvdcve-1.0-2017.json')) as handle:
+            CveFactory.process(handle)
+
+    def test_cve_count(self):
+        self.assertEqual(Search().index(CveDocument.Index.name).count(), 2)
 
     def test_call_call_not_create_rejected(self):
-        self.assertIsNotNone(models.Cve.objects.filter(id='CVE-2017-0605'))
+        self.assertFalse(CveDocument.search().filter('term', id='CVE-2017-0605').execute())
 
     def test_call_call_not_update(self):
-        cve = models.Cve.objects.get(id='CVE-2017-0002')
+        result = CveDocument.search().filter('term', id='CVE-2017-0002').execute()
 
-        self.assertEqual(cve.__str__(), 'CVE-2017-0002')
-        self.assertEqual(cve.access_vector_v2, metrics.AccessVectorV2.NETWORK.value)
-        self.assertEqual(cve.get_access_vector_v2_display(), metrics.AccessVectorV2.NETWORK.name)
-        self.assertEqual(cve.access_complexity_v2, metrics.AccessComplexityV2.MEDIUM.value)
-        self.assertEqual(cve.authentication_v2, metrics.AuthenticationV2.NONE.value)
-        self.assertEqual(cve.confidentiality_impact_v2, metrics.ImpactV2.PARTIAL.value)
-        self.assertEqual(cve.integrity_impact_v2, metrics.ImpactV2.PARTIAL.value)
-        self.assertEqual(cve.availability_impact_v2, metrics.ImpactV2.PARTIAL.value)
+        self.assertEqual(len(result.hits), 1)
+        cve = result.hits[0]
+        self.assertEqual(cve.id, 'CVE-2017-0002')
+        self.assertEqual(cve.access_vector_v2, metrics.AccessVectorV2.NETWORK)
+        self.assertEqual(cve.access_complexity_v2, metrics.AccessComplexityV2.MEDIUM)
+        self.assertEqual(cve.authentication_v2, metrics.AuthenticationV2.NONE)
+        self.assertEqual(cve.confidentiality_impact_v2, metrics.ImpactV2.PARTIAL)
+        self.assertEqual(cve.integrity_impact_v2, metrics.ImpactV2.PARTIAL)
+        self.assertEqual(cve.availability_impact_v2, metrics.ImpactV2.PARTIAL)
 
     def test_call_create(self):
-        cve = models.Cve.objects.get(id='CVE-2017-0008')
+        cve = CveDocument.search().filter('term', id='CVE-2017-0008').execute().hits[0]
         self.assertEqual(cve.base_score_v2, 4.3)
         self.assertEqual(cve.base_score_v3, 4.3)
 
-        self.assertEqual(cve.cwe.id, 'CWE-200')
         self.assertEqual(
             cve.summary, 'Microsoft Internet Explorer 9 through 11 allow remote attackers to obtain sensitive '
                          'information from process memory via a crafted web site, aka "Internet Explorer Information '
@@ -185,59 +114,61 @@ class CveFactoryTest(TestCase):
         self.assertEquals(str(cve.published_date), '2017-03-17 00:59:00+00:00')
         self.assertEquals(str(cve.last_modified_date), '2017-07-12 01:29:00+00:00')
 
-        self.assertEqual(json.loads(cve.references), [
-            {
-                'source': 'BID',
-                'url': 'http://www.securityfocus.com/bid/96073'
-            },
-            {
-                'source': 'SECTRACK',
-                'url': 'http://www.securitytracker.com/id/1038008',
-            },
-            {
-                'source': 'CONFIRM',
-                'url': 'https://portal.msrc.microsoft.com/en-US/security-guidance/advisory/CVE-2017-0008'
-            }
+        self.assertEqual(cve.cwe.id, 'CWE-200')
+        self.assertEqual(len(cve.cpe), 3)
+        self.assertEqual(cve.cpe, [
+            {'name': 'cpe:2.3:a:microsoft:internet_explorer:9:*:*:*:*:*:*:*', 'vendor': 'microsoft'},
+            {'name': 'cpe:2.3:a:microsoft:internet_explorer:10:*:*:*:*:*:*:*', 'vendor': 'microsoft'},
+            {'name': 'cpe:2.3:a:microsoft:internet_explorer:11:*:*:*:*:*:*:*', 'vendor': 'microsoft'}
         ])
 
-        self.assertEqual(cve.cpe.count(), 3)
-        self.assertEqual(cve.cpe.filter(name='cpe:2.3:a:microsoft:internet_explorer:9:*:*:*:*:*:*:*').count(), 1)
-        self.assertEqual(cve.cpe.filter(name='cpe:2.3:a:microsoft:internet_explorer:10:*:*:*:*:*:*:*').count(), 1)
-        self.assertEqual(cve.cpe.filter(name='cpe:2.3:a:microsoft:internet_explorer:11:*:*:*:*:*:*:*').count(), 1)
+        self.assertEqual(cve.access_vector_v2, metrics.AccessVectorV2.NETWORK)
+        self.assertEqual(cve.access_complexity_v2, metrics.AccessComplexityV2.MEDIUM)
+        self.assertEqual(cve.authentication_v2, metrics.AuthenticationV2.NONE)
+        self.assertEqual(cve.confidentiality_impact_v2, metrics.ImpactV2.PARTIAL)
+        self.assertEqual(cve.integrity_impact_v2, metrics.ImpactV2.NONE)
+        self.assertEqual(cve.availability_impact_v2, metrics.ImpactV2.NONE)
 
-        self.assertEqual(cve.access_vector_v2, metrics.AccessVectorV2.NETWORK.value)
-        self.assertEqual(cve.access_complexity_v2, metrics.AccessComplexityV2.MEDIUM.value)
-        self.assertEqual(cve.authentication_v2, metrics.AuthenticationV2.NONE.value)
-        self.assertEqual(cve.confidentiality_impact_v2, metrics.ImpactV2.PARTIAL.value)
-        self.assertEqual(cve.integrity_impact_v2, metrics.ImpactV2.NONE.value)
-        self.assertEqual(cve.availability_impact_v2, metrics.ImpactV2.NONE.value)
-
-        self.assertEqual(cve.attack_vector_v3, metrics.AttackVectorV3.NETWORK.value)
-        self.assertEqual(cve.attack_complexity_v3, metrics.AttackComplexityV3.LOW.value)
-        self.assertEqual(cve.privileges_required_v3, metrics.PrivilegesRequiredV3.NONE.value)
-        self.assertEqual(cve.user_interaction_v3, metrics.UserInteractionV3.REQUIRED.value)
-        self.assertEqual(cve.scope_v3, metrics.ScopeV3.UNCHANGED.value)
-        self.assertEqual(cve.confidentiality_impact_v3, metrics.ImpactV3.LOW.value)
-        self.assertEqual(cve.integrity_impact_v3, metrics.ImpactV3.NONE.value)
-        self.assertEqual(cve.availability_impact_v3, metrics.ImpactV3.NONE.value)
+        self.assertEqual(cve.attack_vector_v3, metrics.AttackVectorV3.NETWORK)
+        self.assertEqual(cve.attack_complexity_v3, metrics.AttackComplexityV3.LOW)
+        self.assertEqual(cve.privileges_required_v3, metrics.PrivilegesRequiredV3.NONE)
+        self.assertEqual(cve.user_interaction_v3, metrics.UserInteractionV3.REQUIRED)
+        self.assertEqual(cve.scope_v3, metrics.ScopeV3.UNCHANGED)
+        self.assertEqual(cve.confidentiality_impact_v3, metrics.ImpactV3.LOW)
+        self.assertEqual(cve.integrity_impact_v3, metrics.ImpactV3.NONE)
+        self.assertEqual(cve.availability_impact_v3, metrics.ImpactV3.NONE)
 
         self.assertEqual(cve.get_privileges_required_v3_value(), 0.85)
-        self.assertEqual([('CVE-2017-0008', True), ('CVE-2017-0002', True)], NotificationCache.get())
 
     def test_update(self):
-        cve = models.Cve.objects.get(id='CVE-2017-0008')
+        cve = CveDocument.search().filter('term', id='CVE-2017-0002').execute().hits[0]
         cve.last_modified_date = None
-        cve.save()
-        cache.clear()
-        factory = CveFactory()
-        with open(get_fixture_location(__file__, 'nvdcve-1.0-2017.json')) as handle:
-            factory.process(handle)
+        cve.save(refresh=True)
 
-        self.assertEqual([('CVE-2017-0008', False)], NotificationCache.get())
-        self.assertEqual(factory.updated, 1)
+        with open(get_fixture_location(__file__, 'nvdcve-1.0-2017.json')) as handle:
+            CveFactory.process(handle)
+
+        self.assertEqual(CveDocument.search().filter('term', id='CVE-2017-0002').count(), 2)
+
+    def test_cwe_update(self):
+        cwe = CweDocument.search().filter('term', id='CWE-200').execute().hits[0]
+        cwe.name = 'Changed'
+        cwe.save(refresh=True)
+
+        cve = CveDocument.search().filter('term', id='CVE-2017-0008').sort('-modified_date').execute().hits
+        self.assertEqual(len(cve), 2)
+        self.assertEqual(cve[0].cwe.name, 'Changed')
+        self.assertEqual(cve[0].change_reason, 'CWE Updated')
+
+    def test_should_not_update(self):
+        self.assertEqual(Search().index(CveDocument.Index.name).count(), 2)
+        with open(get_fixture_location(__file__, 'nvdcve-1.0-2017.json')) as handle:
+            CveFactory.process(handle)
+
+        self.assertEqual(Search().index(CveDocument.Index.name).count(), 2)
 
     def test_calculate_base_score(self):
-        for cve in models.Cve.objects.filter(id='CVE-2017-0002'):
+        for cve in CveDocument.search():
             self.assertEqual(cve.base_score_v2, calculate_base_score_v2(cve), cve.id)
             self.assertEqual(cve.base_score_v3, calculate_base_score_v3(cve), cve.id)
 
@@ -252,13 +183,9 @@ class CveFactoryTest(TestCase):
     def test_privileges_required_V3(self, pr, scope, expected):
         self.assertEqual(pr.value_with_scope(scope), expected)
 
-    @classmethod
-    def tearDownClass(cls):
-        super().tearDownClass()
-        cache.clear()
 
-
-class UpdateCweTaskTest(TestCase):
+@skipIf(not elastic_configured(), 'Skip if elasticsearch is not configured')
+class UpdateCweTaskTest(ESTestCase, TestCase):
 
     @patch('vmc.knowledge_base.tasks.get_file')
     def test_call(self, get_file):
@@ -268,7 +195,7 @@ class UpdateCweTaskTest(TestCase):
         update_cwe()
 
         get_file.assert_called_once_with('https://cwe.mitre.org/data/xml/cwec_v2.12.xml.zip')
-        self.assertEqual(models.Cwe.objects.count(), 2)
+        self.assertEqual(Search().index(CweDocument.Index.name).count(), 2)
 
     @patch('vmc.knowledge_base.tasks.get_file')
     def test_call_nok(self, get_file):
@@ -276,33 +203,11 @@ class UpdateCweTaskTest(TestCase):
 
         update_cwe()
 
-        self.assertEqual(models.Cwe.objects.count(), 0)
+        self.assertEqual(Search().index(CweDocument.Index.name).count(), 0)
 
 
-class UpdateCpeTaskTest(TestCase):
-
-    @patch('vmc.knowledge_base.tasks.get_file')
-    def test_call(self, get_file):
-        file = open(get_fixture_location(__file__, 'official-cpe-dictionary_v2.2.xml'))
-        get_file.return_value = file
-
-        update_cpe()
-
-        get_file.assert_called_once_with(
-            'https://nvd.nist.gov/feeds/xml/cpe/dictionary/official-cpe-dictionary_v2.3.xml.zip'
-        )
-        self.assertEqual(models.Cpe.objects.count(), 1)
-
-    @patch('vmc.knowledge_base.tasks.get_file')
-    def test_call_nok(self, get_file):
-        get_file.return_value = None
-
-        update_cpe()
-
-        self.assertEqual(models.Cpe.objects.count(), 0)
-
-
-class UpdateCveTaskTest(TestCase):
+@skipIf(not elastic_configured(), 'Skip if elasticsearch is not configured')
+class UpdateCveTaskTest(ESTestCase, TestCase):
 
     @patch('vmc.knowledge_base.tasks.get_file')
     def test_call(self, get_file):
@@ -314,7 +219,7 @@ class UpdateCveTaskTest(TestCase):
         get_file.assert_called_once_with(
             'https://nvd.nist.gov/feeds/json/cve/1.0/nvdcve-1.0-2017.json.gz'
         )
-        self.assertEqual(models.Cve.objects.count(), 2)
+        self.assertEqual(Search().index(CveDocument.Index.name).count(), 2)
 
     @patch('vmc.knowledge_base.tasks.get_file')
     def test_call_nok(self, get_file):
@@ -322,26 +227,42 @@ class UpdateCveTaskTest(TestCase):
 
         update_cve(2017)
 
-        self.assertEqual(models.Cve.objects.count(), 0)
+        self.assertEqual(Search().index(CveDocument.Index.name).count(), 0)
 
 
-class UpdateExploitsTaskTest(TestCase):
+@skipIf(not elastic_configured(), 'Skip if elasticsearch is not configured')
+class UpdateExploitsTaskTest(ESTestCase, TestCase):
 
-    @classmethod
-    def setUpClass(cls):
-        super().setUpClass()
+    def setUp(self):
+        super().setUp()
+        self.load_data()
+
+    def load_data(self):
+        with open(get_fixture_location(__file__, 'nvdcve-1.0-2017.json')) as handle:
+            CveFactory.process(handle)
         with open(get_fixture_location(__file__, 'via4.json')) as handle:
-            cls.data = handle.read()
+            self.data = handle.read()
 
     @patch('vmc.knowledge_base.tasks.get_file')
     def test_call_update_exploits(self, get_file):
+        self.assertEqual(Search().index(CveDocument.Index.name).count(), 2)
         get_file.return_value = self.data
         update_exploits()
         get_file.assert_called_once_with('https://www.cve-search.org/feeds/via4.json')
 
-        cve = models.Cve.objects.get(id='CVE-2018-12326')
-        self.assertEqual(cve.exploits.count(), 1)
-        self.assertIsNotNone(cve.exploits.get(id='44904'))
+        self.assertEqual(Search().index(CveDocument.Index.name).count(), 2)
+
+        cve = CveDocument.search().filter('term', id='CVE-2017-0008').sort('-modified_date').execute().hits[0]
+        prev_modified_date = cve.modified_date
+        self.assertEqual(len(cve.exploits), 1)
+        self.assertEqual(cve.exploits, [{'id': '44904', 'url': 'https://www.exploit-db.com/exploits/44904'}])
+
+        update_exploits()
+        self.assertEqual(Search().index(CveDocument.Index.name).count(), 2)
+        cve = CveDocument.search().filter('term', id='CVE-2017-0008').sort('-modified_date').execute().hits[0]
+        self.assertEqual(cve.modified_date, prev_modified_date)
+        self.assertEqual(len(cve.exploits), 1)
+        self.assertEqual(cve.exploits, [{'id': '44904', 'url': 'https://www.exploit-db.com/exploits/44904'}])
 
 
 class AdminPanelTest(LiveServerTestCase):
@@ -351,23 +272,13 @@ class AdminPanelTest(LiveServerTestCase):
         super().setUp()
         self.client.force_login(User.objects.get(username='admin'))
 
-    @parameterized.expand([
-        ('/admin/knowledge_base/cve/', 'nvd-cve-import'),
-        ('/admin/knowledge_base/cpe/', 'nvd-cpe-import')
-    ])
-    def test_button_exists(self, url, expected):
-        self.assertContains(self.client.get(url), expected)
+    def test_button_exists(self):
+        self.assertContains(self.client.get('/admin/knowledge_base/cve/'), 'nvd-cve-import')
 
     @patch('vmc.knowledge_base.admin.update_cve_cwe')
     def test_call_update_cve(self, update_cve_cwe):
         response = self.client.get('/admin/knowledge_base/cve/import', follow=True)
         update_cve_cwe.delay.assert_called_once()
-        self.assertContains(response, 'Importing started.')
-
-    @patch('vmc.knowledge_base.admin.update_cpe')
-    def test_call_update_cpe(self, update_cpe):
-        response = self.client.get('/admin/knowledge_base/cpe/import', follow=True)
-        update_cpe.delay.assert_called_once()
         self.assertContains(response, 'Importing started.')
 
     def tearDown(self):

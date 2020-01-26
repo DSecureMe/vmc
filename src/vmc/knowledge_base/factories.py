@@ -23,16 +23,14 @@ import logging
 from datetime import datetime
 
 from defusedxml.lxml import RestrictedElement
-from django.core.exceptions import ObjectDoesNotExist
 from django.utils.dateparse import parse_datetime
+from vmc.knowledge_base.documents import CweDocument, CveDocument, CpeInnerDoc, ExploitInnerDoc
 
 from vmc.common.xml import iter_elements_by_name
-from vmc.knowledge_base import models
 from vmc.knowledge_base import metrics
 
 
 class CWEFactory:
-    FIELD_LIST = [field.name for field in models.Cwe._meta.get_fields() if field]
 
     @staticmethod
     def process(handle):
@@ -40,21 +38,21 @@ class CWEFactory:
             CWEFactory.create(obj)
 
     @staticmethod
-    def create(item: RestrictedElement) -> models.Cwe:
+    def create(item: RestrictedElement):
         cwe_id = 'CWE-{}'.format(item.get('ID'))
 
-        try:
-            cwe = models.Cwe.objects.get(id=cwe_id)
-        except models.Cwe.DoesNotExist:
-            cwe = models.Cwe(id=cwe_id)
-
-        for field in sorted(CWEFactory.FIELD_LIST):
+        old = CweDocument.search().filter('term', id=cwe_id).sort('-modified_date')[0].execute()
+        cwe = CweDocument(id=cwe_id)
+        for field in CweDocument.get_fields_name():
             parser = getattr(CWEFactory, field, None)
             if parser:
                 setattr(cwe, field, parser(item))
-        if cwe.has_changed:
-            cwe.save()
-        return cwe
+
+        if old.hits and cwe.has_changed(old.hits[0]):
+            cwe.created_date = old.hits[0].created_date
+            cwe.save(refresh=True)
+        elif not old.hits:
+            cwe.save(refresh=True)
 
     @staticmethod
     def name(item: RestrictedElement) -> str:
@@ -93,58 +91,21 @@ class CWEFactory:
         return ' '.join(text.split())
 
     @staticmethod
-    def get(cwe_id: str) -> models.Cwe:
-        cwe, _ = models.Cwe.objects.get_or_create(id=cwe_id)
+    def get(cwe_id: str) -> CweDocument:
+        old = CweDocument.search().filter('term', id=cwe_id).sort('-modified_date')[0].execute()
+        if old.hits:
+            return old.hits[0]
+        cwe = CweDocument(id=cwe_id)
+        cwe.save(refresh=True)
         return cwe
 
 
 class CpeFactory:
     VENDOR = 1
-    FIELD_LIST = [field.name for field in models.Cpe._meta.get_fields() if field]
 
     @staticmethod
-    def process(handle):
-        for obj in iter_elements_by_name(handle, '{http://cpe.mitre.org/dictionary/2.0}cpe-item'):
-            CpeFactory.create(obj)
-
-    @staticmethod
-    def create(item: RestrictedElement) -> models.Cpe:
-        name = item.find('{http://scap.nist.gov/schema/cpe-extension/2.3}cpe23-item').get('name')
-        cpe = CpeFactory.get(name)
-
-        for field in sorted(CpeFactory.FIELD_LIST):
-            parser = getattr(CpeFactory, field, None)
-            if parser:
-                setattr(cpe, field, parser(item))
-
-            cpe.save()
-        return cpe
-
-    @staticmethod
-    def vendor(item: RestrictedElement) -> str:
-        return CpeFactory.get_field(item.get('name'), CpeFactory.VENDOR)
-
-    @staticmethod
-    def title(item: RestrictedElement) -> str:
-        return item.find('{http://cpe.mitre.org/dictionary/2.0}title').text
-
-    @staticmethod
-    def references(item: RestrictedElement) -> str:
-        references = item.find('{http://cpe.mitre.org/dictionary/2.0}references')
-        ref_list = []
-        if references is not None:
-            for ref in references:
-                ref_list.append({
-                    'name': ref.text,
-                    'url': ref.attrib.get('href')
-                })
-        return json.dumps(ref_list)
-
-    @staticmethod
-    def get(name: str) -> models.Cpe:
-        cpe, _ = models.Cpe.objects.get_or_create(
-            name=name, vendor=CpeFactory.get_field(name.replace('cpe:2.3:', ''), CpeFactory.VENDOR))
-        return cpe
+    def get(name: str) -> CpeInnerDoc:
+        return CpeInnerDoc(name=name, vendor=CpeFactory.get_field(name.replace('cpe:2.3:', ''), CpeFactory.VENDOR))
 
     @staticmethod
     def get_field(soft: str, idx: int) -> [str, None]:
@@ -153,45 +114,46 @@ class CpeFactory:
 
 
 class CveFactory:
-    FIELD_LIST = [field.name for field in models.Cve._meta.get_fields() if field]
+    FIELDS = [i for i in CveDocument.get_fields_name()]
 
-    def __init__(self):
-        self.created = 0
-        self.updated = 0
-
-    def process(self, handle):
+    @staticmethod
+    def process(handle):
         data = json.load(handle)
         for obj in data['CVE_Items']:
-            self.create(obj)
+            CveFactory.create(obj)
 
-    def create(self, item: dict) -> [models.Cve, None]:
+    @staticmethod
+    def create(item: dict):
         if '** REJECT **' not in CveFactory.summary(item):
-            cve, created = self.ger_or_create_new(item)
-            if not cve.last_modified_date or cve.last_modified_date < self.last_modified_date(item):
-                for field in sorted(CveFactory.FIELD_LIST):
-                    parser = getattr(self, field, None)
+            old = CveDocument.search().filter(
+                'term', id=CveFactory.get_id(item)).sort('-last_modified_date')[0].execute()
+            if old.hits:
+                last_modified_date = old.hits[0].last_modified_date
+            else:
+                last_modified_date = None
+
+            if not last_modified_date or last_modified_date < CveFactory.last_modified_date(item):
+                cve = CveDocument(id=CveFactory.get_id(item))
+                for field in CveDocument.get_fields_name():
+                    parser = getattr(CveFactory, field, None)
                     if parser:
                         try:
                             setattr(cve, field, parser(item))
                         except Exception as err:
                             logging.debug('cve id %s, field %s, err %s', cve.id, field, err)
-                cve.save()
-                cve.cpe.set(self.get_cpe(item))
-                if created:
-                    self.created += 1
+
+                for cpe in CveFactory.get_cpe(item):
+                    cve.cpe.append(cpe)
+
+                if old.hits and cve.has_changed(old.hits[0]):
+                    cve.modified_date = old.hits[0].modified_date
+                    cve.save(refresh=True)
                 else:
-                    self.updated += 1
-            return cve
+                    cve.save(refresh=True)
+            return None
 
         logging.info('cve id %s is rejected', CveFactory.get_id(item))
         return None
-
-    @staticmethod
-    def ger_or_create_new(item: dict) -> [models.Cve, bool]:
-        try:
-            return models.Cve.objects.get(id=CveFactory.get_id(item)), False
-        except ObjectDoesNotExist:
-            return models.Cve(id=CveFactory.get_id(item)), True
 
     @staticmethod
     def get_id(item: dict) -> str:
@@ -228,12 +190,11 @@ class CveFactory:
         return json.dumps(objs)
 
     @staticmethod
-    def cwe(item: dict) -> [models.Cwe, None]:
+    def cwe(item: dict) -> CweDocument:
         for problemtype_data in item['cve']['problemtype']['problemtype_data']:
             for desc in problemtype_data['description']:
                 if desc['lang'] == 'en':
                     return CWEFactory.get(desc['value'])
-        return None
 
     @staticmethod
     def get_cpe(item: dict) -> list:
@@ -242,7 +203,7 @@ class CveFactory:
             for conf in item['configurations']['nodes']:
                 for cpe_match in conf['cpe_match']:
                     cpes.append(CpeFactory.get(cpe_match['cpe23Uri']))
-        except KeyError:
+        except (KeyError, IndexError):
             pass
         return cpes
 
@@ -340,13 +301,16 @@ class ExploitFactory:
     @staticmethod
     def create(key: str, value: dict) -> None:
         try:
-            exploit_list = list()
+            exploits = []
             for exp_id in value['refmap']['exploit-db']:
-                e, _ = models.Exploit.objects.get_or_create(id=exp_id)
-                exploit_list.append(e)
-
-            cve, _ = models.Cve.objects.get_or_create(id=key)
-            cve.exploits.set(exploit_list)
+                exploits.append(ExploitInnerDoc.create(exp_id=exp_id))
 
         except KeyError:
             pass
+
+        else:
+            result = CveDocument.search().filter('term', id=key).sort('-last_modified_date')[0].execute()
+            if result.hits and result.hits[0].exploits != exploits:
+                result.hits[0].exploits = exploits
+                result.hits[0].save(refresh=True)
+

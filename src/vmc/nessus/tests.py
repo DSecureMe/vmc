@@ -17,16 +17,22 @@
  * under the License.
  *
 """
-
+from unittest import skipIf
 from unittest.mock import patch, MagicMock, call
 
-from django.test import TestCase
+from django.contrib.auth.models import User
+from django.test import TestCase, LiveServerTestCase
+from elasticsearch_dsl import Search
 
-from vmc.assets.models import Asset
+from vmc.common.elastic.tests import ESTestCase
+from vmc.config.test_settings import elastic_configured
+from vmc.nessus.apps import NessusConfig
+
+from vmc.assets.documents import AssetDocument
 from vmc.nessus.api import Nessus
 from vmc.nessus.models import Config
 from vmc.nessus.tasks import get_trash_folder_id, update, update_data
-from vmc.vulnerabilities.models import Vulnerability
+from vmc.vulnerabilities.documents import VulnerabilityDocument
 
 from vmc.common.tests import get_fixture_location
 
@@ -39,6 +45,12 @@ class ResponseMock:
 
     def json(self):
         return self.text
+
+
+class NessusConfigTest(TestCase):
+
+    def test_name(self):
+        self.assertEqual(NessusConfig.name, 'vmc.nessus')
 
 
 class NessusTest(TestCase):
@@ -92,10 +104,12 @@ class GetTrashFolderIdTest(TestCase):
         self.assertIsNone(get_trash_folder_id({'folders': [{'type': 'foo', 'id': 2}]}))
 
 
-class UpdateTest(TestCase):
-    fixtures = ['assets.json', 'config.json']
+@skipIf(not elastic_configured(), 'Skip if elasticsearch is not configured')
+class UpdateTest(ESTestCase, TestCase):
+    fixtures = ['config.json']
 
     def setUp(self):
+        super().setUp()
         self.con = MagicMock()
         self.scanner_api = MagicMock(return_value=self.con)
 
@@ -115,7 +129,7 @@ class UpdateTest(TestCase):
             ]}
 
         update(scanner_api=self.scanner_api)
-        self.assertEqual(Asset.objects.count(), 2)
+        self.assertEqual(Search().index(AssetDocument.Index.name).count(), 0)
         self.scanner_api.assert_called_once_with(Config.objects.first())
         update_data_mock.delay.assert_not_called()
 
@@ -130,16 +144,18 @@ class UpdateTest(TestCase):
         }
 
         update(scanner_api=self.scanner_api)
-        update_data_mock.assert_has_calls([
+        update_data_mock.delay.assert_has_calls([
             call(config_pk=1, scan_id=2),
             call(config_pk=1, scan_id=4)
         ], any_order=True)
 
 
-class UpdateDataTest(TestCase):
+@skipIf(not elastic_configured(), 'Skip if elasticsearch is not configured')
+class UpdateDataTest(ESTestCase, TestCase):
     fixtures = ['config.json']
 
     def setUp(self):
+        super().setUp()
         self.con = MagicMock()
         self.scanner_api = MagicMock(return_value=self.con)
         self.config_id = Config.objects.first().id
@@ -154,12 +170,32 @@ class UpdateDataTest(TestCase):
         self.scanner_api.assert_called_once_with(Config.objects.get(pk=1))
         self.con.download_scan.assert_called_once_with(1)
 
-        vuln = Vulnerability.objects.filter(asset__ip_address='10.0.2.15').first()
-        self.assertEqual(vuln.asset.ip_address, '10.0.2.15')
-        self.assertEqual(vuln.port.number, 22)
-        self.assertEqual(vuln.port.svc_name, 'ssh')
-        self.assertEqual(vuln.port.protocol, 'tcp')
-        self.assertEqual(vuln.cve.id, 'CVE-2008-5161')
-        self.assertEqual(vuln.solution, 'Contact the vendor or consult product documentation to disable CBC mode '
+        vuln = VulnerabilityDocument.search().filter('term', asset__ip_address='10.0.2.15').execute()
+        self.assertEqual(len(vuln.hits), 1)
+        self.assertEqual(vuln.hits[0].asset.ip_address, '10.0.2.15')
+        self.assertEqual(vuln.hits[0].port, 22)
+        self.assertEqual(vuln.hits[0].svc_name, 'ssh')
+        self.assertEqual(vuln.hits[0].protocol, 'tcp')
+        self.assertEqual(vuln.hits[0].cve.id, 'CVE-2008-5161')
+        self.assertEqual(vuln.hits[0].solution, 'Contact the vendor or consult product documentation to disable CBC mode '
                                         'cipher encryption, and enable CTR or GCM cipher mode encryption.')
-        self.assertFalse(vuln.exploit_available)
+
+
+class AdminPanelTest(LiveServerTestCase):
+    fixtures = ['users.json', 'config.json']
+
+    def setUp(self):
+        super().setUp()
+        self.client.force_login(User.objects.get(username='admin'))
+
+    def test_button_exists(self):
+        self.assertContains(self.client.get('/admin/nessus/config/'), 'nessus-import')
+
+    @patch('vmc.nessus.admin.update')
+    def test_call_update_cve(self, update):
+        response = self.client.get('/admin/nessus/config/import', follow=True)
+        update.delay.assert_called_once()
+        self.assertContains(response, 'Importing started.')
+
+    def tearDown(self):
+        self.client.logout()
