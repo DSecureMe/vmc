@@ -18,43 +18,20 @@
  *
 """
 
-import os
-
-from django.conf import settings
 from django.core.management import call_command
 from django.core.management.base import BaseCommand
 
 from vmc.common.elastic.registers import registry
-from vmc.common.management.commands._common import wait_for_db_ready, wait_for_rabbit_ready, wait_for_es_ready
 
 
 class Command(BaseCommand):
-    help = 'Runs Admin Panel for VMC'
+    help = 'Make migrations and initialise indexes'
 
     requires_migrations_checks = False
     requires_system_checks = False
 
     def handle(self, *args, **options):
-        self.stdout.write("Starting VMC Admin Panel")
+        call_command('migrate', *args, **options)
 
-        if wait_for_db_ready() and wait_for_rabbit_ready() and wait_for_es_ready():
-            call_command('migrate', *args, **options)
-
-            for document in registry.get_documents():
-                document.init()
-
-            if settings.DEBUG:
-                call_command(
-                    'runserver',
-                    addrport='0.0.0.0:8080',
-                    use_reloader=False,
-                    use_ipv6=False,
-                    use_threading=False
-                )
-            else:
-                os.system("nginx")
-                os.system("gunicorn vmc.config.wsgi:application --bind localhost:8001")
-
-        else:
-            self.stdout.write("Unable to start VMC Admin Panel")
-            exit(1)
+        for document in registry.get_documents():
+            document.init()

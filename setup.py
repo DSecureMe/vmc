@@ -66,6 +66,7 @@ setup(
             'vmc = vmc.__main__:main'
         ]
     },
+    scripts=['bin/vmcctl'],
     classifiers=[
         'Development Status :: 3 - Alpha',
         'Intended Audience :: Developers',

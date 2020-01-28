@@ -17,20 +17,22 @@
  * under the License.
  *
 """
+from urllib.parse import urlparse
 
-import os
 from django.core.management.base import BaseCommand
 
-from vmc.common.management.commands._common import wait_for_db_ready, wait_for_rabbit_ready
+from vmc.common.management.commands._common import get_config, wait_for_port
 
 
 class Command(BaseCommand):
-    help = 'Runs Monitor for VMC'
+    help = 'Wait for es'
 
     def handle(self, *args, **options):
-        self.stdout.write("Starting VMC Scheduler")
-        if wait_for_db_ready() and wait_for_rabbit_ready():
-            os.system('celery flower -A vmc.config.celery --address=0.0.0.0 --port=8080')
-        else:
-            self.stdout.write("Unable to start VMC Monitor")
+        if not self.wait_for_es_ready():
             exit(1)
+
+    @staticmethod
+    def wait_for_es_ready():
+        es_config = get_config('elasticsearch.hosts', ["http://elasticsearch:9200"])
+        es_config = urlparse(es_config[0])
+        return wait_for_port(es_config.port, es_config.hostname)

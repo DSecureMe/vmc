@@ -1,0 +1,46 @@
+#!/usr/bin/env bash
+
+wait_for () {
+    vmc wait_for_db
+    vmc wait_for_amqp
+    vmc wait_for_es
+}
+
+start () {
+    wait_for
+    case $1 in
+       worker)
+            echo "Starting VMC Scheduler"
+            celery worker -A vmc.config.celery --concurrency=4
+            ;;
+       scheduler)
+            echo "Starting VMC Scheduler"
+            celery -A vmc.config.celery beat --scheduler django_celery_beat.schedulers:DatabaseScheduler  --pidfile=/tmp/scheduler.pid
+            ;;
+       monitor)
+            echo "Starting VMC Monitor"
+            celery flower -A vmc.config.celery --address=0.0.0.0 --port=8080
+            ;;
+       admin)
+            echo "Starting VMC Admin"
+            vmc prepare
+            nginx && gunicorn vmc.config.wsgi:application --bind localhost:8001
+            ;;
+        admin-dev)
+            echo "Starting VMC Admin dev"
+            vmc prepare
+            vmc runserver 0.0.0.0:8080
+            ;;
+       *)
+            echo "Invalid Option, try: worker scheduler monitor admin"
+        ;;
+  esac
+}
+
+{
+    if [[ $1 == 'start' ]]; then
+      start $2
+    else
+      vmc $1
+    fi
+}

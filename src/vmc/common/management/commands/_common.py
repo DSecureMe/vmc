@@ -22,7 +22,6 @@ import time
 import socket
 import yaml
 from pathlib import Path
-from urllib.parse import urlparse
 
 CFG = None
 
@@ -69,26 +68,3 @@ def wait_for_socket(unix_socket, timeout=60.0):
 
 def get_config(key, default):
     return CFG[key] if CFG and key in CFG else default
-
-
-def wait_for_db_ready():
-    db_socket = get_config('database.unix_socket', '')
-    if db_socket:
-        return wait_for_socket(db_socket)
-    return wait_for_port(
-        get_config('database.port', 5432),
-        get_config('database.host', 'localhost')
-    )
-
-
-def wait_for_rabbit_ready():
-    return wait_for_port(
-        get_config('rabbitmq.port', 5672),
-        get_config('rabbitmq.host', 'localhost')
-    )
-
-
-def wait_for_es_ready():
-    es_config = get_config('elasticsearch.hosts', ["http://elasticsearch:9200"])
-    es_config = urlparse(es_config[0])
-    return wait_for_port(es_config.port, es_config.hostname)

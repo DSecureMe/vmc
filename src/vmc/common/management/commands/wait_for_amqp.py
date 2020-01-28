@@ -18,19 +18,21 @@
  *
 """
 
-import os
 from django.core.management.base import BaseCommand
 
-from vmc.common.management.commands._common import wait_for_db_ready, wait_for_rabbit_ready
+from vmc.common.management.commands._common import wait_for_port, get_config
 
 
 class Command(BaseCommand):
-    help = 'Runs Worker for VMC'
+    help = 'Wait for amqp'
 
     def handle(self, *args, **options):
-        self.stdout.write("Starting VMC Scheduler")
-        if wait_for_db_ready() and wait_for_rabbit_ready():
-            os.system('celery worker -A vmc.config.celery --concurrency=4')
-        else:
-            self.stdout.write("Unable to start VMC Worker")
+        if not self.wait_for_amqp():
             exit(1)
+
+    @staticmethod
+    def wait_for_amqp():
+        return wait_for_port(
+            get_config('rabbitmq.port', 5672),
+            get_config('rabbitmq.host', 'localhost')
+        )

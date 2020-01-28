@@ -18,20 +18,24 @@
  *
 """
 
-import os
 from django.core.management.base import BaseCommand
 
-from vmc.common.management.commands._common import wait_for_db_ready, wait_for_rabbit_ready
+from vmc.common.management.commands._common import get_config, wait_for_socket, wait_for_port
 
 
 class Command(BaseCommand):
-    help = 'Runs Scheduler for VMC'
+    help = 'Wait for db'
 
     def handle(self, *args, **options):
-        self.stdout.write("Starting VMC Scheduler")
-        if wait_for_db_ready() and wait_for_rabbit_ready():
-            os.system('celery -A vmc.config.celery  '
-                      'beat --scheduler django_celery_beat.schedulers:DatabaseScheduler  --pidfile=/tmp/scheduler.pid')
-        else:
-            self.stdout.write("Unable to start VMC Scheduler")
+        if not self.wait_for_db_ready():
             exit(1)
+
+    @staticmethod
+    def wait_for_db_ready():
+        db_socket = get_config('database.unix_socket', '')
+        if db_socket:
+            return wait_for_socket(db_socket)
+        return wait_for_port(
+            get_config('database.port', 5432),
+            get_config('database.host', 'localhost')
+        )
