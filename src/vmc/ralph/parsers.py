@@ -17,40 +17,33 @@
  * under the License.
  */
 """
-from elasticsearch_dsl import Q
 
 from vmc.assets.documents import AssetDocument, Impact
 
 
-class AssetFactory:
+class AssetsParser:
 
-    @staticmethod
-    def process(item: dict) -> None:
-        for iface in item['ethernet']:
-            AssetFactory.create(item, iface) # Fixme: bulk create
+    def __init__(self, config_name: str):
+        self.__config_name = config_name
+        self.__parsed = list()
 
-    @staticmethod
-    def create(item: dict, iface: dict) -> [AssetDocument, None]:
+    def parse(self, assets: list) -> list:
+        for asset in assets:
+            for iface in asset['ethernet']:
+                self.create(asset, iface)
+        return self.__parsed
+
+    def create(self, item: dict, iface: dict):
         asset = AssetDocument()
+        asset.tags = [self.__config_name]
         for field in AssetDocument.get_fields_name():
-            parser = getattr(AssetFactory, field, None)
+            parser = getattr(AssetsParser, field, None)
             try:
                 if parser:
                     setattr(asset, field, parser(item, iface))
             except (KeyError, IndexError):
                 setattr(asset, field, 'UNKNOWN')
-
-        old_asset = AssetDocument.search().filter(
-            Q('term', ip_address=AssetFactory.ip_address(item, iface)) &
-            Q('term', cmdb_id=AssetFactory.cmdb_id(item, iface))).sort('-modified_date')[0].execute()
-        if not old_asset.hits:
-            asset.save(refresh=True)
-        elif asset.has_changed(old_asset.hits[0]):
-            asset.created_date = old_asset.hits[0].created_date
-            asset.change_reason = 'Asset Update'
-            asset.save(refresh=True)
-
-        return None
+        self.__parsed.append(asset)
 
     @staticmethod
     def cmdb_id(item: dict, _) -> int:
@@ -70,11 +63,19 @@ class AssetFactory:
 
     @staticmethod
     def business_owner(item: dict, _) -> str:
-        return item['business_owners'][0]['username']
+        return AssetsParser.owner(item['business_owners'][0])
 
     @staticmethod
     def technical_owner(item: dict, _) -> str:
-        return item['technical_owners'][0]['username']
+        return AssetsParser.owner(item['technical_owners'][0])
+
+    @staticmethod
+    def owner(item: dict) -> str:
+        return '{first} {last} ({username})'.format(
+            first=item['first_name'],
+            last=item['last_name'],
+            username=item['username']
+        )
 
     @staticmethod
     def hostname(item: dict, _) -> str:

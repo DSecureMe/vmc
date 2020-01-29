@@ -20,24 +20,32 @@
 
 import logging
 from celery import shared_task
+from vmc.assets.documents import AssetDocument
 
 from vmc.ralph.api import Ralph
 from vmc.ralph.models import Config
 
-from vmc.ralph.factories import AssetFactory
+from vmc.ralph.parsers import AssetsParser
 
 LOGGER = logging.getLogger(__name__)
 
 
 @shared_task
-def load_all_assets():
-    LOGGER.info('Start loading data from ralph')
+def update_assets(config_id: int):
     try:
-        ralph_api = Ralph(config=Config.objects.first())
-        all_assets = ralph_api.get_all_assets()
-
-        for asset in all_assets:
-            AssetFactory.process(asset)
+        config = Config.objects.get(pk=config_id)
+        ralph_api = Ralph(config)
+        parser = AssetsParser(config.name)
+        LOGGER.info('Start loading data from Ralph: %s', config.name)
+        assets = ralph_api.get_all_assets()
+        assets = parser.parse(assets)
+        AssetDocument.create_or_update(assets)
+        LOGGER.info('Finish loading data from Ralph: %s', config.name)
     except Exception as ex:
-        LOGGER.error(ex)
-    LOGGER.info('Finish loading data from ralph')
+        LOGGER.error('Error with loading data from Ralph: %s', ex)
+
+
+@shared_task
+def start_update_assets():
+    for config in Config.objects.all().values_list('id', flat=True):
+        update_assets.delay(config_id=config)

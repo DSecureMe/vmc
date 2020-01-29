@@ -19,7 +19,7 @@
 """
 from decimal import Decimal
 
-from elasticsearch_dsl import Date, Keyword, InnerDoc
+from elasticsearch_dsl import Date, Keyword, InnerDoc, Q
 from vmc.common.enum import TupleValueEnum
 
 from vmc.common.elastic.documents import Document, TupleValueField
@@ -35,6 +35,7 @@ class Impact(TupleValueEnum):
 
 class AssetInnerDoc(InnerDoc):
     ip_address = Keyword()
+    mac_address = Keyword()
     os = Keyword()
     cmdb_id = Keyword()
     confidentiality_requirement = TupleValueField(choice_type=Impact)
@@ -46,6 +47,7 @@ class AssetInnerDoc(InnerDoc):
     created_date = Date()
     modified_date = Date()
     change_reason = Keyword()
+    tags = Keyword()
 
 
 @registry.register_document
@@ -53,3 +55,17 @@ class AssetDocument(AssetInnerDoc, Document):
     class Index:
         name = 'asset'
 
+    @staticmethod
+    def create_or_update(assets: list) -> None:
+        for asset in assets:
+            old_asset = AssetDocument.search().filter(
+                Q('term', ip_address=asset.ip_address) &
+                Q('term', cmdb_id=asset.cmdb_id)).sort('-modified_date')[0].execute()
+
+            if not old_asset.hits:
+                asset.save(refresh=True)
+
+            elif asset.has_changed(old_asset.hits[0]):
+                asset.created_date = old_asset.hits[0].created_date
+                asset.change_reason = 'Asset Update'
+                asset.save(refresh=True)

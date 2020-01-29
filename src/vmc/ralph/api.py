@@ -42,7 +42,7 @@ class Ralph:
 
     def __init__(self, config: Config):
 
-        self.url = config.url
+        self.url = config.get_url()
         self.username = config.username
         self.password = config.password
         self.api_token = None

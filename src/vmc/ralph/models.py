@@ -23,10 +23,20 @@ from vmc.common.models import BaseModel
 
 
 class Config(BaseModel):
+    SCHEMA = (
+        ('http', 'http'),
+        ('https', 'https')
+    )
     name = models.CharField(max_length=128)
-    url = models.CharField(max_length=128)
+    schema = models.CharField(choices=SCHEMA, default='http', max_length=5)
+    host = models.CharField(max_length=128)
+    port = models.PositiveSmallIntegerField()
     username = models.TextField()
     password = models.TextField()
+    insecure = models.BooleanField(default=False)
 
     def __str__(self):
         return self.name
+
+    def get_url(self) -> str:
+        return '{}://{}:{}'.format(self.schema, self.host, self.port)

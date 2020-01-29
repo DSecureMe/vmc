@@ -24,12 +24,8 @@ start () {
        admin)
             echo "Starting VMC Admin"
             vmc prepare
-            nginx && gunicorn vmc.config.wsgi:application --bind localhost:8001
-            ;;
-        admin-dev)
-            echo "Starting VMC Admin dev"
-            vmc prepare
-            vmc runserver 0.0.0.0:8080
+            nginx
+            gunicorn vmc.config.wsgi:application --bind localhost:8001
             ;;
        *)
             echo "Invalid Option, try: worker scheduler monitor admin"

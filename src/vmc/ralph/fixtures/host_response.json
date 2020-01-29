@@ -5,9 +5,9 @@
       {
           "id": 35,
           "url": "http://ralph-vmc-demo.dsecure.me/api/users/35/",
-          "username": "vmc-demo-admin",
-          "first_name": "",
-          "last_name": "",
+          "username": "FLBO",
+          "first_name": "FNAME",
+          "last_name": "LNAME",
           "ui_url": "http://ralph-vmc-demo.dsecure.me/accounts/ralphuser/35/"
       }
   ],
@@ -15,9 +15,9 @@
       {
           "id": 35,
           "url": "http://ralph-vmc-demo.dsecure.me/api/users/35/",
-          "username": "vmc-demo-admin",
-          "first_name": "",
-          "last_name": "",
+          "username": "FLTO",
+          "first_name": "FNAME",
+          "last_name": "LNAME",
           "ui_url": "http://ralph-vmc-demo.dsecure.me/accounts/ralphuser/35/"
       }
   ],
