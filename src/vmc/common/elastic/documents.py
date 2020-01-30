@@ -85,10 +85,11 @@ class Document(ESDocument):
         return obj
 
     def has_changed(self, other):
+        changed_fields = []
         for name in self.get_fields_name():
             if name not in Document.BASE_DOCUMENT_FIELDS and getattr(self, name) != getattr(other, name):
-                return True
-        return False
+                changed_fields.append(name)
+        return changed_fields
 
     def __hash__(self):
         return id(self)

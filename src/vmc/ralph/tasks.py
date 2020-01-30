@@ -22,7 +22,7 @@ import logging
 from celery import shared_task
 from vmc.assets.documents import AssetDocument
 
-from vmc.ralph.api import Ralph
+from vmc.ralph.clients import RalphClient
 from vmc.ralph.models import Config
 
 from vmc.ralph.parsers import AssetsParser
@@ -34,12 +34,12 @@ LOGGER = logging.getLogger(__name__)
 def update_assets(config_id: int):
     try:
         config = Config.objects.get(pk=config_id)
-        ralph_api = Ralph(config)
+        client = RalphClient(config)
         parser = AssetsParser(config.name)
         LOGGER.info('Start loading data from Ralph: %s', config.name)
-        assets = ralph_api.get_all_assets()
+        assets = client.get_assets()
         assets = parser.parse(assets)
-        AssetDocument.create_or_update(assets)
+        AssetDocument.create_or_update(config.name, assets)
         LOGGER.info('Finish loading data from Ralph: %s', config.name)
     except Exception as ex:
         LOGGER.error('Error with loading data from Ralph: %s', ex)

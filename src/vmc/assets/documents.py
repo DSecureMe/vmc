@@ -56,16 +56,17 @@ class AssetDocument(AssetInnerDoc, Document):
         name = 'asset'
 
     @staticmethod
-    def create_or_update(assets: list) -> None:
+    def create_or_update(tag: str, assets: list) -> None:
         for asset in assets:
             old_asset = AssetDocument.search().filter(
                 Q('term', ip_address=asset.ip_address) &
-                Q('term', cmdb_id=asset.cmdb_id)).sort('-modified_date')[0].execute()
-
+                Q('term', cmdb_id=asset.cmdb_id) &
+                Q('match', tags=tag)
+            ).sort('-modified_date')[0].execute()
             if not old_asset.hits:
                 asset.save(refresh=True)
-
             elif asset.has_changed(old_asset.hits[0]):
                 asset.created_date = old_asset.hits[0].created_date
-                asset.change_reason = 'Asset Update'
+                fields = ','.join(asset.has_changed(old_asset.hits[0]))
+                asset.change_reason = 'Asset update, changed fields: {}'.format(fields)
                 asset.save(refresh=True)

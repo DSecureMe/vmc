@@ -32,7 +32,7 @@ from vmc.config.test_settings import elastic_configured
 from vmc.assets.documents import Impact as AssetImpact, AssetDocument
 
 from vmc.ralph.apps import RalphConfig
-from vmc.ralph.api import Ralph
+from vmc.ralph.clients import RalphClient
 from vmc.ralph.models import Config
 from vmc.common.tests import get_fixture_location
 from vmc.common.elastic.tests import ESTestCase
@@ -42,7 +42,7 @@ from vmc.ralph.tasks import start_update_assets, update_assets
 
 class ResponseMock:
 
-    def __init__(self, resp, status_code):
+    def __init__(self, resp, status_code=200):
         self.text = resp
         self.status_code = status_code
 
@@ -71,56 +71,67 @@ class ModelConfigTest(TestCase):
         self.assertEqual(self.uut.get_url(), expected)
 
 
-class RalphTest(TestCase):
+class RalphClientTest(TestCase):
     fixtures = ['config.json']
 
     def setUp(self):
         self.config = Config.objects.get(pk=1)
-        self.uut = Ralph(self.config)
+        self.uut = RalphClient(self.config)
 
-    @patch('vmc.ralph.api.requests')
-    def test_call_get_token(self, request_mock):
-        request_mock.request.return_value = ResponseMock({'token': '79ee13720dbf474399dde532daad558aaeb131c3'}, 200)
+    @staticmethod
+    def _get_response(name: str):
+        with open(get_fixture_location(__file__, name)) as f:
+            return json.loads(f.read())
 
-        token = self.uut.get_token()
-        self.assertEqual(token, '79ee13720dbf474399dde532daad558aaeb131c3')
+    @patch('vmc.ralph.clients.requests')
+    def test_get_auth_header_call(self, request_mock):
+        request_mock.request.return_value = ResponseMock({'token': 'auth_token'})
+        self.assertEqual({'Authorization': 'Token auth_token'}, self.uut.get_auth_header())
+        request_mock.request.assert_called_once_with(
+            'POST',
+            'http://test:80/api-token-auth/',
+            headers={'Content-Type': 'application/json'},
+            data=json.dumps({'username': self.config.username, 'password': self.config.password}),
+            verify=False
+        )
 
-    @patch('vmc.ralph.api.requests')
-    def test_call_get_host_by_id(self, request_mock):
+    @patch('vmc.ralph.clients.requests')
+    def test_get_auth_header_call_token_exists(self, request_mock):
+        self.uut._api_token = 'auth_token'
+        request_mock.request.assert_not_called()
+        self.assertEqual({'Authorization': 'Token auth_token'}, self.uut.get_auth_header())
 
-        with open(get_fixture_location(__file__, 'host_response.json')) as f:
-            j = f.read()
-        api_response = json.loads(j)
-        api_response_json = json.dumps(json.loads(j))
+    @patch('vmc.ralph.clients.requests')
+    def test_get_assets_call(self, request_mock):
+        self.uut._api_token = 'auth_token'
+        request_mock.request.return_value = ResponseMock(self._get_response('all_hosts_response.json'))
 
-        self.uut.get_token = Mock(return_value='79ee13720dbf474399dde532daad558aaeb131c3')
-        request_mock.request.return_value = ResponseMock(json.dumps(api_response), 200)
-        result = self.uut.get_host_data_by_id(62)
-
-        self.assertEqual(result, api_response_json)
-
-    @patch('vmc.ralph.api.requests')
-    def test_call_no_such_host_exception(self, request_mock):
-
-        self.uut.get_token = Mock(return_value='79ee13720dbf474399dde532daad558aaeb131c3')
-        request_mock.request.return_value = ResponseMock('{"detail":"Not found."}', 200)
-
-        result = self.uut.get_host_data_by_id('a')
-        self.assertEqual(result, 'Such asset doesn\'t exist')
-
-    @patch('vmc.ralph.api.requests')
-    def test_call_get_all_assets(self, request_mock):
-
-        self.uut.get_token = Mock(return_value='79ee13720dbf474399dde532daad558aaeb131c3')
-
-        with open(get_fixture_location(__file__, 'all_hosts_response.json')) as f:
-            j = f.read()
-        api_response = j
-        request_mock.request.return_value = ResponseMock(api_response, 200)
-        result = self.uut.get_all_assets()
+        result = self.uut.get_assets()
         self.assertIs(type(result), list)
         self.assertIs(type(result[0]), dict)
         self.assertEqual(len(result), 1)
+        request_mock.request.assert_called_once_with(
+            'GET',
+            'http://test:80/api/data-center-assets/?format=json&limit=500',
+            headers={'Authorization': 'Token auth_token'},
+            verify=False
+        )
+
+    @patch('vmc.ralph.clients.requests')
+    def test_get_users_call(self, request_mock):
+        self.uut._api_token = 'auth_token'
+        request_mock.request.return_value = ResponseMock(self._get_response('all_users.json'))
+
+        result = self.uut.get_users()
+        self.assertIs(type(result), list)
+        self.assertIs(type(result[0]), dict)
+        self.assertEqual(len(result), 1)
+        request_mock.request.assert_called_once_with(
+            'GET',
+            'http://test:80/api/users/?format=json&limit=500',
+            headers={'Authorization': 'Token auth_token'},
+            verify=False
+        )
 
 
 class AssetsParserTest(TestCase):
@@ -161,11 +172,11 @@ class UpdateAssetsTaskTest(TestCase):
         start_update_assets()
         update_assets_mock.delay.assert_called_once_with(config_id=self.config.id)
 
-    @patch('vmc.ralph.tasks.Ralph')
+    @patch('vmc.ralph.tasks.RalphClient')
     @patch('vmc.ralph.tasks.AssetsParser')
     @patch('vmc.ralph.tasks.AssetDocument')
     def test_update_assets_call(self, asset_document_mock, parser_mock, mock_api):
-        mock_api().get_all_assets.return_value = self.RESPONSE
+        mock_api().get_assets.return_value = self.RESPONSE
         parser_mock().parse.return_value = self.RESPONSE
 
         update_assets(self.config.id)
@@ -173,9 +184,9 @@ class UpdateAssetsTaskTest(TestCase):
         mock_api.assert_called_with(self.config)
         parser_mock.assert_called_with(self.config.name)
         parser_mock().parse.assert_called_with(self.RESPONSE)
-        asset_document_mock.create_or_update.assert_called_once_with(self.RESPONSE)
+        asset_document_mock.create_or_update.assert_called_once_with(self.config.name, self.RESPONSE)
 
-    @patch('vmc.ralph.tasks.Ralph')
+    @patch('vmc.ralph.tasks.RalphClient')
     @patch('vmc.ralph.tasks.AssetsParser')
     def test_update_assets_call_exception(self, factory_mock, mock_api):
         mock_api().get_all_assets.side_effect = Exception('Unknown')
@@ -194,13 +205,13 @@ class UpdateAssetsIntegrationTest(ESTestCase, TestCase):
         self.config_id = Config.objects.first().id
 
     def update_assets(self, mock_api):
-        mock_api().get_all_assets.return_value = self.hosts
+        mock_api().get_assets.return_value = self.hosts
         update_assets(self.config_id)
         self.assertEqual(2, Search().index(AssetDocument.Index.name).count())
         self.assertEqual(AssetDocument.search().filter('term', ip_address='10.0.0.23').count(), 1)
         self.assertEqual(AssetDocument.search().filter('term', ip_address='10.0.0.25').count(), 1)
 
-    @patch('vmc.ralph.tasks.Ralph')
+    @patch('vmc.ralph.tasks.RalphClient')
     def test_call(self, mock_api):
         self.update_assets(mock_api)
         self.update_assets(mock_api)

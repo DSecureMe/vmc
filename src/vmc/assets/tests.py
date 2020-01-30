@@ -20,7 +20,9 @@
 from unittest import skipIf
 
 from django.test import TestCase
+from elasticsearch_dsl import Search
 from parameterized import parameterized
+from elasticsearch_dsl import Q
 
 from vmc.common.elastic.tests import ESTestCase
 from vmc.assets.apps import AssetsConfig
@@ -94,3 +96,29 @@ class AssetDocumentTest(ESTestCase, TestCase):
         self.assertEqual(uut.change_reason, 'create')
         self.assertTrue(uut.created_date)
         self.assertTrue(uut.modified_date)
+
+    def test_tags(self):
+        a_1_tag_1 = AssetDocument(cmdb_id=1, ip_address='10.0.0.1', tags=['TAG1', 'OTHER'], hostname='hostname_1')
+        a_1_tag_1.save(refresh=True)
+        a_2_tag_1 = AssetDocument(cmdb_id=2, ip_address='10.0.0.2', tags=['TAG1'], hostname='hostname_2')
+        a_2_tag_1.save(refresh=True)
+
+        a_1_tag_2 = AssetDocument(cmdb_id=1, ip_address='10.0.0.1', tags=['TAG2'], hostname='hostname_1')
+        a_1_tag_2.save(refresh=True)
+        a_2_tag_2 = AssetDocument(cmdb_id=2, ip_address='10.0.0.2', tags=['TAG2', 'OTHER'], hostname='hostname_2')
+        a_2_tag_2.save(refresh=True)
+
+        self.assertEqual(4, Search().index(AssetDocument.Index.name).count())
+
+        a_1_tag_1_copy = a_1_tag_1.clone()
+        a_1_tag_1_copy.hostname = 'hostname_1_copy'
+        AssetDocument.create_or_update('TAG1', [a_1_tag_1_copy])
+        self.assertEqual(5, Search().index(AssetDocument.Index.name).count())
+
+        result = AssetDocument.search().filter(
+            Q('term', ip_address=a_1_tag_1_copy.ip_address) &
+            Q('term', cmdb_id=a_1_tag_1_copy.cmdb_id) &
+            Q('match', tags='TAG1')
+        ).sort('-modified_date')[0].execute()
+        self.assertEqual(result.hits[0].hostname, a_1_tag_1_copy.hostname)
+        self.assertEqual(result.hits[0].change_reason, 'Asset update, changed fields: hostname')
