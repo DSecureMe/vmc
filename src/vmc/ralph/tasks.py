@@ -25,7 +25,7 @@ from vmc.assets.documents import AssetDocument
 from vmc.ralph.clients import RalphClient
 from vmc.ralph.models import Config
 
-from vmc.ralph.parsers import AssetsParser
+from vmc.ralph.parsers import AssetsParser, OwnerParser
 
 LOGGER = logging.getLogger(__name__)
 
@@ -37,11 +37,15 @@ def update_assets(config_id: int):
         client = RalphClient(config)
         parser = AssetsParser(config.name)
         LOGGER.info('Start loading data from Ralph: %s', config.name)
+        users = client.get_users()
+        users = OwnerParser.parse(users)
         assets = client.get_assets()
-        assets = parser.parse(assets)
+        assets = parser.parse(assets, users)
         AssetDocument.create_or_update(config.name, assets)
         LOGGER.info('Finish loading data from Ralph: %s', config.name)
     except Exception as ex:
+        import traceback
+        traceback.print_exc()
         LOGGER.error('Error with loading data from Ralph: %s', ex)
 
 

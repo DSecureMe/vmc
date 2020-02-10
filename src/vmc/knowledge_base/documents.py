@@ -29,9 +29,6 @@ class ExploitInnerDoc(InnerDoc):
     id = Keyword()
     url = Keyword()
 
-    class Index:
-        name = 'exploit'
-
     @staticmethod
     def create(exp_id: int):
         url = 'https://www.exploit-db.com/exploits/{}'.format(exp_id)

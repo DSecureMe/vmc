@@ -21,8 +21,8 @@
 from django.dispatch import receiver
 
 from vmc.common.elastic.signals import post_save
-from vmc.assets.documents import AssetDocument
-from vmc.knowledge_base.documents import CveDocument
+from vmc.assets.documents import AssetDocument, AssetInnerDoc
+from vmc.knowledge_base.documents import CveDocument, CveInnerDoc
 from vmc.vulnerabilities.documents import VulnerabilityDocument
 
 
@@ -38,10 +38,8 @@ def cve_update(cve: CveDocument):
     )
     response = s.execute()
     for vuln in response.hits:
-        new_vuln = vuln.clone()
-        new_vuln.cve = cve
-        new_vuln.change_reason = 'CVE Updated'
-        new_vuln.save(refresh=True)
+        vuln.cve = cve.clone()
+        vuln.save(refresh=True)
 
 
 def asset_update(asset: AssetDocument):
@@ -56,10 +54,8 @@ def asset_update(asset: AssetDocument):
     )
     response = s.execute()
     for vuln in response.hits:
-        new_vuln = vuln.clone()
-        new_vuln.asset = asset
-        new_vuln.change_reason = 'Asset Updated'
-        new_vuln.save(refresh=True)
+        vuln.asset = asset.clone()
+        vuln.save(refresh=True)
 
 
 @receiver(post_save)

@@ -60,6 +60,8 @@ THIRD_PARTY_APPS = [
     'django_celery_beat',
     'django_celery_results',
     'simple_history',
+    'rest_framework',
+    'drf_yasg',
 ]
 
 

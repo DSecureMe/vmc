@@ -24,6 +24,8 @@ from datetime import datetime
 
 from defusedxml.lxml import RestrictedElement
 from django.utils.dateparse import parse_datetime
+from django.utils.timezone import now
+
 from vmc.knowledge_base.documents import CweDocument, CveDocument, CpeInnerDoc, ExploitInnerDoc
 
 from vmc.common.xml import iter_elements_by_name
@@ -49,8 +51,8 @@ class CWEFactory:
                 setattr(cwe, field, parser(item))
 
         if old.hits and cwe.has_changed(old.hits[0]):
-            cwe.created_date = old.hits[0].created_date
-            cwe.save(refresh=True)
+            old.hits[0].modified_date = now()
+            old.hits[0].update(**cwe.to_dict(), refresh=True)
         elif not old.hits:
             cwe.save(refresh=True)
 
@@ -144,10 +146,9 @@ class CveFactory:
 
                 for cpe in CveFactory.get_cpe(item):
                     cve.cpe.append(cpe)
-
                 if old.hits and cve.has_changed(old.hits[0]):
-                    cve.modified_date = old.hits[0].modified_date
-                    cve.save(refresh=True)
+                    old.hits[0].modified_date = now()
+                    old.hits[0].update(**cve.to_dict(), refresh=True)
                 else:
                     cve.save(refresh=True)
             return None

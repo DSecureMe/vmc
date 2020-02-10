@@ -18,6 +18,7 @@
  */
 """
 from django.dispatch import receiver
+
 from vmc.knowledge_base.documents import CweDocument, CveDocument
 
 from vmc.common.elastic.signals import post_save
@@ -37,7 +38,5 @@ def update_cve(**kwargs):
         )
         response = s.execute()
         for cve in response.hits:
-            new_cve = cve.clone()
-            new_cve.cwe = kwargs['instance']
-            new_cve.change_reason = 'CWE Updated'
-            new_cve.save(refresh=True)
+            cve.cwe = kwargs['instance'].clone()
+            cve.save(refresh=True)

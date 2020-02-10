@@ -148,7 +148,9 @@ class CveFactoryTest(ESTestCase, TestCase):
         with open(get_fixture_location(__file__, 'nvdcve-1.0-2017.json')) as handle:
             CveFactory.process(handle)
 
-        self.assertEqual(CveDocument.search().filter('term', id='CVE-2017-0002').count(), 2)
+        self.assertEqual(CveDocument.search().filter('term', id='CVE-2017-0002').count(), 1)
+        new_cve = CveDocument.search().filter('term', id='CVE-2017-0002').execute().hits[0]
+        self.assertTrue(cve.last_modified_date != new_cve.last_modified_date)
 
     def test_cwe_update(self):
         cwe = CweDocument.search().filter('term', id='CWE-200').execute().hits[0]
@@ -156,9 +158,8 @@ class CveFactoryTest(ESTestCase, TestCase):
         cwe.save(refresh=True)
 
         cve = CveDocument.search().filter('term', id='CVE-2017-0008').sort('-modified_date').execute().hits
-        self.assertEqual(len(cve), 2)
+        self.assertEqual(len(cve), 1)
         self.assertEqual(cve[0].cwe.name, 'Changed')
-        self.assertEqual(cve[0].change_reason, 'CWE Updated')
 
     def test_should_not_update(self):
         self.assertEqual(Search().index(CveDocument.Index.name).count(), 2)

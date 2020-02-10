@@ -80,9 +80,20 @@ class Document(ESDocument):
             created = True
             self.created_date = now()
         self.modified_date = now()
-        obj = super().save(** kwargs)
+        super().save(** kwargs)
         post_save.send(sender=type(self), instance=self, created=created)
-        return obj
+        return self
+
+    def update(self, using=None, index=None,  detect_noop=True,
+               doc_as_upsert=False, refresh=False, retry_on_conflict=None,
+               script=None, script_id=None, scripted_upsert=False, upsert=None,
+               **fields):
+        self.modified_date = now()
+        super().update(using=using, index=index, detect_noop=detect_noop,
+                       doc_as_upsert=doc_as_upsert, refresh=refresh, retry_on_conflict=retry_on_conflict,
+                       script=script, script_id=script_id, scripted_upsert=scripted_upsert, upsert=upsert, **fields)
+        post_save.send(sender=type(self), instance=self, created=False)
+        return self
 
     def has_changed(self, other):
         changed_fields = []
@@ -101,6 +112,8 @@ class Document(ESDocument):
         new_obj = self.__class__()
         for name in self.get_fields_name():
             if name not in without_fields and getattr(self, name, None):
+                t = getattr(new_obj, name, None)
+                print(type(t))
                 setattr(new_obj, name, getattr(self, name))
         return new_obj
 

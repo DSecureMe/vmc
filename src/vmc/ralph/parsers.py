@@ -18,7 +18,27 @@
  */
 """
 
-from vmc.assets.documents import AssetDocument, Impact
+from vmc.assets.documents import AssetDocument, OwnerInnerDoc, Impact
+
+
+class OwnerParser:
+
+    @staticmethod
+    def parse(users: list) -> dict:
+        result = dict()
+        for user in users:
+            try:
+                result[user['id']] = OwnerInnerDoc(
+                    name='{first} {last} ({username})'.format(
+                        first=user['first_name'],
+                        last=user['last_name'],
+                        username=user['username']),
+                    email=user['email'],
+                    department=user['department'] if user['department'] else '',
+                    team=user['team']['name'] if user['team'] else '')
+            except KeyError:
+                pass
+        return result
 
 
 class AssetsParser:
@@ -26,8 +46,12 @@ class AssetsParser:
     def __init__(self, config_name: str):
         self.__config_name = config_name
         self.__parsed = list()
+        self.__users = dict()
 
-    def parse(self, assets: list) -> list:
+    def parse(self, assets: list, users: dict = None) -> list:
+        if users:
+            self.__users = users
+
         for asset in assets:
             for iface in asset['ethernet']:
                 self.create(asset, iface)
@@ -37,7 +61,7 @@ class AssetsParser:
         asset = AssetDocument()
         asset.tags = [self.__config_name]
         for field in AssetDocument.get_fields_name():
-            parser = getattr(AssetsParser, field, None)
+            parser = getattr(self, field, None)
             try:
                 if parser:
                     setattr(asset, field, parser(item, iface))
@@ -61,21 +85,15 @@ class AssetsParser:
     def os(item: dict, _) -> str:
         return item['custom_fields']['os']
 
-    @staticmethod
-    def business_owner(item: dict, _) -> str:
-        return AssetsParser.owner(item['business_owners'][0])
+    def business_owner(self, item: dict, _) -> list:
+        return self.owner(item, 'business_owners')
 
-    @staticmethod
-    def technical_owner(item: dict, _) -> str:
-        return AssetsParser.owner(item['technical_owners'][0])
+    def technical_owner(self, item: dict, _) -> list:
+        return self.owner(item, 'technical_owners')
 
-    @staticmethod
-    def owner(item: dict) -> str:
-        return '{first} {last} ({username})'.format(
-            first=item['first_name'],
-            last=item['last_name'],
-            username=item['username']
-        )
+    def owner(self, item: dict, field_name: str) -> list:
+        owners = [self.__users[us['id']] for us in item[field_name] if us['id'] in self.__users]
+        return owners if owners else [OwnerInnerDoc()]
 
     @staticmethod
     def hostname(item: dict, _) -> str:

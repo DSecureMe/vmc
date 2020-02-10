@@ -1,0 +1,85 @@
+[
+  {
+    "id": 1,
+    "url": "http://ralph-demo.allegro.tech/api/users/1/",
+    "assets_as_user": [],
+    "assets_as_owner": [],
+    "licences": [],
+    "ui_url": "http://ralph-demo.allegro.tech/accounts/ralphuser/1/",
+    "last_login": "2019-02-17T21:28:05.414546",
+    "is_superuser": true,
+    "username": "DS",
+    "first_name": "M",
+    "last_name": "W",
+    "email": "contact@dsecure.me",
+    "is_staff": true,
+    "is_active": true,
+    "date_joined": "2019-01-31T10:52:00.772162",
+    "country": "Poland",
+    "city": "",
+    "company": "",
+    "employee_id": "",
+    "profit_center": "",
+    "cost_center": "",
+    "department": "DEPARTMENT",
+    "manager": "",
+    "location": "",
+    "segment": "",
+    "team": {
+                "id": 3,
+                "url": "http://ralph-demo.allegro.tech/api/teams/3/",
+                "ui_url": "http://ralph-demo.allegro.tech/accounts/team/3/",
+                "name": "TEAM"
+    },
+    "regions": [
+      {
+        "id": 1,
+        "url": "http://ralph-demo.allegro.tech/api/regions/1/",
+        "ui_url": "http://ralph-demo.allegro.tech/accounts/region/1/",
+        "name": "gggpl",
+        "country": "Albania",
+        "stocktaking_enabled": true
+      },
+      {
+        "id": 2,
+        "url": "http://ralph-demo.allegro.tech/api/regions/2/",
+        "ui_url": "http://ralph-demo.allegro.tech/accounts/region/2/",
+        "name": "de",
+        "country": "Germany",
+        "stocktaking_enabled": true
+      },
+      {
+        "id": 3,
+        "url": "http://ralph-demo.allegro.tech/api/regions/3/",
+        "ui_url": "http://ralph-demo.allegro.tech/accounts/region/3/",
+        "name": "ua",
+        "country": "Albania",
+        "stocktaking_enabled": true
+      },
+      {
+        "id": 4,
+        "url": "http://ralph-demo.allegro.tech/api/regions/4/",
+        "ui_url": "http://ralph-demo.allegro.tech/accounts/region/4/",
+        "name": "ES",
+        "country": "Albania",
+        "stocktaking_enabled": true
+      },
+      {
+        "id": 5,
+        "url": "http://ralph-demo.allegro.tech/api/regions/5/",
+        "ui_url": "http://ralph-demo.allegro.tech/accounts/region/5/",
+        "name": "NNE",
+        "country": "Albania",
+        "stocktaking_enabled": true
+      },
+      {
+        "id": 6,
+        "url": "http://ralph-demo.allegro.tech/api/regions/6/",
+        "ui_url": "http://ralph-demo.allegro.tech/accounts/region/6/",
+        "name": "Mid-West",
+        "country": "Albania",
+        "stocktaking_enabled": true
+      }
+    ]
+  }
+]

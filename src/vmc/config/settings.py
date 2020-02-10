@@ -23,6 +23,7 @@ import yaml
 
 CFG = None
 CFG_PATH = '/etc/vmc/config.yml'
+VMC_PATH = os.path.realpath(os.path.dirname(__file__))
 
 try:
     with open(CFG_PATH, 'r') as ymlfile:
@@ -93,7 +94,7 @@ ROOT_URLCONF = 'vmc.config.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
+        'DIRS': [os.path.join(VMC_PATH, app.replace('.', '/'), 'templates') for app in INTERNAL_APPS],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [

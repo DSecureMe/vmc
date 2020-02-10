@@ -20,16 +20,16 @@
 
 import json
 from unittest import skipIf
-from unittest.mock import patch, Mock
+from unittest.mock import patch
 from parameterized import parameterized
 
 from django.contrib.auth.models import User
 from django.test import TestCase, LiveServerTestCase
 from elasticsearch_dsl import Search
 
-from vmc.ralph.parsers import AssetsParser
+from vmc.ralph.parsers import AssetsParser, OwnerParser
 from vmc.config.test_settings import elastic_configured
-from vmc.assets.documents import Impact as AssetImpact, AssetDocument
+from vmc.assets.documents import Impact as AssetImpact, AssetDocument, OwnerInnerDoc
 
 from vmc.ralph.apps import RalphConfig
 from vmc.ralph.clients import RalphClient
@@ -69,6 +69,9 @@ class ModelConfigTest(TestCase):
     def test_call_url(self, schema, expected):
         self.uut.schema = schema
         self.assertEqual(self.uut.get_url(), expected)
+
+    def test_call__str__(self):
+        self.assertEqual(self.uut.__str__(), 'Test Ralph Config')
 
 
 class RalphClientTest(TestCase):
@@ -134,6 +137,24 @@ class RalphClientTest(TestCase):
         )
 
 
+class OwnerParserTest(TestCase):
+
+    def setUp(self) -> None:
+        self.uut = OwnerParser
+        with open(get_fixture_location(__file__, 'users_response.json')) as f:
+            self.users = json.loads(f.read())
+
+    def test_call_parse(self):
+        result = self.uut.parse(self.users)
+        self.assertEqual(len(result), 1)
+        self.assertEqual(type(result), dict)
+        self.assertEqual(type(result[1]), OwnerInnerDoc)
+        self.assertEqual(result[1].name, 'M W (DS)')
+        self.assertEqual(result[1].email, 'contact@dsecure.me')
+        self.assertEqual(result[1].department, 'DEPARTMENT')
+        self.assertEqual(result[1].team, 'TEAM')
+
+
 class AssetsParserTest(TestCase):
     CONFIG_NAME = 'test_name'
 
@@ -142,9 +163,7 @@ class AssetsParserTest(TestCase):
         with open(get_fixture_location(__file__, 'host_response.json')) as f:
             self.hosts = [json.loads(f.read())]
 
-    def test_parse_called(self):
-        result = self.uut.parse(self.hosts)
-
+    def assert_fields(self, result):
         self.assertEqual(len(result), 2)
         self.assertEqual(result[0].tags, [AssetsParserTest.CONFIG_NAME])
         self.assertEqual(result[0].cmdb_id, 62)
@@ -155,13 +174,25 @@ class AssetsParserTest(TestCase):
         self.assertEqual(result[0].availability_requirement, AssetImpact.NOT_DEFINED)
         self.assertEqual(result[0].os, 'Windows Server 2003')
         self.assertEqual(result[0].hostname, 'ralph1.allegro.pl')
-        self.assertEqual(result[0].business_owner, 'FNAME LNAME (FLBO)')
-        self.assertEqual(result[0].technical_owner, 'FNAME LNAME (FLTO)')
+
+    def test_parse_called(self):
+        result = self.uut.parse(self.hosts)
+        self.assert_fields(result)
+        self.assertEqual(result[0].business_owner, [{}])
+        self.assertEqual(result[0].technical_owner, [{}])
+
+    def test_parse_with_users_called(self):
+        users = {35: OwnerInnerDoc(name='FNAME LNAME (FLBO)', email='contact@dsecure.me')}
+        result = self.uut.parse(self.hosts, users)
+        self.assert_fields(result)
+        self.assertEqual(result[0].business_owner, [{'name': 'FNAME LNAME (FLBO)', 'email': 'contact@dsecure.me'}])
+        self.assertEqual(result[0].technical_owner, [{'name': 'FNAME LNAME (FLBO)', 'email': 'contact@dsecure.me'}])
 
 
 class UpdateAssetsTaskTest(TestCase):
     fixtures = ['config.json']
     RESPONSE = [1, 2]
+    USERS = [1, 2]
 
     def setUp(self) -> None:
         super().setUp()
@@ -173,17 +204,23 @@ class UpdateAssetsTaskTest(TestCase):
         update_assets_mock.delay.assert_called_once_with(config_id=self.config.id)
 
     @patch('vmc.ralph.tasks.RalphClient')
+    @patch('vmc.ralph.tasks.OwnerParser')
     @patch('vmc.ralph.tasks.AssetsParser')
     @patch('vmc.ralph.tasks.AssetDocument')
-    def test_update_assets_call(self, asset_document_mock, parser_mock, mock_api):
+    def test_update_assets_call(self, asset_document_mock, asset_parser, owner_parser, mock_api):
         mock_api().get_assets.return_value = self.RESPONSE
-        parser_mock().parse.return_value = self.RESPONSE
+        mock_api().get_users.return_value = self.USERS
+        asset_parser().parse.return_value = self.RESPONSE
+        owner_parser.parse.return_value = self.USERS
 
         update_assets(self.config.id)
 
         mock_api.assert_called_with(self.config)
-        parser_mock.assert_called_with(self.config.name)
-        parser_mock().parse.assert_called_with(self.RESPONSE)
+        mock_api().get_users.assert_called_once()
+        owner_parser.parse.assert_called_with(self.USERS)
+        mock_api().get_assets.assert_called_once()
+        asset_parser.assert_called_with(self.config.name)
+        asset_parser().parse.assert_called_with(self.USERS, self.RESPONSE)
         asset_document_mock.create_or_update.assert_called_once_with(self.config.name, self.RESPONSE)
 
     @patch('vmc.ralph.tasks.RalphClient')
@@ -202,14 +239,21 @@ class UpdateAssetsIntegrationTest(ESTestCase, TestCase):
         super().setUp()
         with open(get_fixture_location(__file__, 'host_response.json')) as f:
             self.hosts = [json.loads(f.read())]
+        with open(get_fixture_location(__file__, 'users_response.json')) as f:
+            self.users = json.loads(f.read())
         self.config_id = Config.objects.first().id
 
     def update_assets(self, mock_api):
         mock_api().get_assets.return_value = self.hosts
+        mock_api().get_users.return_value = self.users
+
         update_assets(self.config_id)
         self.assertEqual(2, Search().index(AssetDocument.Index.name).count())
         self.assertEqual(AssetDocument.search().filter('term', ip_address='10.0.0.23').count(), 1)
         self.assertEqual(AssetDocument.search().filter('term', ip_address='10.0.0.25').count(), 1)
+
+        update_assets(self.config_id)
+        self.assertEqual(2, Search().index(AssetDocument.Index.name).count())
 
     @patch('vmc.ralph.tasks.RalphClient')
     def test_call(self, mock_api):

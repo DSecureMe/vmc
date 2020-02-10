@@ -19,7 +19,7 @@
 """
 from decimal import Decimal
 
-from elasticsearch_dsl import Date, Keyword, InnerDoc, Q
+from elasticsearch_dsl import Keyword, InnerDoc, Q, Nested
 from vmc.common.enum import TupleValueEnum
 
 from vmc.common.elastic.documents import Document, TupleValueField
@@ -33,6 +33,13 @@ class Impact(TupleValueEnum):
     NOT_DEFINED = ('N', Decimal('1.0'))
 
 
+class OwnerInnerDoc(InnerDoc):
+    name = Keyword()
+    email = Keyword()
+    department = Keyword()
+    team = Keyword()
+
+
 class AssetInnerDoc(InnerDoc):
     ip_address = Keyword()
     mac_address = Keyword()
@@ -41,17 +48,15 @@ class AssetInnerDoc(InnerDoc):
     confidentiality_requirement = TupleValueField(choice_type=Impact)
     integrity_requirement = TupleValueField(choice_type=Impact)
     availability_requirement = TupleValueField(choice_type=Impact)
-    business_owner = Keyword()
-    technical_owner = Keyword()
+    business_owner = Nested(OwnerInnerDoc, include_in_parent=True)
+    technical_owner = Nested(OwnerInnerDoc, include_in_parent=True)
     hostname = Keyword()
-    created_date = Date()
-    modified_date = Date()
     change_reason = Keyword()
     tags = Keyword()
 
 
 @registry.register_document
-class AssetDocument(AssetInnerDoc, Document):
+class AssetDocument(Document, AssetInnerDoc):
     class Index:
         name = 'asset'
 
@@ -62,11 +67,8 @@ class AssetDocument(AssetInnerDoc, Document):
                 Q('term', ip_address=asset.ip_address) &
                 Q('term', cmdb_id=asset.cmdb_id) &
                 Q('match', tags=tag)
-            ).sort('-modified_date')[0].execute()
+            ).execute()
             if not old_asset.hits:
                 asset.save(refresh=True)
             elif asset.has_changed(old_asset.hits[0]):
-                asset.created_date = old_asset.hits[0].created_date
-                fields = ','.join(asset.has_changed(old_asset.hits[0]))
-                asset.change_reason = 'Asset update, changed fields: {}'.format(fields)
-                asset.save(refresh=True)
+                old_asset.hits[0].update(**asset.to_dict(), refresh=True)

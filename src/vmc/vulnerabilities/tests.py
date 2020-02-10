@@ -65,8 +65,6 @@ def create_asset(ip_address='10.10.10.10') -> AssetDocument:
         ip_address=ip_address,
         mac_address='mac_address',
         os='OS',
-        business_owner='business_owner',
-        technical_owner='technical_owner',
         hostname='HOSTNAME',
         confidentiality_requirement=AssetImpact.LOW,
         integrity_requirement=AssetImpact.LOW,
@@ -205,15 +203,14 @@ class VulnerabilityDocumentTest(ESTestCase, TestCase):
         self.asset.confidentiality_requirement = AssetImpact.HIGH
         self.asset.save(refresh=True)
 
-        self.assertEqual(Search().index(VulnerabilityDocument.Index.name).count(), 8)
+        self.assertEqual(Search().index(VulnerabilityDocument.Index.name).count(), 6)
 
         result = VulnerabilityDocument.search().filter(
             'term', asset__ip_address=self.asset.ip_address).sort('-modified_date').filter(
             'term', cve__id=self.cve.id).execute()
 
-        self.assertEqual(len(result.hits), 4)
+        self.assertEqual(len(result.hits), 3)
         self.assertEqual(result.hits[0].asset.confidentiality_requirement, self.asset.confidentiality_requirement)
-        self.assertEqual(result.hits[0].change_reason, 'Asset Updated')
         self.assertEqual(result.hits[0].environmental_score_v2, 6.4)
         self.assertEqual(result.hits[0].environmental_score_v3, 8.8)
         self.assertTrue(result.hits[0].modified_date > result.hits[1].modified_date)
@@ -222,9 +219,8 @@ class VulnerabilityDocumentTest(ESTestCase, TestCase):
             'term', asset__ip_address=self.asset.ip_address).sort('-modified_date').filter(
             'term', cve__id=self.cve_2.id).execute()
 
-        self.assertEqual(len(result.hits), 4)
+        self.assertEqual(len(result.hits), 3)
         self.assertEqual(result.hits[0].asset.confidentiality_requirement, self.asset.confidentiality_requirement)
-        self.assertEqual(result.hits[0].change_reason, 'Asset Updated')
         self.assertEqual(result.hits[0].environmental_score_v2, 6.4)
         self.assertEqual(result.hits[0].environmental_score_v3, 8.8)
         self.assertTrue(result.hits[0].modified_date > result.hits[1].modified_date)
@@ -243,15 +239,14 @@ class VulnerabilityDocumentTest(ESTestCase, TestCase):
         self.cve.access_vector_v2 = metrics.AccessVectorV2.LOCAL
         self.cve.save(refresh=True)
 
-        self.assertEqual(Search().index(VulnerabilityDocument.Index.name).count(), 8)
+        self.assertEqual(Search().index(VulnerabilityDocument.Index.name).count(), 6)
 
         result = VulnerabilityDocument.search().filter(
             'term', asset__ip_address=self.asset.ip_address).sort('-modified_date').filter(
             'term', cve__id=self.cve.id).execute()
 
-        self.assertEqual(len(result.hits), 4)
+        self.assertEqual(len(result.hits), 3)
         self.assertEqual(result.hits[0].cve.access_vector_v2, self.cve.access_vector_v2)
-        self.assertEqual(result.hits[0].change_reason, 'CVE Updated')
         self.assertEqual(result.hits[0].environmental_score_v2, 2.5)
         self.assertEqual(result.hits[0].environmental_score_v3, 6.9)
         self.assertTrue(result.hits[0].modified_date > result.hits[1].modified_date)
@@ -260,9 +255,8 @@ class VulnerabilityDocumentTest(ESTestCase, TestCase):
             'term', asset__ip_address=self.asset_2.ip_address).sort('-modified_date').filter(
             'term', cve__id=self.cve.id).execute()
 
-        self.assertEqual(len(result.hits), 4)
+        self.assertEqual(len(result.hits), 3)
         self.assertEqual(result.hits[0].cve.access_vector_v2, self.cve.access_vector_v2)
-        self.assertEqual(result.hits[0].change_reason, 'CVE Updated')
         self.assertEqual(result.hits[0].environmental_score_v2, 2.5)
         self.assertEqual(result.hits[0].environmental_score_v3, 6.9)
         self.assertTrue(result.hits[0].modified_date > result.hits[1].modified_date)

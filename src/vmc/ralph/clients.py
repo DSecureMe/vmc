@@ -64,7 +64,6 @@ class RalphClient:
     def _get_list(self, url: str) -> List:
         results = []
         response = self._action('GET', url, headers=self.get_auth_header())
-
         if int(response['count']) > 0:
             while True:
                 results.extend(response['results'])
@@ -89,7 +88,7 @@ class RalphClient:
             if resp.status_code != 200:
                 self._print_debug(kwargs['headers'], url, resp.status_code,
                                   kwargs['data'] if 'data' in kwargs else 'None')
-                raise
+                return []
 
         except requests.exceptions.SSLError as ssl_error:
             raise SSLException('{} for {}.'.format(ssl_error, url))
