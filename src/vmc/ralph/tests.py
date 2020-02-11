@@ -170,8 +170,11 @@ class AssetsParserTest(TestCase):
         self.assertEqual(result[0].ip_address, '10.0.0.25')
         self.assertEqual(result[0].mac_address, '02:44:AA:BB:77:99')
         self.assertEqual(result[0].confidentiality_requirement, AssetImpact.HIGH)
+        self.assertIsInstance(result[0].confidentiality_requirement, AssetImpact)
         self.assertEqual(result[0].integrity_requirement, AssetImpact.NOT_DEFINED)
+        self.assertIsInstance(result[0].integrity_requirement, AssetImpact)
         self.assertEqual(result[0].availability_requirement, AssetImpact.NOT_DEFINED)
+        self.assertIsInstance(result[0].availability_requirement, AssetImpact)
         self.assertEqual(result[0].os, 'Windows Server 2003')
         self.assertEqual(result[0].hostname, 'ralph1.allegro.pl')
 

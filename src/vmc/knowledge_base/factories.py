@@ -51,8 +51,7 @@ class CWEFactory:
                 setattr(cwe, field, parser(item))
 
         if old.hits and cwe.has_changed(old.hits[0]):
-            old.hits[0].modified_date = now()
-            old.hits[0].update(**cwe.to_dict(), refresh=True)
+            old.hits[0].update(cwe, refresh=True)
         elif not old.hits:
             cwe.save(refresh=True)
 
@@ -147,8 +146,7 @@ class CveFactory:
                 for cpe in CveFactory.get_cpe(item):
                     cve.cpe.append(cpe)
                 if old.hits and cve.has_changed(old.hits[0]):
-                    old.hits[0].modified_date = now()
-                    old.hits[0].update(**cve.to_dict(), refresh=True)
+                    old.hits[0].update(cve, refresh=True)
                 else:
                     cve.save(refresh=True)
             return None

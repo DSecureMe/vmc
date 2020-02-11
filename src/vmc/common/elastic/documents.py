@@ -75,24 +75,18 @@ class Document(ESDocument):
     change_reason = Keyword()
 
     def save(self, **kwargs):
-        created = False
+        date = now()
         if not self.created_date:
-            created = True
-            self.created_date = now()
-        self.modified_date = now()
+            self.created_date = date
+        self.modified_date = date
         super().save(** kwargs)
-        post_save.send(sender=type(self), instance=self, created=created)
+        post_save.send(sender=type(self), instance=self, created=(self.created_date == self.modified_date))
         return self
 
-    def update(self, using=None, index=None,  detect_noop=True,
-               doc_as_upsert=False, refresh=False, retry_on_conflict=None,
-               script=None, script_id=None, scripted_upsert=False, upsert=None,
-               **fields):
-        self.modified_date = now()
-        super().update(using=using, index=index, detect_noop=detect_noop,
-                       doc_as_upsert=doc_as_upsert, refresh=refresh, retry_on_conflict=retry_on_conflict,
-                       script=script, script_id=script_id, scripted_upsert=scripted_upsert, upsert=upsert, **fields)
-        post_save.send(sender=type(self), instance=self, created=False)
+    def update(self, document, using=None, index=None, refresh=False):
+        for name in self.get_fields_name():
+            setattr(self, name, getattr(document, name))
+        self.save(using=using, index=index, refresh=refresh)
         return self
 
     def has_changed(self, other):

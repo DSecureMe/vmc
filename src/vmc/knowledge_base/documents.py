@@ -73,7 +73,7 @@ class CveInnerDoc(InnerDoc):
 
     exploits = Nested(ExploitInnerDoc, include_in_parent=True)
     cpe = Nested(CpeInnerDoc, include_in_parent=True)
-    cwe = Object(CweInnerDoc)
+    cwe = Object(CweInnerDoc, include_in_parent=True)
 
     def get_privileges_required_v3_value(self) -> float:
         scope = metrics.ScopeV3(self.scope_v3)

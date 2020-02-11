@@ -70,19 +70,23 @@ class AssetDocumentTest(ESTestCase, TestCase):
     def test_document_index_name(self):
         self.assertEqual(AssetDocument.Index.name, 'asset')
 
-    def test_document(self):
+    def create_asset(self, ip_address, tags, cmdb_id=1, hostname='test-hostname'):
         asset = AssetDocument(
-            ip_address='10.10.10.1',
+            ip_address=ip_address,
             os='Windows',
-            cmdb_id='1',
+            cmdb_id=cmdb_id,
             confidentiality_requirement='NOT_DEFINED',
             integrity_requirement='NOT_DEFINED',
             availability_requirement='NOT_DEFINED',
-            hostname='test-hostname'
+            hostname=hostname,
+            tags=tags
         )
         asset.technical_owner.append(self.to)
         asset.business_owner.append(self.bo)
-        asset.save(refresh=True)
+        return asset.save(refresh=True)
+
+    def test_document(self):
+        self.create_asset(ip_address='10.10.10.1', tags=[])
 
         result = AssetDocument.search().filter('term', ip_address='10.10.10.1').execute()
         self.assertEqual(len(result.hits), 1)
@@ -104,18 +108,10 @@ class AssetDocumentTest(ESTestCase, TestCase):
         self.assertTrue(uut.modified_date)
 
     def test_tags(self):
-        a_1_tag_1 = AssetDocument(cmdb_id=1, ip_address='10.0.0.1', tags=['TAG1', 'OTHER'], hostname='hostname_1')
-        a_1_tag_1.business_owner = [self.bo]
-        a_1_tag_1.technical_owner = [self.to]
-
-        a_1_tag_1.save(refresh=True)
-        a_2_tag_1 = AssetDocument(cmdb_id=2, ip_address='10.0.0.2', tags=['TAG1'], hostname='hostname_2')
-        a_2_tag_1.save(refresh=True)
-
-        a_1_tag_2 = AssetDocument(cmdb_id=1, ip_address='10.0.0.1', tags=['TAG2'], hostname='hostname_1')
-        a_1_tag_2.save(refresh=True)
-        a_2_tag_2 = AssetDocument(cmdb_id=2, ip_address='10.0.0.2', tags=['TAG2', 'OTHER'], hostname='hostname_2')
-        a_2_tag_2.save(refresh=True)
+        a_1_tag_1 = self.create_asset(cmdb_id=1, ip_address='10.0.0.1', tags=['TAG1', 'OTHER'], hostname='hostname_1')
+        self.create_asset(cmdb_id=2, ip_address='10.0.0.2', tags=['TAG1', 'OTHER'], hostname='hostname_2')
+        self.create_asset(cmdb_id=1, ip_address='10.0.0.1', tags=['TAG2'], hostname='hostname_1')
+        self.create_asset(cmdb_id=2, ip_address='10.0.0.2', tags=['TAG2'], hostname='hostname_2')
 
         self.assertEqual(4, Search().index(AssetDocument.Index.name).count())
 

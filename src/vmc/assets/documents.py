@@ -71,4 +71,4 @@ class AssetDocument(Document, AssetInnerDoc):
             if not old_asset.hits:
                 asset.save(refresh=True)
             elif asset.has_changed(old_asset.hits[0]):
-                old_asset.hits[0].update(**asset.to_dict(), refresh=True)
+                old_asset.hits[0].update(asset, refresh=True)

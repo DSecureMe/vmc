@@ -38,8 +38,8 @@ class VulnerabilityDocument(Document):
     solution = Keyword()
     environmental_score_v2 = Float()
     environmental_score_v3 = Float()
-    cve = Object(CveInnerDoc)
-    asset = Object(AssetInnerDoc)
+    cve = Object(CveInnerDoc, include_in_parent=True)
+    asset = Object(AssetInnerDoc, include_in_parent=True)
 
     class Index:
         name = 'vulnerability'

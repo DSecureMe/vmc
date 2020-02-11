@@ -59,9 +59,7 @@
   "processors":[],
   "object_type":"datacenterasset",
   "custom_fields":{
-    "confidentiality": "H",
-    "integrity": "N",
-    "availability": "N",
+    "confidentiality": "HIGH",
     "os": "Windows Server 2003"
   },
   "configuration_variables":{
