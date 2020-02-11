@@ -177,14 +177,14 @@ class VulnerabilityDocumentTest(ESTestCase, TestCase):
 
         self.assertEqual(uut.asset.ip_address, self.asset.ip_address)
         self.assertEqual(uut.asset.mac_address, self.asset.mac_address)
-        self.assertEqual(uut.asset.os, self.vulnerability.asset.os)
+        self.assertEqual(uut.asset.os, self.asset.os)
         self.assertEqual(uut.asset.confidentiality_requirement, self.asset.confidentiality_requirement)
         self.assertEqual(uut.asset.integrity_requirement, self.asset.integrity_requirement)
         self.assertEqual(uut.asset.availability_requirement, self.asset.availability_requirement)
 
-        self.assertEqual(uut.port, self.vulnerability.port)
-        self.assertEqual(uut.svc_name, self.vulnerability.svc_name)
-        self.assertEqual(uut.protocol, self.vulnerability.protocol)
+        self.assertEqual(uut.port, 22)
+        self.assertEqual(uut.svc_name, 'ssh')
+        self.assertEqual(uut.protocol, 'tcp')
 
         self.assertEqual(uut.environmental_score_v2, 4.9)
         self.assertEqual(uut.environmental_score_v3, 6.9)
