@@ -21,13 +21,14 @@
 from django.dispatch import receiver
 
 from vmc.common.elastic.signals import post_save
-from vmc.assets.documents import AssetDocument, AssetInnerDoc
-from vmc.knowledge_base.documents import CveDocument, CveInnerDoc
+from vmc.assets.documents import AssetDocument
+from vmc.knowledge_base.documents import CveDocument
 from vmc.vulnerabilities.documents import VulnerabilityDocument
 
 
-def cve_update(cve: CveDocument):
-    s = VulnerabilityDocument.search().filter('term', cve__id=cve.id).extra(
+@receiver(post_save, sender=CveDocument)
+def cve_update(instance: CveDocument, **kwargs):
+    s = VulnerabilityDocument.search().filter('term', cve__id=instance.id).extra(
         collapse={
             'field': 'asset.ip_address', "inner_hits": {
                 "name": "most_recent",
@@ -38,12 +39,13 @@ def cve_update(cve: CveDocument):
     )
     response = s.execute()
     for vuln in response.hits:
-        vuln.cve = cve.clone()
+        vuln.cve = instance
         vuln.save(refresh=True)
 
 
-def asset_update(asset: AssetDocument):
-    s = VulnerabilityDocument.search().filter('term', asset__ip_address=asset.ip_address).extra(
+@receiver(post_save, sender=AssetDocument)
+def asset_update(instance: AssetDocument, **kwargs):
+    s = VulnerabilityDocument.search().filter('term', asset__ip_address=instance.ip_address).extra(
         collapse={
             'field': 'cve.id', "inner_hits": {
                 "name": "most_recent",
@@ -54,14 +56,5 @@ def asset_update(asset: AssetDocument):
     )
     response = s.execute()
     for vuln in response.hits:
-        vuln.asset = asset.clone()
+        vuln.asset = instance
         vuln.save(refresh=True)
-
-
-@receiver(post_save)
-def update_cve(**kwargs):
-    if isinstance(kwargs['instance'], CveDocument):
-        cve_update(kwargs['instance'])
-
-    if isinstance(kwargs['instance'], AssetDocument):
-        asset_update(kwargs['instance'])

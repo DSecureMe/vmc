@@ -136,7 +136,7 @@ class VulnerabilityDocumentTest(ESTestCase, TestCase):
 
     @classmethod
     def create_vulnerability(cls, asset, cve):
-        cls.vulnerability = VulnerabilityDocument(
+        vulnerability = VulnerabilityDocument(
             asset=asset,
             cve=cve,
             description='description',
@@ -145,18 +145,18 @@ class VulnerabilityDocumentTest(ESTestCase, TestCase):
             svc_name='ssh',
             protocol='tcp'
         )
-        cls.vulnerability.save(refresh=True)
+        vulnerability.save(refresh=True)
 
     def test_document_index_name(self):
         self.assertEqual(VulnerabilityDocument.Index.name, 'vulnerability')
 
     def test_document_fields(self):
         self.create_vulnerability(self.asset, self.cve)
-        search = VulnerabilityDocument.search().filter('term', port=self.vulnerability.port).execute()
+        search = VulnerabilityDocument.search().filter('term', port=22).execute()
         self.assertEqual(len(search.hits), 1)
 
         uut = search.hits[0]
-        self.assertEqual(uut.cve.id, self.vulnerability.cve.id)
+        self.assertEqual(uut.cve.id, self.cve.id)
         self.assertEqual(uut.cve.base_score_v2, self.cve.base_score_v2)
         self.assertEqual(uut.cve.base_score_v3, self.cve.base_score_v3)
         self.assertEqual(uut.cve.summary, self.cve.summary)
@@ -201,29 +201,31 @@ class VulnerabilityDocumentTest(ESTestCase, TestCase):
         self.assertEqual(Search().index(VulnerabilityDocument.Index.name).count(), 6)
 
         self.asset.confidentiality_requirement = AssetImpact.HIGH
+        self.asset.integrity_requirement = AssetImpact.HIGH
         self.asset.save(refresh=True)
 
         self.assertEqual(Search().index(VulnerabilityDocument.Index.name).count(), 6)
 
-        result = VulnerabilityDocument.search().filter(
+        result_1 = VulnerabilityDocument.search().filter(
             'term', asset__ip_address=self.asset.ip_address).sort('-modified_date').filter(
             'term', cve__id=self.cve.id).execute()
 
-        self.assertEqual(len(result.hits), 3)
-        self.assertEqual(result.hits[0].asset.confidentiality_requirement, self.asset.confidentiality_requirement)
-        self.assertEqual(result.hits[0].environmental_score_v2, 6.4)
-        self.assertEqual(result.hits[0].environmental_score_v3, 8.8)
-        self.assertTrue(result.hits[0].modified_date > result.hits[1].modified_date)
+        self.assertEqual(len(result_1.hits), 3)
+        self.assertEqual(result_1.hits[0].asset.confidentiality_requirement, self.asset.confidentiality_requirement)
+        self.assertEqual(result_1.hits[0].asset.integrity_requirement, self.asset.integrity_requirement)
+        self.assertEqual(result_1.hits[0].environmental_score_v2, 7.5)
+        self.assertEqual(result_1.hits[0].environmental_score_v3, 8.8)
+        self.assertTrue(result_1.hits[0].modified_date > result_1.hits[1].modified_date)
 
-        result = VulnerabilityDocument.search().filter(
+        result_2 = VulnerabilityDocument.search().filter(
             'term', asset__ip_address=self.asset.ip_address).sort('-modified_date').filter(
             'term', cve__id=self.cve_2.id).execute()
 
-        self.assertEqual(len(result.hits), 3)
-        self.assertEqual(result.hits[0].asset.confidentiality_requirement, self.asset.confidentiality_requirement)
-        self.assertEqual(result.hits[0].environmental_score_v2, 6.4)
-        self.assertEqual(result.hits[0].environmental_score_v3, 8.8)
-        self.assertTrue(result.hits[0].modified_date > result.hits[1].modified_date)
+        self.assertEqual(len(result_2.hits), 3)
+        self.assertEqual(result_2.hits[0].asset.confidentiality_requirement, self.asset.confidentiality_requirement)
+        self.assertEqual(result_2.hits[0].environmental_score_v2, 7.5)
+        self.assertEqual(result_2.hits[0].environmental_score_v3, 8.8)
+        self.assertTrue(result_2.hits[0].modified_date > result_2.hits[1].modified_date)
 
     def test_cve_updated(self):
         self.create_vulnerability(self.asset, self.cve)
@@ -241,22 +243,22 @@ class VulnerabilityDocumentTest(ESTestCase, TestCase):
 
         self.assertEqual(Search().index(VulnerabilityDocument.Index.name).count(), 6)
 
-        result = VulnerabilityDocument.search().filter(
+        result_1 = VulnerabilityDocument.search().filter(
             'term', asset__ip_address=self.asset.ip_address).sort('-modified_date').filter(
             'term', cve__id=self.cve.id).execute()
 
-        self.assertEqual(len(result.hits), 3)
-        self.assertEqual(result.hits[0].cve.access_vector_v2, self.cve.access_vector_v2)
-        self.assertEqual(result.hits[0].environmental_score_v2, 2.5)
-        self.assertEqual(result.hits[0].environmental_score_v3, 6.9)
-        self.assertTrue(result.hits[0].modified_date > result.hits[1].modified_date)
+        self.assertEqual(len(result_1.hits), 3)
+        self.assertEqual(result_1.hits[0].cve.access_vector_v2, self.cve.access_vector_v2)
+        self.assertEqual(result_1.hits[0].environmental_score_v2, 2.5)
+        self.assertEqual(result_1.hits[0].environmental_score_v3, 6.9)
+        self.assertTrue(result_1.hits[0].modified_date > result_1.hits[1].modified_date)
 
-        result = VulnerabilityDocument.search().filter(
+        result_2 = VulnerabilityDocument.search().filter(
             'term', asset__ip_address=self.asset_2.ip_address).sort('-modified_date').filter(
             'term', cve__id=self.cve.id).execute()
 
-        self.assertEqual(len(result.hits), 3)
-        self.assertEqual(result.hits[0].cve.access_vector_v2, self.cve.access_vector_v2)
-        self.assertEqual(result.hits[0].environmental_score_v2, 2.5)
-        self.assertEqual(result.hits[0].environmental_score_v3, 6.9)
-        self.assertTrue(result.hits[0].modified_date > result.hits[1].modified_date)
+        self.assertEqual(len(result_2.hits), 3)
+        self.assertEqual(result_2.hits[0].cve.access_vector_v2, self.cve.access_vector_v2)
+        self.assertEqual(result_2.hits[0].environmental_score_v2, 2.5)
+        self.assertEqual(result_2.hits[0].environmental_score_v3, 6.9)
+        self.assertTrue(result_2.hits[0].modified_date > result_2.hits[1].modified_date)

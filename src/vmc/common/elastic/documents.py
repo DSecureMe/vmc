@@ -112,8 +112,6 @@ class Document(ESDocument):
         new_obj = self.__class__()
         for name in self.get_fields_name():
             if name not in without_fields and getattr(self, name, None):
-                t = getattr(new_obj, name, None)
-                print(type(t))
                 setattr(new_obj, name, getattr(self, name))
         return new_obj
 

@@ -24,19 +24,18 @@ from vmc.knowledge_base.documents import CweDocument, CveDocument
 from vmc.common.elastic.signals import post_save
 
 
-@receiver(post_save)
-def update_cve(**kwargs):
-    if isinstance(kwargs['instance'], CweDocument):
-        s = CveDocument.search().filter('term', cwe__id=kwargs['instance'].id).extra(
-            collapse={
-                'field': 'id', 'inner_hits': {
-                    'name': 'most_recent',
-                    'size': 1,
-                    'sort': [{'modified_date': 'desc'}]
-                }
+@receiver(post_save, sender=CweDocument)
+def update_cve(instance: CweDocument, **kwargs):
+    s = CveDocument.search().filter('term', cwe__id=instance.id).extra(
+        collapse={
+            'field': 'id', 'inner_hits': {
+                'name': 'most_recent',
+                'size': 1,
+                'sort': [{'modified_date': 'desc'}]
             }
-        )
-        response = s.execute()
-        for cve in response.hits:
-            cve.cwe = kwargs['instance'].clone()
-            cve.save(refresh=True)
+        }
+    )
+    response = s.execute()
+    for cve in response.hits:
+        cve.cwe = instance
+        cve.save(refresh=True)

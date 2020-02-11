@@ -50,7 +50,7 @@ class VulnerabilityDocument(Document):
     def prepare_environmental_score_v3(self):
         return environmental_score_v3(self.cve, self.asset) if self.cve.base_score_v3 else 0.0
 
-    def save(self, *args, **kwargs):
+    def save(self, **kwargs):
         self.environmental_score_v2 = self.prepare_environmental_score_v2()
         self.environmental_score_v3 = self.prepare_environmental_score_v3()
-        return super().save(*args, **kwargs)
+        return super().save(**kwargs)
