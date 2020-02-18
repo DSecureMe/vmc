@@ -35,7 +35,7 @@ def update_assets(config_id: int):
     try:
         config = Config.objects.get(pk=config_id)
         client = RalphClient(config)
-        parser = AssetsParser(config.name)
+        parser = AssetsParser(config)
         LOGGER.info('Start loading data from Ralph: %s', config.name)
         users = client.get_users()
         users = OwnerParser.parse(users)

@@ -156,16 +156,17 @@ class OwnerParserTest(TestCase):
 
 
 class AssetsParserTest(TestCase):
-    CONFIG_NAME = 'test_name'
+    fixtures = ['config.json']
 
     def setUp(self) -> None:
-        self.uut = AssetsParser(AssetsParserTest.CONFIG_NAME)
+        self.config = Config.objects.first()
+        self.uut = AssetsParser(self.config)
         with open(get_fixture_location(__file__, 'host_response.json')) as f:
             self.hosts = [json.loads(f.read())]
 
     def assert_fields(self, result):
         self.assertEqual(len(result), 2)
-        self.assertEqual(result['102-10.0.0.25'].tags, [AssetsParserTest.CONFIG_NAME])
+        self.assertEqual(result['102-10.0.0.25'].tags, [self.config.name])
         self.assertEqual(result['102-10.0.0.25'].cmdb_id, 102)
         self.assertEqual(result['102-10.0.0.25'].ip_address, '10.0.0.25')
         self.assertEqual(result['102-10.0.0.25'].mac_address, '02:44:AA:BB:77:99')
@@ -177,6 +178,7 @@ class AssetsParserTest(TestCase):
         self.assertIsInstance(result['102-10.0.0.25'].availability_requirement, AssetImpact)
         self.assertEqual(result['102-10.0.0.25'].os, 'Windows Server 2003')
         self.assertEqual(result['102-10.0.0.25'].hostname, 'ralph1.allegro.pl')
+        self.assertEqual(result['102-10.0.0.25'].url, 'http://test:80/data_center/datacenterasset/62')
 
     def test_parse_called(self):
         result = self.uut.parse(self.hosts)
@@ -222,7 +224,7 @@ class UpdateAssetsTaskTest(TestCase):
         mock_api().get_users.assert_called_once()
         owner_parser.parse.assert_called_with(self.USERS)
         mock_api().get_assets.assert_called_once()
-        asset_parser.assert_called_with(self.config.name)
+        asset_parser.assert_called_with(self.config)
         asset_parser().parse.assert_called_with(self.USERS, self.RESPONSE)
         asset_document_mock.create_or_update.assert_called_once_with(self.config.name, self.RESPONSE)
 

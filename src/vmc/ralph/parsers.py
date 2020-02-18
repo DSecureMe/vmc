@@ -46,8 +46,8 @@ class OwnerParser:
 
 class AssetsParser:
 
-    def __init__(self, config_name: str):
-        self.__config_name = config_name
+    def __init__(self, config: str):
+        self.__config = config
         self.__parsed = dict()
         self.__users = dict()
 
@@ -65,7 +65,7 @@ class AssetsParser:
 
     def create(self, item: dict, iface: dict):
         asset = AssetDocument()
-        asset.tags = [self.__config_name]
+        asset.tags = [self.__config.name]
         for field in AssetDocument.get_fields_name():
             parser = getattr(self, field, None)
             try:
@@ -125,3 +125,6 @@ class AssetsParser:
             return Impact(item['custom_fields']['availability'])
         except KeyError:
             return Impact.NOT_DEFINED
+
+    def url(self, item: dict, _) -> str:
+        return '{}/data_center/datacenterasset/{}'.format(self.__config.get_url(), item['id'])

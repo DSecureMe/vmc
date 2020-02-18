@@ -19,7 +19,7 @@
 """
 from decimal import Decimal
 
-from elasticsearch_dsl import Keyword, InnerDoc, Q, Nested
+from elasticsearch_dsl import Keyword, InnerDoc, Nested
 from vmc.common.enum import TupleValueEnum
 
 from vmc.common.elastic.documents import Document, TupleValueField
@@ -53,6 +53,7 @@ class AssetInnerDoc(InnerDoc):
     hostname = Keyword()
     change_reason = Keyword()
     tags = Keyword()
+    url = Keyword()
 
 
 @registry.register_document
