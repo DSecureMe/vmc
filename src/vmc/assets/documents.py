@@ -66,16 +66,13 @@ class AssetDocument(Document, AssetInnerDoc):
         # TODO: paging
         total = AssetDocument.search().count()
         for current_assets in AssetDocument.search()[0:total]:
-            key = current_assets.key()
-            if key in assets:
-                if current_assets.has_changed(assets[key]):
-                    current_assets.update(assets[key], refresh=True)
-                del assets[key]
-            elif key not in assets and 'DELETED' not in current_assets.tags:
+            cmdb_id = current_assets.cmdb_id
+            if current_assets.cmdb_id in assets:
+                if current_assets.has_changed(assets[cmdb_id]):
+                    current_assets.update(assets[cmdb_id], refresh=True)
+                del assets[cmdb_id]
+            elif cmdb_id not in assets and 'DELETED' not in current_assets.tags:
                 current_assets.tags.append('DELETED')
                 current_assets.save(refresh=True)
         for asset in assets.values():
             asset.save(refresh=True)
-
-    def key(self):
-        return '{}-{}'.format(self.cmdb_id, self.ip_address)

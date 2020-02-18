@@ -19,6 +19,7 @@
 """
 
 import json
+import uuid
 from unittest import skipIf
 from unittest.mock import patch
 from parameterized import parameterized
@@ -161,37 +162,38 @@ class AssetsParserTest(TestCase):
     def setUp(self) -> None:
         self.config = Config.objects.first()
         self.uut = AssetsParser(self.config)
+        self.asset_cmdb_id = str(uuid.uuid3(uuid.NAMESPACE_OID, '102-10.0.0.25'))
         with open(get_fixture_location(__file__, 'host_response.json')) as f:
             self.hosts = [json.loads(f.read())]
 
     def assert_fields(self, result):
         self.assertEqual(len(result), 2)
-        self.assertEqual(result['102-10.0.0.25'].tags, [self.config.name])
-        self.assertEqual(result['102-10.0.0.25'].cmdb_id, 102)
-        self.assertEqual(result['102-10.0.0.25'].ip_address, '10.0.0.25')
-        self.assertEqual(result['102-10.0.0.25'].mac_address, '02:44:AA:BB:77:99')
-        self.assertEqual(result['102-10.0.0.25'].confidentiality_requirement, AssetImpact.HIGH)
-        self.assertIsInstance(result['102-10.0.0.25'].confidentiality_requirement, AssetImpact)
-        self.assertEqual(result['102-10.0.0.25'].integrity_requirement, AssetImpact.NOT_DEFINED)
-        self.assertIsInstance(result['102-10.0.0.25'].integrity_requirement, AssetImpact)
-        self.assertEqual(result['102-10.0.0.25'].availability_requirement, AssetImpact.NOT_DEFINED)
-        self.assertIsInstance(result['102-10.0.0.25'].availability_requirement, AssetImpact)
-        self.assertEqual(result['102-10.0.0.25'].os, 'Windows Server 2003')
-        self.assertEqual(result['102-10.0.0.25'].hostname, 'ralph1.allegro.pl')
-        self.assertEqual(result['102-10.0.0.25'].url, 'http://test:80/data_center/datacenterasset/62')
+        self.assertEqual(result[self.asset_cmdb_id].tags, [self.config.name])
+        self.assertEqual(result[self.asset_cmdb_id].cmdb_id, self.asset_cmdb_id)
+        self.assertEqual(result[self.asset_cmdb_id].ip_address, '10.0.0.25')
+        self.assertEqual(result[self.asset_cmdb_id].mac_address, '02:44:AA:BB:77:99')
+        self.assertEqual(result[self.asset_cmdb_id].confidentiality_requirement, AssetImpact.HIGH)
+        self.assertIsInstance(result[self.asset_cmdb_id].confidentiality_requirement, AssetImpact)
+        self.assertEqual(result[self.asset_cmdb_id].integrity_requirement, AssetImpact.NOT_DEFINED)
+        self.assertIsInstance(result[self.asset_cmdb_id].integrity_requirement, AssetImpact)
+        self.assertEqual(result[self.asset_cmdb_id].availability_requirement, AssetImpact.NOT_DEFINED)
+        self.assertIsInstance(result[self.asset_cmdb_id].availability_requirement, AssetImpact)
+        self.assertEqual(result[self.asset_cmdb_id].os, 'Windows Server 2003')
+        self.assertEqual(result[self.asset_cmdb_id].hostname, 'ralph1.allegro.pl')
+        self.assertEqual(result[self.asset_cmdb_id].url, 'http://test:80/data_center/datacenterasset/62')
 
     def test_parse_called(self):
         result = self.uut.parse(self.hosts)
         self.assert_fields(result)
-        self.assertEqual(result['102-10.0.0.25'].business_owner, [{}])
-        self.assertEqual(result['102-10.0.0.25'].technical_owner, [{}])
+        self.assertEqual(result[self.asset_cmdb_id].business_owner, [{}])
+        self.assertEqual(result[self.asset_cmdb_id].technical_owner, [{}])
 
     def test_parse_with_users_called(self):
         users = {35: OwnerInnerDoc(name='FNAME LNAME (FLBO)', email='contact@dsecure.me')}
         result = self.uut.parse(self.hosts, users)
         self.assert_fields(result)
-        self.assertEqual(result['102-10.0.0.25'].business_owner, [{'name': 'FNAME LNAME (FLBO)', 'email': 'contact@dsecure.me'}])
-        self.assertEqual(result['102-10.0.0.25'].technical_owner, [{'name': 'FNAME LNAME (FLBO)', 'email': 'contact@dsecure.me'}])
+        self.assertEqual(result[self.asset_cmdb_id].business_owner, [{'name': 'FNAME LNAME (FLBO)', 'email': 'contact@dsecure.me'}])
+        self.assertEqual(result[self.asset_cmdb_id].technical_owner, [{'name': 'FNAME LNAME (FLBO)', 'email': 'contact@dsecure.me'}])
 
 
 class UpdateAssetsTaskTest(TestCase):

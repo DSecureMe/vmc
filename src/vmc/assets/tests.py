@@ -114,7 +114,7 @@ class AssetDocumentTest(ESTestCase, TestCase):
         self.create_asset(cmdb_id=4, ip_address='10.0.0.2', tags=['TAG2'], hostname='hostname_2')
 
         self.assertEqual(4, Search().index(AssetDocument.Index.name).count())
-        AssetDocument.create_or_update('', {asset_1.key(): asset_1, asset_2.key(): asset_2})
+        AssetDocument.create_or_update('', {asset_1.cmdb_id: asset_1, asset_2.cmdb_id: asset_2})
 
         result = AssetDocument.search().filter(Q('match', tags='DELETED')).sort('-modified_date').execute()
         self.assertEqual(2, len(result.hits))
@@ -133,7 +133,7 @@ class AssetDocumentTest(ESTestCase, TestCase):
 
         a_1_tag_1_copy = a_1_tag_1.clone()
         a_1_tag_1_copy.hostname = 'hostname_1_copy'
-        AssetDocument.create_or_update('TAG1', {'1-10.0.0.1': a_1_tag_1_copy})
+        AssetDocument.create_or_update('TAG1', {a_1_tag_1_copy.cmdb_id: a_1_tag_1_copy})
         self.assertEqual(4, Search().index(AssetDocument.Index.name).count())
 
         result = AssetDocument.search().filter(

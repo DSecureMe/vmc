@@ -20,6 +20,8 @@
 
 import logging
 from celery import shared_task
+
+from vmc.common.tasks import memcache_lock
 from vmc.assets.documents import AssetDocument
 
 from vmc.ralph.clients import RalphClient
@@ -30,10 +32,8 @@ from vmc.ralph.parsers import AssetsParser, OwnerParser
 LOGGER = logging.getLogger(__name__)
 
 
-@shared_task
-def update_assets(config_id: int):
+def _update(config: Config):
     try:
-        config = Config.objects.get(pk=config_id)
         client = RalphClient(config)
         parser = AssetsParser(config)
         LOGGER.info('Start loading data from Ralph: %s', config.name)
@@ -47,6 +47,16 @@ def update_assets(config_id: int):
         import traceback
         traceback.print_exc()
         LOGGER.error('Error with loading data from Ralph: %s', ex)
+
+
+@shared_task
+def update_assets(config_id: int):
+    config = Config.objects.get(pk=config_id)
+    lock_id = 'update-assets-lock-{}'.format(config.id)
+    with memcache_lock(lock_id, config.id) as acquired:
+        if acquired:
+            return _update(config)
+    LOGGER.info('Update assets for %s is already being imported by another worker', config.name)
 
 
 @shared_task

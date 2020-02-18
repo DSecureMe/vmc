@@ -18,7 +18,9 @@
  */
 """
 import logging
+import uuid
 
+from vmc.ralph.models import Config
 from vmc.assets.documents import AssetDocument, OwnerInnerDoc, Impact
 
 LOGGER = logging.getLogger(__name__)
@@ -46,7 +48,7 @@ class OwnerParser:
 
 class AssetsParser:
 
-    def __init__(self, config: str):
+    def __init__(self, config: Config):
         self.__config = config
         self.__parsed = dict()
         self.__users = dict()
@@ -73,11 +75,11 @@ class AssetsParser:
                     setattr(asset, field, parser(item, iface))
             except (KeyError, IndexError):
                 setattr(asset, field, 'UNKNOWN')
-        self.__parsed[asset.key()] = asset
+        self.__parsed[asset.cmdb_id] = asset
 
     @staticmethod
-    def cmdb_id(_, iface: dict) -> int:
-        return iface['id']
+    def cmdb_id(_, iface: dict) -> str:
+        return str(uuid.uuid3(uuid.NAMESPACE_OID, '{}-{}'.format(iface['id'], AssetsParser.ip_address(_, iface))))
 
     @staticmethod
     def ip_address(_, iface: dict) -> str:
