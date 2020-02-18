@@ -27,6 +27,7 @@ from datetime import datetime
 
 from celery import shared_task, group
 
+from vmc.common.tasks import memcache_lock
 from vmc.common.utils import get_file
 from vmc.knowledge_base.factories import CveFactory, CWEFactory, ExploitFactory
 
@@ -86,10 +87,17 @@ def update_exploits():
         LOGGER.error(ex)
 
 
+def _update_cve_cwe():
+    (
+            group(update_cve.si(year) for year in range(START_YEAR, datetime.now().year + 1)) |
+            update_cwe.si() |
+            update_exploits.si()
+    )()
+
+
 @shared_task
 def update_cve_cwe():
-    (
-        group(update_cve.si(year) for year in range(START_YEAR, datetime.now().year + 1)) |
-        update_cwe.si() |
-        update_exploits.si()
-    )()
+    with memcache_lock('update_cve_cwe', True) as acquired:
+        if acquired:
+            return _update_cve_cwe()
+    LOGGER.info('Update cve and cwe are already being imported by another worker')
