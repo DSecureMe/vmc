@@ -165,31 +165,31 @@ class AssetsParserTest(TestCase):
 
     def assert_fields(self, result):
         self.assertEqual(len(result), 2)
-        self.assertEqual(result[0].tags, [AssetsParserTest.CONFIG_NAME])
-        self.assertEqual(result[0].cmdb_id, 62)
-        self.assertEqual(result[0].ip_address, '10.0.0.25')
-        self.assertEqual(result[0].mac_address, '02:44:AA:BB:77:99')
-        self.assertEqual(result[0].confidentiality_requirement, AssetImpact.HIGH)
-        self.assertIsInstance(result[0].confidentiality_requirement, AssetImpact)
-        self.assertEqual(result[0].integrity_requirement, AssetImpact.NOT_DEFINED)
-        self.assertIsInstance(result[0].integrity_requirement, AssetImpact)
-        self.assertEqual(result[0].availability_requirement, AssetImpact.NOT_DEFINED)
-        self.assertIsInstance(result[0].availability_requirement, AssetImpact)
-        self.assertEqual(result[0].os, 'Windows Server 2003')
-        self.assertEqual(result[0].hostname, 'ralph1.allegro.pl')
+        self.assertEqual(result['102-10.0.0.25'].tags, [AssetsParserTest.CONFIG_NAME])
+        self.assertEqual(result['102-10.0.0.25'].cmdb_id, 102)
+        self.assertEqual(result['102-10.0.0.25'].ip_address, '10.0.0.25')
+        self.assertEqual(result['102-10.0.0.25'].mac_address, '02:44:AA:BB:77:99')
+        self.assertEqual(result['102-10.0.0.25'].confidentiality_requirement, AssetImpact.HIGH)
+        self.assertIsInstance(result['102-10.0.0.25'].confidentiality_requirement, AssetImpact)
+        self.assertEqual(result['102-10.0.0.25'].integrity_requirement, AssetImpact.NOT_DEFINED)
+        self.assertIsInstance(result['102-10.0.0.25'].integrity_requirement, AssetImpact)
+        self.assertEqual(result['102-10.0.0.25'].availability_requirement, AssetImpact.NOT_DEFINED)
+        self.assertIsInstance(result['102-10.0.0.25'].availability_requirement, AssetImpact)
+        self.assertEqual(result['102-10.0.0.25'].os, 'Windows Server 2003')
+        self.assertEqual(result['102-10.0.0.25'].hostname, 'ralph1.allegro.pl')
 
     def test_parse_called(self):
         result = self.uut.parse(self.hosts)
         self.assert_fields(result)
-        self.assertEqual(result[0].business_owner, [{}])
-        self.assertEqual(result[0].technical_owner, [{}])
+        self.assertEqual(result['102-10.0.0.25'].business_owner, [{}])
+        self.assertEqual(result['102-10.0.0.25'].technical_owner, [{}])
 
     def test_parse_with_users_called(self):
         users = {35: OwnerInnerDoc(name='FNAME LNAME (FLBO)', email='contact@dsecure.me')}
         result = self.uut.parse(self.hosts, users)
         self.assert_fields(result)
-        self.assertEqual(result[0].business_owner, [{'name': 'FNAME LNAME (FLBO)', 'email': 'contact@dsecure.me'}])
-        self.assertEqual(result[0].technical_owner, [{'name': 'FNAME LNAME (FLBO)', 'email': 'contact@dsecure.me'}])
+        self.assertEqual(result['102-10.0.0.25'].business_owner, [{'name': 'FNAME LNAME (FLBO)', 'email': 'contact@dsecure.me'}])
+        self.assertEqual(result['102-10.0.0.25'].technical_owner, [{'name': 'FNAME LNAME (FLBO)', 'email': 'contact@dsecure.me'}])
 
 
 class UpdateAssetsTaskTest(TestCase):
@@ -229,7 +229,7 @@ class UpdateAssetsTaskTest(TestCase):
     @patch('vmc.ralph.tasks.RalphClient')
     @patch('vmc.ralph.tasks.AssetsParser')
     def test_update_assets_call_exception(self, factory_mock, mock_api):
-        mock_api().get_all_assets.side_effect = Exception('Unknown')
+        mock_api().get_assets.side_effect = Exception('Unknown')
         update_assets(self.config.id)
         factory_mock.parse.assert_not_called()
 

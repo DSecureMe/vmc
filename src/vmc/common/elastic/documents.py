@@ -85,7 +85,8 @@ class Document(ESDocument):
 
     def update(self, document, using=None, index=None, refresh=False):
         for name in self.get_fields_name():
-            setattr(self, name, getattr(document, name))
+            if name not in Document.BASE_DOCUMENT_FIELDS:
+                setattr(self, name, getattr(document, name))
         self.save(using=using, index=index, refresh=refresh)
         return self
 

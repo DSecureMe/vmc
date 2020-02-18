@@ -17,8 +17,11 @@
  * under the License.
  */
 """
+import logging
 
 from vmc.assets.documents import AssetDocument, OwnerInnerDoc, Impact
+
+LOGGER = logging.getLogger(__name__)
 
 
 class OwnerParser:
@@ -36,8 +39,8 @@ class OwnerParser:
                     email=user['email'],
                     department=user['department'] if user['department'] else '',
                     team=user['team']['name'] if user['team'] else '')
-            except KeyError:
-                pass
+            except KeyError as ex:
+                LOGGER.warning(ex)
         return result
 
 
@@ -45,16 +48,19 @@ class AssetsParser:
 
     def __init__(self, config_name: str):
         self.__config_name = config_name
-        self.__parsed = list()
+        self.__parsed = dict()
         self.__users = dict()
 
-    def parse(self, assets: list, users: dict = None) -> list:
+    def parse(self, assets: list, users: dict = None) -> dict:
         if users:
             self.__users = users
 
         for asset in assets:
-            for iface in asset['ethernet']:
-                self.create(asset, iface)
+            try:
+                for iface in asset['ethernet']:
+                    self.create(asset, iface)
+            except TypeError:
+                pass
         return self.__parsed
 
     def create(self, item: dict, iface: dict):
@@ -67,11 +73,11 @@ class AssetsParser:
                     setattr(asset, field, parser(item, iface))
             except (KeyError, IndexError):
                 setattr(asset, field, 'UNKNOWN')
-        self.__parsed.append(asset)
+        self.__parsed[asset.key()] = asset
 
     @staticmethod
-    def cmdb_id(item: dict, _) -> int:
-        return item['id']
+    def cmdb_id(_, iface: dict) -> int:
+        return iface['id']
 
     @staticmethod
     def ip_address(_, iface: dict) -> str:

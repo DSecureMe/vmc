@@ -107,6 +107,22 @@ class AssetDocumentTest(ESTestCase, TestCase):
         self.assertTrue(uut.created_date)
         self.assertTrue(uut.modified_date)
 
+    def test_delete_asset(self):
+        asset_1 = self.create_asset(cmdb_id=1, ip_address='10.0.0.1', tags=['TAG1'], hostname='hostname_1')
+        asset_2 = self.create_asset(cmdb_id=2, ip_address='10.0.0.2', tags=['TAG1'], hostname='hostname_2')
+        self.create_asset(cmdb_id=3, ip_address='10.0.0.1', tags=['TAG2'], hostname='hostname_1')
+        self.create_asset(cmdb_id=4, ip_address='10.0.0.2', tags=['TAG2'], hostname='hostname_2')
+
+        self.assertEqual(4, Search().index(AssetDocument.Index.name).count())
+        AssetDocument.create_or_update('', {asset_1.key(): asset_1, asset_2.key(): asset_2})
+
+        result = AssetDocument.search().filter(Q('match', tags='DELETED')).sort('-modified_date').execute()
+        self.assertEqual(2, len(result.hits))
+        self.assertEqual(result.hits[0].ip_address, '10.0.0.2')
+        self.assertEqual(result.hits[0].cmdb_id, 4)
+        self.assertEqual(result.hits[1].ip_address, '10.0.0.1')
+        self.assertEqual(result.hits[1].cmdb_id, 3)
+
     def test_tags(self):
         a_1_tag_1 = self.create_asset(cmdb_id=1, ip_address='10.0.0.1', tags=['TAG1', 'OTHER'], hostname='hostname_1')
         self.create_asset(cmdb_id=2, ip_address='10.0.0.2', tags=['TAG1', 'OTHER'], hostname='hostname_2')
@@ -117,7 +133,7 @@ class AssetDocumentTest(ESTestCase, TestCase):
 
         a_1_tag_1_copy = a_1_tag_1.clone()
         a_1_tag_1_copy.hostname = 'hostname_1_copy'
-        AssetDocument.create_or_update('TAG1', [a_1_tag_1_copy])
+        AssetDocument.create_or_update('TAG1', {'1-10.0.0.1': a_1_tag_1_copy})
         self.assertEqual(4, Search().index(AssetDocument.Index.name).count())
 
         result = AssetDocument.search().filter(

@@ -61,14 +61,20 @@ class AssetDocument(Document, AssetInnerDoc):
         name = 'asset'
 
     @staticmethod
-    def create_or_update(tag: str, assets: list) -> None:
-        for asset in assets:
-            old_asset = AssetDocument.search().filter(
-                Q('term', ip_address=asset.ip_address) &
-                Q('term', cmdb_id=asset.cmdb_id) &
-                Q('match', tags=tag)
-            ).execute()
-            if not old_asset.hits:
-                asset.save(refresh=True)
-            elif asset.has_changed(old_asset.hits[0]):
-                old_asset.hits[0].update(asset, refresh=True)
+    def create_or_update(_: str, assets: dict) -> None:
+        # TODO: paging
+        total = AssetDocument.search().count()
+        for current_assets in AssetDocument.search()[0:total]:
+            key = current_assets.key()
+            if key in assets:
+                if current_assets.has_changed(assets[key]):
+                    current_assets.update(assets[key], refresh=True)
+                del assets[key]
+            elif key not in assets and 'DELETED' not in current_assets.tags:
+                current_assets.tags.append('DELETED')
+                current_assets.save(refresh=True)
+        for asset in assets.values():
+            asset.save(refresh=True)
+
+    def key(self):
+        return '{}-{}'.format(self.cmdb_id, self.ip_address)
