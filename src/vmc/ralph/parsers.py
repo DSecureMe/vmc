@@ -75,11 +75,11 @@ class AssetsParser:
                     setattr(asset, field, parser(item, iface))
             except (KeyError, IndexError):
                 setattr(asset, field, 'UNKNOWN')
-        self.__parsed[asset.cmdb_id] = asset
+        self.__parsed[asset.id] = asset
 
-    @staticmethod
-    def cmdb_id(_, iface: dict) -> str:
-        return str(uuid.uuid3(uuid.NAMESPACE_OID, '{}-{}'.format(iface['id'], AssetsParser.ip_address(_, iface))))
+    def id(self, _, iface: dict) -> str:
+        key = '{}-{}-{}'.format(self.__config.pk, iface['id'], AssetsParser.ip_address(_, iface))
+        return str(uuid.uuid3(uuid.NAMESPACE_OID, key))
 
     @staticmethod
     def ip_address(_, iface: dict) -> str:

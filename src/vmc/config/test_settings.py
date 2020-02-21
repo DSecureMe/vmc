@@ -43,11 +43,12 @@ ALLOWED_HOSTS = ['*']
 INTERNAL_APPS = [
     'vmc',
     'vmc.common',
+    'vmc.elasticsearch',
+    'vmc.knowledge_base',
     'vmc.assets',
+    'vmc.ralph',
     'vmc.vulnerabilities',
     'vmc.nessus',
-    'vmc.knowledge_base',
-    'vmc.ralph'
 ]
 
 THIRD_PARTY_APPS = [
@@ -68,7 +69,6 @@ def elastic_configured():
 
 
 if elastic_configured():
-    THIRD_PARTY_APPS.append('django_elasticsearch_dsl')
     ELASTICSEARCH_DSL = {
         'default': {
             'hosts': os.environ.get('ELASTICSEARCH_URL', None),

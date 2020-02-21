@@ -26,17 +26,17 @@ from parameterized import parameterized
 
 from django.contrib.auth.models import User
 from django.test import TestCase, LiveServerTestCase
-from elasticsearch_dsl import Search
 
 from vmc.ralph.parsers import AssetsParser, OwnerParser
 from vmc.config.test_settings import elastic_configured
 from vmc.assets.documents import Impact as AssetImpact, AssetDocument, OwnerInnerDoc
 
+from vmc.common.tests import get_fixture_location
 from vmc.ralph.apps import RalphConfig
 from vmc.ralph.clients import RalphClient
 from vmc.ralph.models import Config
-from vmc.common.tests import get_fixture_location
-from vmc.common.elastic.tests import ESTestCase
+from vmc.elasticsearch import Search
+from vmc.elasticsearch.tests import ESTestCase
 
 from vmc.ralph.tasks import start_update_assets, update_assets
 
@@ -162,38 +162,38 @@ class AssetsParserTest(TestCase):
     def setUp(self) -> None:
         self.config = Config.objects.first()
         self.uut = AssetsParser(self.config)
-        self.asset_cmdb_id = str(uuid.uuid3(uuid.NAMESPACE_OID, '102-10.0.0.25'))
+        self.asset_id = str(uuid.uuid3(uuid.NAMESPACE_OID, '1-102-10.0.0.25'))
         with open(get_fixture_location(__file__, 'host_response.json')) as f:
             self.hosts = [json.loads(f.read())]
 
     def assert_fields(self, result):
         self.assertEqual(len(result), 2)
-        self.assertEqual(result[self.asset_cmdb_id].tags, [self.config.name])
-        self.assertEqual(result[self.asset_cmdb_id].cmdb_id, self.asset_cmdb_id)
-        self.assertEqual(result[self.asset_cmdb_id].ip_address, '10.0.0.25')
-        self.assertEqual(result[self.asset_cmdb_id].mac_address, '02:44:AA:BB:77:99')
-        self.assertEqual(result[self.asset_cmdb_id].confidentiality_requirement, AssetImpact.HIGH)
-        self.assertIsInstance(result[self.asset_cmdb_id].confidentiality_requirement, AssetImpact)
-        self.assertEqual(result[self.asset_cmdb_id].integrity_requirement, AssetImpact.NOT_DEFINED)
-        self.assertIsInstance(result[self.asset_cmdb_id].integrity_requirement, AssetImpact)
-        self.assertEqual(result[self.asset_cmdb_id].availability_requirement, AssetImpact.NOT_DEFINED)
-        self.assertIsInstance(result[self.asset_cmdb_id].availability_requirement, AssetImpact)
-        self.assertEqual(result[self.asset_cmdb_id].os, 'Windows Server 2003')
-        self.assertEqual(result[self.asset_cmdb_id].hostname, 'ralph1.allegro.pl')
-        self.assertEqual(result[self.asset_cmdb_id].url, 'http://test:80/data_center/datacenterasset/62')
+        self.assertEqual(result[self.asset_id].tags, [self.config.name])
+        self.assertEqual(result[self.asset_id].id, self.asset_id)
+        self.assertEqual(result[self.asset_id].ip_address, '10.0.0.25')
+        self.assertEqual(result[self.asset_id].mac_address, '02:44:AA:BB:77:99')
+        self.assertEqual(result[self.asset_id].confidentiality_requirement, AssetImpact.HIGH)
+        self.assertIsInstance(result[self.asset_id].confidentiality_requirement, AssetImpact)
+        self.assertEqual(result[self.asset_id].integrity_requirement, AssetImpact.NOT_DEFINED)
+        self.assertIsInstance(result[self.asset_id].integrity_requirement, AssetImpact)
+        self.assertEqual(result[self.asset_id].availability_requirement, AssetImpact.NOT_DEFINED)
+        self.assertIsInstance(result[self.asset_id].availability_requirement, AssetImpact)
+        self.assertEqual(result[self.asset_id].os, 'Windows Server 2003')
+        self.assertEqual(result[self.asset_id].hostname, 'ralph1.allegro.pl')
+        self.assertEqual(result[self.asset_id].url, 'http://test:80/data_center/datacenterasset/62')
 
     def test_parse_called(self):
         result = self.uut.parse(self.hosts)
         self.assert_fields(result)
-        self.assertEqual(result[self.asset_cmdb_id].business_owner, [{}])
-        self.assertEqual(result[self.asset_cmdb_id].technical_owner, [{}])
+        self.assertEqual(result[self.asset_id].business_owner, [{}])
+        self.assertEqual(result[self.asset_id].technical_owner, [{}])
 
     def test_parse_with_users_called(self):
         users = {35: OwnerInnerDoc(name='FNAME LNAME (FLBO)', email='contact@dsecure.me')}
         result = self.uut.parse(self.hosts, users)
         self.assert_fields(result)
-        self.assertEqual(result[self.asset_cmdb_id].business_owner, [{'name': 'FNAME LNAME (FLBO)', 'email': 'contact@dsecure.me'}])
-        self.assertEqual(result[self.asset_cmdb_id].technical_owner, [{'name': 'FNAME LNAME (FLBO)', 'email': 'contact@dsecure.me'}])
+        self.assertEqual(result[self.asset_id].business_owner, [{'name': 'FNAME LNAME (FLBO)', 'email': 'contact@dsecure.me'}])
+        self.assertEqual(result[self.asset_id].technical_owner, [{'name': 'FNAME LNAME (FLBO)', 'email': 'contact@dsecure.me'}])
 
 
 class UpdateAssetsTaskTest(TestCase):

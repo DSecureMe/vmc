@@ -24,10 +24,11 @@ from unittest.mock import patch
 
 from django.contrib.auth.models import User
 from django.test import TestCase, LiveServerTestCase
-from elasticsearch_dsl import Search
 from parameterized import parameterized
 
-from vmc.common.elastic.tests import ESTestCase
+from vmc.common.tests import get_fixture_location
+from vmc.elasticsearch import Search
+from vmc.elasticsearch.tests import ESTestCase
 from vmc.config.test_settings import elastic_configured
 from vmc.knowledge_base.documents import CveDocument, CweDocument
 
@@ -35,8 +36,6 @@ from vmc.knowledge_base.factories import CveFactory, CWEFactory
 from vmc.knowledge_base import metrics
 from vmc.knowledge_base.utils import calculate_base_score_v2, calculate_base_score_v3
 from vmc.knowledge_base.tasks import update_exploits, update_cwe, update_cve
-
-from vmc.common.tests import get_fixture_location
 
 
 @skipIf(not elastic_configured(), 'Skip if elasticsearch is not configured')

@@ -17,21 +17,20 @@
  * under the License.
  */
 """
+
+from django.apps import AppConfig
+from django.conf import settings
+
 from elasticsearch_dsl.connections import connections
+from django.utils.module_loading import import_string
 
-from vmc.common.elastic.registers import registry
 
+class ElasticSearchConfig(AppConfig):
+    name = 'vmc.elasticsearch'
+    verbose_name = 'ElasticSearch'
+    signal_processor = None
 
-class ESTestCase(object):
-
-    def setUp(self):
-        for doc in registry.get_documents():
-            doc.init()
-
-        super(ESTestCase, self).setUp()
-
-    def tearDown(self):
-        client = connections.get_connection()
-        for doc in registry.get_documents():
-            client.indices.delete(doc.Index.name, ignore=404)
-        super(ESTestCase, self).tearDown()
+    def ready(self):
+        self.module.autodiscover()
+        if getattr(settings, 'ELASTICSEARCH_DSL', None):
+            connections.configure(**settings.ELASTICSEARCH_DSL)

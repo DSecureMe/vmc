@@ -15,23 +15,12 @@
  * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
- *
+ */
 """
-
-from django.core.management import call_command
-from django.core.management.base import BaseCommand
-
-from vmc.common.elastic.registers import registry
+from django.contrib import admin
+from vmc.elasticsearch.models import Config, DocumentRegistry, Tenant
 
 
-class Command(BaseCommand):
-    help = 'Make migrations and initialise indexes'
-
-    requires_migrations_checks = False
-    requires_system_checks = False
-
-    def handle(self, *args, **options):
-        call_command('migrate', *args, **options)
-
-        for document in registry.get_documents():
-            document.init()
+admin.site.register(Config)
+admin.site.register(DocumentRegistry)
+admin.site.register(Tenant)

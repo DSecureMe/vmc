@@ -54,11 +54,12 @@ ALLOWED_HOSTS = ['*']
 
 INTERNAL_APPS = [
     'vmc.common',
+    'vmc.elasticsearch',
+    'vmc.knowledge_base',
     'vmc.assets',
+    'vmc.ralph',
     'vmc.vulnerabilities',
     'vmc.nessus',
-    'vmc.knowledge_base',
-    'vmc.ralph'
 ]
 
 THIRD_PARTY_APPS = [
@@ -73,8 +74,6 @@ THIRD_PARTY_APPS = [
     'simple_history'
 ]
 
-if get_config('elasticsearch.hosts', False):
-    THIRD_PARTY_APPS.append('django_elasticsearch_dsl')
 
 INSTALLED_APPS = THIRD_PARTY_APPS + INTERNAL_APPS
 

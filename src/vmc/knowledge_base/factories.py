@@ -24,7 +24,6 @@ from datetime import datetime
 
 from defusedxml.lxml import RestrictedElement
 from django.utils.dateparse import parse_datetime
-from django.utils.timezone import now
 
 from vmc.knowledge_base.documents import CweDocument, CveDocument, CpeInnerDoc, ExploitInnerDoc
 

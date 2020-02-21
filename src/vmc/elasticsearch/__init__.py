@@ -17,25 +17,19 @@
  * under the License.
  */
 """
-from django.dispatch import receiver
 
-from vmc.knowledge_base.documents import CweDocument, CveDocument
+from django.utils.module_loading import autodiscover_modules
 
-from vmc.common.elastic.signals import post_save
+from elasticsearch_dsl import Keyword, InnerDoc, Nested, Q, Date, Float, Object, Search, Integer
+from .documents import Document, TupleValueField, EnumField
 
 
-@receiver(post_save, sender=CweDocument)
-def update_cve(instance: CweDocument, **kwargs):
-    s = CveDocument.search().filter('term', cwe__id=instance.id).extra(
-        collapse={
-            'field': 'id', 'inner_hits': {
-                'name': 'most_recent',
-                'size': 1,
-                'sort': [{'modified_date': 'desc'}]
-            }
-        }
-    )
-    response = s.execute()
-    for cve in response.hits:
-        cve.cwe = instance
-        cve.save(refresh=True)
+def autodiscover():
+    autodiscover_modules('documents')
+
+
+__all__ = ['Document', 'TupleValueField', 'EnumField', 'Keyword', 'InnerDoc', 'Nested',
+           'Q', 'Date', 'Float', 'Object', 'Search', 'Integer']
+
+
+default_app_config = 'vmc.elasticsearch.apps.ElasticSearchConfig'

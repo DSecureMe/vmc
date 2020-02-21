@@ -17,22 +17,3 @@
  * under the License.
  */
 """
-
-from collections import defaultdict
-
-
-class DocumentRegistry:
-
-    def __init__(self):
-        self.documents = defaultdict()
-
-    def register_document(self, document):
-        index_meta = getattr(document, 'Index')
-        self.documents.update({index_meta.name: document})
-        return document
-
-    def get_documents(self):
-        return self.documents.values()
-
-
-registry = DocumentRegistry()

@@ -18,10 +18,14 @@
  *
 """
 
-from django.apps import AppConfig
+from django.core.management.base import BaseCommand
+
+from vmc.elasticsearch.registries import registry
 
 
-class KnowledgeBaseConfig(AppConfig):
-    name = 'vmc.knowledge_base'
-    verbose_name = 'Knowledge Base'
+class Command(BaseCommand):
+    help = 'Creates indexes in ElasticSearch'
 
+    def handle(self, *args, **options):
+        for document in registry.get_documents():
+            document.init()

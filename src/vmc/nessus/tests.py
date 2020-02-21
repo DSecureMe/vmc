@@ -22,10 +22,10 @@ from unittest.mock import patch, MagicMock, call
 
 from django.contrib.auth.models import User
 from django.test import TestCase, LiveServerTestCase
-from elasticsearch_dsl import Search
 
-from vmc.common.elastic.tests import ESTestCase
 from vmc.config.test_settings import elastic_configured
+from vmc.elasticsearch import Search
+from vmc.elasticsearch.tests import ESTestCase
 from vmc.nessus.apps import NessusConfig
 
 from vmc.assets.documents import AssetDocument

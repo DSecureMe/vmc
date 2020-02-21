@@ -18,13 +18,11 @@
  *
 """
 
-from elasticsearch_dsl import Integer, Keyword, Object, Float
+from vmc.assets.documents import AssetInnerDoc, AssetDocument
 
-from vmc.assets.documents import AssetInnerDoc
-
-from vmc.common.elastic.documents import Document
-from vmc.common.elastic.registers import registry
-from vmc.knowledge_base.documents import CveInnerDoc
+from vmc.elasticsearch import Document, Integer, Keyword, Object, Float
+from vmc.knowledge_base.documents import CveInnerDoc, CveDocument
+from vmc.elasticsearch.registries import registry
 
 from vmc.vulnerabilities.utils import environmental_score_v2, environmental_score_v3
 
@@ -43,6 +41,7 @@ class VulnerabilityDocument(Document):
 
     class Index:
         name = 'vulnerability'
+        related_documents = [CveDocument, AssetDocument]
 
     def prepare_environmental_score_v2(self):
         return environmental_score_v2(self.cve, self.asset) if self.cve.base_score_v2 else 0.0

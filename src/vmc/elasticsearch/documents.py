@@ -25,7 +25,7 @@ from elasticsearch_dsl import Document as ESDocument
 from django.utils.timezone import now
 from vmc.common.enum import TupleValueEnum
 
-from vmc.common.elastic.signals import post_save
+from vmc.elasticsearch.signals import post_save
 
 
 class TupleValueField(CustomField):

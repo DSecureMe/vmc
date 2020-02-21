@@ -21,11 +21,11 @@
 from unittest import skipIf
 
 from django.test import TestCase
-from elasticsearch_dsl import Search
 from parameterized import parameterized
 from vmc.knowledge_base.documents import CveDocument
 
-from vmc.common.elastic.tests import ESTestCase
+from vmc.elasticsearch import Search
+from vmc.elasticsearch.tests import ESTestCase
 from vmc.assets.documents import Impact as AssetImpact, AssetDocument
 from vmc.vulnerabilities.documents import VulnerabilityDocument
 
@@ -62,8 +62,10 @@ def create_cve(cve_id='CVE-2017-0002') -> CveDocument:
 
 def create_asset(ip_address='10.10.10.10') -> AssetDocument:
     asset = AssetDocument(
+        id=ip_address,
         ip_address=ip_address,
         mac_address='mac_address',
+        cmdb_id=ip_address,
         os='OS',
         hostname='HOSTNAME',
         confidentiality_requirement=AssetImpact.LOW,

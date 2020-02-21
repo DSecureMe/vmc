@@ -19,11 +19,9 @@
 """
 from decimal import Decimal
 
-from elasticsearch_dsl import Keyword, InnerDoc, Nested
 from vmc.common.enum import TupleValueEnum
-
-from vmc.common.elastic.documents import Document, TupleValueField
-from vmc.common.elastic.registers import registry
+from vmc.elasticsearch import Document, TupleValueField, Keyword, InnerDoc, Nested, Q
+from vmc.elasticsearch.registries import registry
 
 
 class Impact(TupleValueEnum):
@@ -41,10 +39,10 @@ class OwnerInnerDoc(InnerDoc):
 
 
 class AssetInnerDoc(InnerDoc):
+    id = Keyword()
     ip_address = Keyword()
     mac_address = Keyword()
     os = Keyword()
-    cmdb_id = Keyword()
     confidentiality_requirement = TupleValueField(choice_type=Impact)
     integrity_requirement = TupleValueField(choice_type=Impact)
     availability_requirement = TupleValueField(choice_type=Impact)
@@ -59,20 +57,20 @@ class AssetInnerDoc(InnerDoc):
 @registry.register_document
 class AssetDocument(Document, AssetInnerDoc):
     class Index:
-        name = 'asset'
+        name = 'assets'
 
     @staticmethod
-    def create_or_update(_: str, assets: dict) -> None:
+    def create_or_update(tag: str, assets: dict, index=None) -> None:
         # TODO: paging
-        total = AssetDocument.search().count()
-        for current_assets in AssetDocument.search()[0:total]:
-            cmdb_id = current_assets.cmdb_id
-            if current_assets.cmdb_id in assets:
-                if current_assets.has_changed(assets[cmdb_id]):
-                    current_assets.update(assets[cmdb_id], refresh=True)
-                del assets[cmdb_id]
-            elif cmdb_id not in assets and 'DELETED' not in current_assets.tags:
+        total = AssetDocument.search(index=index).filter(Q('match', tags=tag)).count()
+        for current_assets in AssetDocument.search().filter(Q('match', tags=tag))[0:total]:
+            asset_id = current_assets.id
+            if current_assets.id in assets:
+                if current_assets.has_changed(assets[asset_id]):
+                    current_assets.update(assets[asset_id], refresh=True)
+                del assets[asset_id]
+            elif asset_id not in assets and 'DELETED' not in current_assets.tags:
                 current_assets.tags.append('DELETED')
-                current_assets.save(refresh=True)
+                current_assets.save(refresh=True, index=index)
         for asset in assets.values():
-            asset.save(refresh=True)
+            asset.save(refresh=True, index=index)

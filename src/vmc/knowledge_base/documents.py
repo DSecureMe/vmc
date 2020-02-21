@@ -18,11 +18,10 @@
  *
 """
 
-from elasticsearch_dsl import InnerDoc, Date, Keyword, Float, Nested, Object
-
 from vmc.knowledge_base import metrics
-from vmc.common.elastic.registers import registry
-from vmc.common.elastic.documents import Document, TupleValueField, EnumField
+from vmc.elasticsearch import Document, TupleValueField, EnumField
+from vmc.elasticsearch import InnerDoc, Date, Keyword, Float, Nested, Object
+from vmc.elasticsearch.registries import registry
 
 
 class ExploitInnerDoc(InnerDoc):
@@ -90,3 +89,4 @@ class CweDocument(CweInnerDoc, Document):
 class CveDocument(CveInnerDoc, Document):
     class Index:
         name = 'cve'
+        related_documents = [CweDocument]

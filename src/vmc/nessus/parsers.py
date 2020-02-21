@@ -46,7 +46,7 @@ class AssetFactory:
         result = AssetDocument.search().filter('term', ip_address=ip_address).sort('-modified_date').execute()
         if result.hits:
             return result.hits[0]
-        asset = AssetDocument(ip_address=ip_address)
+        asset = AssetDocument(id=ip_address, ip_address=ip_address)
         asset.save(refresh=True)
         return asset
 
