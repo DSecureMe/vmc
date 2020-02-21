@@ -22,7 +22,6 @@ from django.apps import AppConfig
 from django.conf import settings
 
 from elasticsearch_dsl.connections import connections
-from django.utils.module_loading import import_string
 
 
 class ElasticSearchConfig(AppConfig):

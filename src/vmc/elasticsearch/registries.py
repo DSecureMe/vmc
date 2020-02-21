@@ -21,7 +21,6 @@
 from vmc.elasticsearch import Object
 from vmc.elasticsearch.models import DocumentRegistry as DBDocumentRegistry
 from vmc.elasticsearch.signals import post_save
-from django.conf import settings
 
 
 class DocumentRegistry:
