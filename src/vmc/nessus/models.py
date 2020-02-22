@@ -20,14 +20,28 @@
 
 from django.db import models
 from vmc.common.models import BaseModel
+from vmc.elasticsearch.models import Tenant
 
 
 class Config(BaseModel):
+    SCHEMA = (
+        ('http', 'http'),
+        ('https', 'https')
+    )
     name = models.CharField(max_length=128)
-    url = models.CharField(max_length=128)
+    schema = models.CharField(choices=SCHEMA, default='http', max_length=5)
+    host = models.CharField(max_length=128)
+    port = models.PositiveSmallIntegerField()
     api_key = models.TextField()
     secret_key = models.TextField()
     insecure = models.BooleanField(default=False)
+    tenant = models.ForeignKey(Tenant, null=True, on_delete=models.DO_NOTHING)
+
+    class Meta:
+        db_table = 'nessus_config'
 
     def __str__(self):
         return self.name
+
+    def get_url(self) -> str:
+        return '{}://{}:{}'.format(self.schema, self.host, self.port)

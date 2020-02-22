@@ -41,7 +41,7 @@ def _update(config: Config):
         users = OwnerParser.parse(users)
         assets = client.get_assets()
         assets = parser.parse(assets, users)
-        AssetDocument.create_or_update(config.name, assets)
+        AssetDocument.create_or_update(assets, config)
         LOGGER.info('Finish loading data from Ralph: %s', config.name)
     except Exception as ex:
         import traceback

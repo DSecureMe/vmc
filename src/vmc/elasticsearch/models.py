@@ -29,6 +29,9 @@ class Config(BaseModel):
     name = models.CharField(max_length=128)
     prefix = models.CharField(max_length=128)
 
+    class Meta:
+        db_table = 'elasticsearch_config'
+
     def __str__(self):
         return self.name
 
@@ -37,6 +40,12 @@ class Tenant(BaseModel):
     name = models.CharField(max_length=128)
     slug_name = models.CharField(max_length=128)
     elasticsearch_config = models.ForeignKey(Config, on_delete=models.DO_NOTHING)
+
+    class Meta:
+        db_table = 'elasticsearch_tenant'
+
+    def __str__(self):
+        return self.name
 
     def save(self, force_insert=False, force_update=False, using=None,
              update_fields=None):
@@ -56,6 +65,9 @@ class DocumentRegistry(BaseModel):
     tenant = models.ForeignKey(Tenant, on_delete=models.DO_NOTHING)
     module = models.CharField(max_length=256)
     document = models.CharField(max_length=256)
+
+    class Meta:
+        db_table = 'elasticsearch_document_registry'
 
     def tenant_elasticsearch_config_name(self):
         return self.tenant.elasticsearch_config.name

@@ -32,6 +32,12 @@ from vmc.assets.documents import AssetDocument, OwnerInnerDoc, Impact
 from vmc.config.test_settings import elastic_configured
 
 
+class AssetConfigMock:
+    def __init__(self, name):
+        self.name = name
+        self.tenant = None
+
+
 class AssetsConfigTest(TestCase):
 
     def test_name(self):
@@ -68,7 +74,7 @@ class AssetDocumentTest(ESTestCase, TestCase):
         self.bo = OwnerInnerDoc(name='bo_name', email='bo_name@dsecure.me', department='department', team=['team'])
 
     def test_document_index_name(self):
-        self.assertEqual(AssetDocument.Index.name, 'assets')
+        self.assertEqual(AssetDocument.Index.name, 'asset')
 
     def create_asset(self, ip_address, tags, asset_id=1, hostname='test-hostname'):
         asset = AssetDocument(
@@ -117,7 +123,7 @@ class AssetDocumentTest(ESTestCase, TestCase):
 
         a_1_tag_1_copy = a_1_tag_1.clone()
         a_1_tag_1_copy.hostname = 'hostname_1_copy'
-        AssetDocument.create_or_update('TAG1', {a_1_tag_1_copy.id: a_1_tag_1_copy})
+        AssetDocument.create_or_update({a_1_tag_1_copy.id: a_1_tag_1_copy}, AssetConfigMock('TAG1'))
         self.assertEqual(4, Search().index(AssetDocument.Index.name).count())
 
         result = AssetDocument.search().filter(
@@ -134,7 +140,7 @@ class AssetDocumentTest(ESTestCase, TestCase):
         self.create_asset(asset_id=2, ip_address='10.0.0.2', tags=['TAG2'], hostname='hostname_2')
 
         self.assertEqual(4, Search().index(AssetDocument.Index.name).count())
-        AssetDocument.create_or_update('TAG1', {asset_1.id: asset_1})
+        AssetDocument.create_or_update({asset_1.id: asset_1}, AssetConfigMock('TAG1'))
 
         result = AssetDocument.search().filter(Q('match', tags='DELETED')).execute()
         self.assertEqual(1, len(result.hits))

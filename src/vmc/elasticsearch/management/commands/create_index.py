@@ -17,3 +17,16 @@
  * under the License.
  *
 """
+
+from django.core.management.base import BaseCommand
+
+from vmc.elasticsearch.registries import registry
+
+
+class Command(BaseCommand):
+    help = 'Creates indexes in ElasticSearch'
+
+    def handle(self, *args, **options):
+        documents = registry.get_documents()
+        for index in documents:
+            documents[index].init(index=index)

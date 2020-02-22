@@ -41,29 +41,25 @@ def get_value(item: RestrictedElement) -> str:
 class AssetFactory:
 
     @staticmethod
-    def create(item: RestrictedElement) -> AssetDocument:
+    def create(item: RestrictedElement, config) -> AssetDocument:
         ip_address = item.find(".//tag[@name='host-ip']").text
-        result = AssetDocument.search().filter('term', ip_address=ip_address).sort('-modified_date').execute()
-        if result.hits:
-            return result.hits[0]
-        asset = AssetDocument(id=ip_address, ip_address=ip_address)
-        asset.save(refresh=True)
-        return asset
+        return AssetDocument.get_or_create(ip_address, config)
 
 
 class ReportParser:
     INFO = '0'
 
     @staticmethod
-    def parse(xml_root) -> None:
+    def parse(xml_root, config) -> None:
+        index = VulnerabilityDocument.get_index(config)
         for host in iter_elements_by_name(xml_root, 'ReportHost'):
             for item in host.iter('ReportItem'):
-                asset = AssetFactory.create(host)
+                asset = AssetFactory.create(host, config)
 
                 for cve in item.findall('cve'):
                     cve_id = get_value(cve)
                     if item.get('severity') != ReportParser.INFO and cve_id:
-                        cve = ReportParser.get_or_create_cve(cve_id=cve_id)
+                        cve = CveDocument.get_or_create(cve_id=cve_id)
                         port_number = item.get('port')
 
                         if port_number != 0:
@@ -82,13 +78,4 @@ class ReportParser:
                             description=get_value(item.find('description')),
                             solution=get_value(item.find('solution')),
                             exploit_available=True if get_value(item.find('exploit_available')) == 'true' else False
-                        ).save(refresh=True)
-
-    @staticmethod
-    def get_or_create_cve(cve_id: str) -> CveDocument:
-        result = CveDocument.search().filter('term', id=cve_id).sort('-modified_date').execute()
-        if result.hits:
-            return result.hits[0]
-        cve = CveDocument(id=cve_id)
-        cve.save(refresh=True)
-        return cve
+                        ).save(index=index, refresh=True)

@@ -28,14 +28,20 @@ class DocumentRegistry:
     def __init__(self):
         self.documents = dict()
         self.documents_tenant = set()
+        self.related_documents = set()
 
     def register_document(self, document):
         index_meta = getattr(document, 'Index')
         self.documents.update({index_meta.name: document})
 
+        if getattr(document.Index, 'tenant_separation', False):
+            self.documents_tenant.add(document)
+
         if getattr(document.Index, 'related_documents', None):
             for related in document.Index.related_documents:
-                post_save.connect(self.update_related, sender=related)
+                if related not in self.related_documents:
+                    post_save.connect(self.update_related, sender=related)
+                    self.related_documents.add(related)
 
         return document
 
@@ -60,10 +66,24 @@ class DocumentRegistry:
             for field_name in document.get_fields_name():
                 field_type = document._doc_type.mapping[field_name]
                 if isinstance(field_type, Object) and issubclass(sender, field_type._doc_class):
-                    result = document.search().filter('term', **{'{}__id'.format(field_name): instance.id}).execute()
-                    for hit in result.hits:
-                        setattr(hit, field_name, instance)
-                        hit.save(refresh=True)
+                    for index in self._get_indexes(instance, field_type._doc_class):
+                        result = document.search(index=index).filter('term', **{'{}__id'.format(field_name): instance.id}).execute()
+                        for hit in result.hits:
+                            setattr(hit, field_name, instance)
+                            hit.save(index=index, refresh=True)
+
+    def _get_indexes(self, instance, receiver):
+        if getattr(instance.Index, 'tenant_separation', False):
+            try:
+                index_data = DBDocumentRegistry.objects.get(index_name=instance._get_index())
+                return [DBDocumentRegistry.objects.values_list('index_name', flat=True).get(
+                    tenant=index_data.tenant,
+                    module=receiver.__module__,
+                    document=receiver.__name__
+                )]
+            except DBDocumentRegistry.DoesNotExist:
+                return [None]
+        return [index for index in self.get_documents()]
 
     def _get_related_doc(self, instance):
         for document in self.documents.values():
@@ -76,6 +96,15 @@ class DocumentRegistry:
         for obj in DBDocumentRegistry.objects.all():
             documents.update({obj.index_name: obj.get_document()})
         return documents
+
+    def get_index_for_tenant(self, tenant, document):
+        if tenant:
+            return DBDocumentRegistry.objects.values_list('index_name', flat=True).get(
+                tenant=tenant,
+                module=document.__module__,
+                document=document.__name__
+            )
+        return document.Index.name
 
 
 registry = DocumentRegistry()

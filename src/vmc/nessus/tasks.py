@@ -44,12 +44,13 @@ def get_trash_folder_id(scan_list: Dict) -> [int, None]:
 
 @shared_task
 def update_data(config_pk: int, scan_id: int, scaner_api=Nessus):  # pylint: disable=too-many-locals
-    api = scaner_api(Config.objects.get(pk=config_pk))
+    config = Config.objects.get(pk=config_pk)
+    api = scaner_api(config)
     LOGGER.info('Trying to download nessus file %d', scan_id)
     file = api.download_scan(scan_id)
     if file:
         LOGGER.info('Trying to parse nessus file %d', scan_id)
-        ReportParser.parse(file)
+        ReportParser.parse(file, config)
         file.close()
         LOGGER.info('Parsing nessus file %d done.', scan_id)
     else:

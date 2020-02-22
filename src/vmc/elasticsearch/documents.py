@@ -23,6 +23,7 @@ from typing import Type
 from elasticsearch_dsl import Date, Keyword, CustomField
 from elasticsearch_dsl import Document as ESDocument
 from django.utils.timezone import now
+
 from vmc.common.enum import TupleValueEnum
 
 from vmc.elasticsearch.signals import post_save
@@ -109,6 +110,13 @@ class Document(ESDocument):
             if name not in without_fields and getattr(self, name, None):
                 setattr(new_obj, name, getattr(self, name))
         return new_obj
+
+    @classmethod
+    def get_index(cls, config):
+        if config:
+            from vmc.elasticsearch.registries import registry
+            return registry.get_index_for_tenant(config.tenant, cls)
+        return cls.Index.name
 
     @classmethod
     def get_fields_name(cls):

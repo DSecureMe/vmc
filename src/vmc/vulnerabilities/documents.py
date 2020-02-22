@@ -42,6 +42,7 @@ class VulnerabilityDocument(Document):
     class Index:
         name = 'vulnerability'
         related_documents = [CveDocument, AssetDocument]
+        tenant_separation = True
 
     def prepare_environmental_score_v2(self):
         return environmental_score_v2(self.cve, self.asset) if self.cve.base_score_v2 else 0.0

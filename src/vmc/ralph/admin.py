@@ -32,12 +32,12 @@ class ConfigForm(ModelForm):
         widgets = {
             'password': PasswordInput(),
         }
-        fields = ['name', 'schema', 'host', 'port', 'username', 'insecure', 'password']
+        fields = ['name', 'schema', 'host', 'port', 'username', 'insecure', 'password', 'tenant']
 
 
 class ConfigAdmin(admin.ModelAdmin):
     change_list_template = "ralph/admin/change_list.html"
-    list_display = ('name', 'host')
+    list_display = ('name', 'host', 'tenant')
     form = ConfigForm
 
     def get_urls(self):

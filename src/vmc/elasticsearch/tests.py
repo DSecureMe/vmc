@@ -42,7 +42,7 @@ class ESTestCase(object):
         super(ESTestCase, self).tearDown()
 
 
-class RalphConfigTest(TestCase):
+class ConfigTest(TestCase):
 
     def test_name(self):
         self.assertEqual(ElasticSearchConfig.name, 'vmc.elasticsearch')

@@ -38,7 +38,7 @@ class SSLException(Exception):
 class Nessus:
 
     def __init__(self, config: Config):
-        self.url = config.url
+        self.url = config.get_url()
         self.api_key = config.api_key
         self.secret_key = config.secret_key
         self.insecure = config.insecure

@@ -228,7 +228,7 @@ class UpdateAssetsTaskTest(TestCase):
         mock_api().get_assets.assert_called_once()
         asset_parser.assert_called_with(self.config)
         asset_parser().parse.assert_called_with(self.USERS, self.RESPONSE)
-        asset_document_mock.create_or_update.assert_called_once_with(self.config.name, self.RESPONSE)
+        asset_document_mock.create_or_update.assert_called_once_with(self.RESPONSE, self.config)
 
     @patch('vmc.ralph.tasks.RalphClient')
     @patch('vmc.ralph.tasks.AssetsParser')

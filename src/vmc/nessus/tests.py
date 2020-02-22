@@ -68,7 +68,7 @@ class NessusTest(TestCase):
     def assert_request(self, request_mock, method, action):
         request_mock.request.assert_called_with(
             method,
-            'http://test/{}'.format(action),
+            'http://test:80/{}'.format(action),
             data='{}',
             headers=self.headers,
             verify=not self.config.insecure

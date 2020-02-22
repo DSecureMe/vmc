@@ -4,7 +4,9 @@
     "pk": 1,
     "fields": {
       "name": "Test Config",
-      "url": "http://test",
+      "schema": "http",
+      "host": "test",
+      "port": 80,
       "api_key": "API_KEY",
       "secret_key": "SECRET_KEY",
       "insecure": 1,

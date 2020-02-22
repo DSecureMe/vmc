@@ -57,16 +57,18 @@ class AssetInnerDoc(InnerDoc):
 @registry.register_document
 class AssetDocument(Document, AssetInnerDoc):
     class Index:
-        name = 'assets'
+        name = 'asset'
+        tenant_separation = True
 
     @staticmethod
-    def create_or_update(tag: str, assets: dict, index=None) -> None:
+    def create_or_update(assets: dict, config=None) -> None:
         # TODO: paging
-        total = AssetDocument.search(index=index).filter(Q('match', tags=tag)).count()
-        for current_assets in AssetDocument.search().filter(Q('match', tags=tag))[0:total]:
+        index = AssetDocument.get_index(config)
+        total = AssetDocument.search(index=index).filter(Q('match', tags=config.name)).count()
+        for current_assets in AssetDocument.search(index=index).filter(Q('match', tags=config.name))[0:total]:
             asset_id = current_assets.id
             if current_assets.id in assets:
-                if current_assets.has_changed(assets[asset_id]):
+                if current_assets.has_changed(current_assets):
                     current_assets.update(assets[asset_id], refresh=True)
                 del assets[asset_id]
             elif asset_id not in assets and 'DELETED' not in current_assets.tags:
@@ -74,3 +76,13 @@ class AssetDocument(Document, AssetInnerDoc):
                 current_assets.save(refresh=True, index=index)
         for asset in assets.values():
             asset.save(refresh=True, index=index)
+
+    @staticmethod
+    def get_or_create(ip_address, config=None):
+        index = AssetDocument.get_index(config)
+        result = AssetDocument.search(index=index).filter(
+            'term', ip_address=ip_address).execute()
+        if result.hits:
+            return result.hits[0]
+        asset = AssetDocument(id=ip_address, ip_address=ip_address, tags=config.name)
+        return asset.save(index=index, refresh=True)

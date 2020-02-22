@@ -90,3 +90,11 @@ class CveDocument(CveInnerDoc, Document):
     class Index:
         name = 'cve'
         related_documents = [CweDocument]
+
+    @staticmethod
+    def get_or_create(cve_id: str):
+        result = CveDocument.search().filter('term', id=cve_id).execute()
+        if result.hits:
+            return result.hits[0]
+        cve = CveDocument(id=cve_id)
+        return cve.save(refresh=True)
