@@ -65,15 +65,15 @@ class AssetDocument(Document, AssetInnerDoc):
         # TODO: paging
         index = AssetDocument.get_index(config)
         total = AssetDocument.search(index=index).filter(Q('match', tags=config.name)).count()
-        for current_assets in AssetDocument.search(index=index).filter(Q('match', tags=config.name))[0:total]:
-            asset_id = current_assets.id
-            if current_assets.id in assets:
-                if current_assets.has_changed(current_assets):
-                    current_assets.update(assets[asset_id], refresh=True, index=index)
+        for current_asset in AssetDocument.search(index=index).filter(Q('match', tags=config.name))[0:total]:
+            asset_id = current_asset.id
+            if asset_id in assets:
+                if current_asset.has_changed(assets[asset_id]):
+                    current_asset.update(assets[asset_id], refresh=True, index=index)
                 del assets[asset_id]
-            elif asset_id not in assets and 'DELETED' not in current_assets.tags:
-                current_assets.tags.append('DELETED')
-                current_assets.save(refresh=True, index=index)
+            elif asset_id not in assets and 'DELETED' not in current_asset.tags:
+                current_asset.tags.append('DELETED')
+                current_asset.save(refresh=True, index=index)
         for asset in assets.values():
             asset.save(refresh=True, index=index)
 
