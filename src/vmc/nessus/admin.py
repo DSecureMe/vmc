@@ -28,7 +28,7 @@ from vmc.nessus.tasks import update
 
 class ConfigAdmin(admin.ModelAdmin):
     change_list_template = "nessus/admin/change_list.html"
-    list_display = ('name', 'url', 'tenant')
+    list_display = ('name', 'host', 'tenant')
 
     def get_urls(self):
         urls = super().get_urls()
