@@ -69,7 +69,7 @@ class AssetDocument(Document, AssetInnerDoc):
             asset_id = current_assets.id
             if current_assets.id in assets:
                 if current_assets.has_changed(current_assets):
-                    current_assets.update(assets[asset_id], refresh=True)
+                    current_assets.update(assets[asset_id], refresh=True, index=index)
                 del assets[asset_id]
             elif asset_id not in assets and 'DELETED' not in current_assets.tags:
                 current_assets.tags.append('DELETED')
