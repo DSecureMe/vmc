@@ -19,6 +19,7 @@
 """
 from enum import Enum
 from typing import Type
+from fnmatch import fnmatch
 
 from elasticsearch_dsl import Date, Keyword, CustomField
 from elasticsearch_dsl import Document as ESDocument
@@ -90,6 +91,10 @@ class Document(ESDocument):
                 setattr(self, name, getattr(document, name))
         self.save(using=using, index=index, refresh=refresh)
         return self
+
+    @classmethod
+    def _matches(cls, hit):
+        return fnmatch(hit['_index'], '*{}'.format(cls.Index.name))
 
     def has_changed(self, other):
         changed_fields = []

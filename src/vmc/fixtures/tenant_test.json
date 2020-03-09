@@ -1,0 +1,78 @@
+[
+   {
+    "model": "elasticsearch.config",
+    "pk": 1,
+    "fields": {
+      "name": "Tenant Test",
+      "prefix": "test",
+      "created_date": "2019-03-06T22:37:31.540Z",
+      "modified_date": "2019-03-06T22:37:31.540Z"
+    }
+  },
+  {
+    "model": "elasticsearch.tenant",
+    "pk": 1,
+    "fields": {
+      "name": "Tenant",
+      "slug_name": "tenant",
+      "elasticsearch_config": 1,
+      "created_date": "2019-03-06T22:37:31.540Z",
+      "modified_date": "2019-03-06T22:37:31.540Z"
+    }
+  },
+  {
+    "model": "elasticsearch.documentregistry",
+    "pk": 1,
+    "fields": {
+      "index_name": "test.tenant.asset",
+      "tenant": 1,
+      "module": "vmc.assets.documents",
+      "document": "AssetDocument",
+      "created_date": "2019-03-06T22:37:31.540Z",
+      "modified_date": "2019-03-06T22:37:31.540Z"
+    }
+  },
+  {
+    "model": "elasticsearch.documentregistry",
+    "pk": 2,
+    "fields": {
+      "index_name": "test.tenant.vulnerability",
+      "tenant": 1,
+      "module": "vmc.vulnerabilities.documents",
+      "document": "VulnerabilityDocument",
+      "created_date": "2019-03-06T22:37:31.540Z",
+      "modified_date": "2019-03-06T22:37:31.540Z"
+    }
+  },
+  {
+    "model": "ralph.config",
+    "pk": 1,
+    "fields": {
+      "name": "Ralph Tenant",
+      "schema": "http",
+      "host": "1.1.1.1",
+      "port": 80,
+      "insecure": true,
+      "username": "test",
+      "password": "test",
+      "tenant": 1,
+      "created_date": "2019-03-06T22:37:31.540Z",
+      "modified_date": "2019-03-06T22:37:31.540Z"
+    }
+  },
+    {
+    "model": "ralph.config",
+    "pk": 2,
+    "fields": {
+      "name": "Ralph",
+      "schema": "http",
+      "host": "1.1.1.1",
+      "port": 80,
+      "insecure": true,
+      "username": "test",
+      "password": "test",
+      "created_date": "2019-03-06T22:37:31.540Z",
+      "modified_date": "2019-03-06T22:37:31.540Z"
+    }
+  }
+]

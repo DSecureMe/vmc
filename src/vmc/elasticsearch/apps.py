@@ -27,7 +27,6 @@ from elasticsearch_dsl.connections import connections
 class ElasticSearchConfig(AppConfig):
     name = 'vmc.elasticsearch'
     verbose_name = 'ElasticSearch'
-    signal_processor = None
 
     def ready(self):
         self.module.autodiscover()
