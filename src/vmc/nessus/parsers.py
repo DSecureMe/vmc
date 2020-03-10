@@ -55,7 +55,7 @@ class ReportParser:
         for host in iter_elements_by_name(xml_root, 'ReportHost'):
             for item in host.iter('ReportItem'):
                 asset = AssetFactory.create(host, config)
-
+                plugin_id = item.get('pluginID')
                 for cve in item.findall('cve'):
                     cve_id = get_value(cve)
                     if item.get('severity') != ReportParser.INFO and cve_id:
@@ -70,6 +70,7 @@ class ReportParser:
                             svc_name = None
                             protocol = None
                         VulnerabilityDocument(
+                            plugin_id=plugin_id,
                             asset=asset,
                             cve=cve,
                             port=port_number,
@@ -79,3 +80,47 @@ class ReportParser:
                             solution=get_value(item.find('solution')),
                             exploit_available=True if get_value(item.find('exploit_available')) == 'true' else False
                         ).save(index=index, refresh=True)
+
+
+class ScanParser:
+    INFO = '0'
+
+    def __init__(self, config: Config):
+        self.__config = config
+        self.__parsed = dict()
+
+    def parse(self, xml_root, config):
+        vuln = dict()
+        index = VulnerabilityDocument.get_index(config)
+        for host in iter_elements_by_name(xml_root, 'ReportHost'):
+            for item in host.iter('ReportItem'):
+                vuln['asset'] = AssetFactory.create(host, config)
+                vuln['plugin_id'] = item.get('pluginID')
+                for cve in item.findall('cve'):
+                    vuln['cve_id'] = get_value(cve)
+                    if item.get('severity') != ReportParser.INFO and vuln['cve_id']:
+                        vuln['cve'] = CveDocument.get_or_create(cve_id=vuln['cve_id'])
+                        vuln['port_number'] = item.get('port')
+
+                        if vuln['port_number'] != 0:
+                            vuln['svc_name'] = item.get('svc_name')
+                            vuln['protocol'] = item.get('protocol')
+                        else:
+                            vuln['port_number'] = None
+                            vuln['svc_name'] = None
+                            vuln['protocol'] = None
+                        self.create(vuln)
+        return self.__parsed
+
+    def create(self, item: dict):
+        vuln = VulnerabilityDocument()
+        for field in VulnerabilityDocument.get_fields_name():
+            parser = getattr(self, field, None)
+            try:
+                if parser:
+                    setattr(vuln, field, item[field])
+            except (KeyError, IndexError):
+                setattr(vuln, field, 'UNKNOWN')
+        self.__parsed[vuln.id] = vuln
+
+    #TODO: uuid, jak nadpisać id??

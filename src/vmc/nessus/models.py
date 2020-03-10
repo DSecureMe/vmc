@@ -35,6 +35,7 @@ class Config(BaseModel):
     api_key = models.TextField()
     secret_key = models.TextField()
     insecure = models.BooleanField(default=False)
+    update_interval = models.PositiveSmallIntegerField()
     tenant = models.ForeignKey(Tenant, null=True, on_delete=models.DO_NOTHING)
 
     class Meta:

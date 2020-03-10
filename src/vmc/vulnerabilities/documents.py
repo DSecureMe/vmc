@@ -28,7 +28,8 @@ from vmc.vulnerabilities.utils import environmental_score_v2, environmental_scor
 
 
 @registry.register_document
-class VulnerabilityDocument(Document):
+class VulnerabilityDocument(Document):#TODO: Should we add tags?
+    plugin_id = Integer()
     port = Integer()
     svc_name = Keyword()
     protocol = Keyword()
