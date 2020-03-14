@@ -17,10 +17,19 @@
  * under the License.
  */
 """
-
+from enum import Enum
 from vmc.elasticsearch import Object
 from vmc.elasticsearch.models import DocumentRegistry as DBDocumentRegistry
 from vmc.elasticsearch.signals import post_save
+
+
+class SnapShotMode(Enum):
+    DAYLI = 'dayli'
+    MONTHLY = 'monthly'
+
+    @classmethod
+    def values(cls):
+        return [snap.value for snap in cls]
 
 
 class DocumentRegistry:
@@ -33,6 +42,10 @@ class DocumentRegistry:
     def register_document(self, document):
         index_meta = getattr(document, 'Index')
         self.documents.update({index_meta.name: document})
+
+        for value in SnapShotMode.values():
+            snap_index = '{}.{}'.format(index_meta.name, value)
+            self.documents.update({snap_index: document})
 
         if getattr(document.Index, 'tenant_separation', False):
             self.documents_tenant.add(document)
@@ -61,13 +74,17 @@ class DocumentRegistry:
                 )
                 document.init(index=index_name)
 
+                for snap_index in SnapShotMode:
+                    document.init(index='{}.{}'.format(index_name, snap_index.value))
+
     def update_related(self, sender, instance, **kwargs):
         for document in self._get_related_doc(sender):
             for field_name in document.get_fields_name():
                 field_type = document._doc_type.mapping[field_name]
                 if isinstance(field_type, Object) and issubclass(sender, field_type._doc_class):
                     for index in self._get_indexes(instance, field_type._doc_class):
-                        result = document.search(index=index).filter('term', **{'{}__id'.format(field_name): instance.id}).execute()
+                        result = document.search(index=index).filter(
+                            'term', **{'{}__id'.format(field_name): instance.id}).execute()
                         for hit in result.hits:
                             setattr(hit, field_name, instance)
                             hit.save(index=index, refresh=True)
@@ -93,11 +110,18 @@ class DocumentRegistry:
 
     def get_documents(self):
         documents = self.documents.copy()
+
         for obj in DBDocumentRegistry.objects.all():
             documents.update({obj.index_name: obj.get_document()})
+
+            for value in SnapShotMode.values():
+                snap_index = '{}.{}'.format(obj.index_name, value)
+                documents.update({snap_index: obj.get_document()})
+
         return documents
 
-    def get_index_for_tenant(self, tenant, document):
+    @staticmethod
+    def get_index_for_tenant(tenant, document):
         if tenant:
             return DBDocumentRegistry.objects.values_list('index_name', flat=True).get(
                 tenant=tenant,

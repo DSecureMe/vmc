@@ -75,6 +75,7 @@ class Document(ESDocument):
     created_date = Date()
     modified_date = Date()
     change_reason = Keyword()
+    snapshot_date = Date()
 
     def save(self, **kwargs):
         date = now()

@@ -17,10 +17,11 @@
  * under the License.
  */
 """
-
+from celery.schedules import crontab
 from django.apps import AppConfig
 from django.conf import settings
 
+from vmc.config.celery import app
 from elasticsearch_dsl.connections import connections
 
 
@@ -32,3 +33,16 @@ class ElasticSearchConfig(AppConfig):
         self.module.autodiscover()
         if getattr(settings, 'ELASTICSEARCH_DSL', None):
             connections.configure(**settings.ELASTICSEARCH_DSL)
+
+            app.conf.beat_schedule = {
+                'create snapshot every day at midnight': {
+                    'task': 'vmc.elasticsearch.tasks.snapshot',
+                    'schedule': crontab(hour=0, minute=0),
+                    'args': ('dayli', )
+                },
+                'create snapshot every first day of month at midnight': {
+                    'task': 'vmc.elasticsearch.tasks.snapshot',
+                    'schedule': crontab(hour=0, minute=0, day_of_month=1),
+                    'args': ('monthly', )
+                },
+            }
