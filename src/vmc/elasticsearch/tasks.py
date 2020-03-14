@@ -31,6 +31,9 @@ from vmc.elasticsearch import Search
 
 LOGGER = logging.getLogger(__name__)
 
+STEP = 1000
+START = 0
+
 
 @shared_task
 def snapshot(name: str) -> None:
@@ -41,14 +44,15 @@ def snapshot(name: str) -> None:
 
 @shared_task
 def _snapshot_documents(name: str, index: str) -> None:
-    # TODO: paging ?
     docs = []
     LOGGER.info('Creating snapshot for %s %s', index, name)
     total = Search(index=index).count()
-    for current in Search(index=index)[0:total]:
-        current.snapshot_date = now()
-        docs.append(current.to_dict())
+    paging = [(START if i == START else i + 1, i + STEP) for i in range(START, total, STEP)]
+    for st, en in paging:
+        for current in Search(index=index)[st:en]:
+            current.snapshot_date = now()
+            docs.append(current.to_dict())
 
-    if docs:
-        bulk(get_connection(), docs, refresh=True, index='{}.{}'.format(index, name))
+        if docs:
+            bulk(get_connection(), docs, refresh=True, index='{}.{}'.format(index, name))
     LOGGER.info('Snapshot for %s %s done', index, name)

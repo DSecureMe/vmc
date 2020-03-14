@@ -54,6 +54,10 @@ class AssetInnerDoc(InnerDoc):
     url = Keyword()
 
 
+STEP = 500
+START = 0
+
+
 @registry.register_document
 class AssetDocument(Document, AssetInnerDoc):
     class Index:
@@ -62,18 +66,20 @@ class AssetDocument(Document, AssetInnerDoc):
 
     @staticmethod
     def create_or_update(assets: dict, config=None) -> None:
-        # TODO: paging
         index = AssetDocument.get_index(config)
         total = AssetDocument.search(index=index).filter(Q('match', tags=config.name)).count()
-        for current_asset in AssetDocument.search(index=index).filter(Q('match', tags=config.name))[0:total]:
-            asset_id = current_asset.id
-            if asset_id in assets:
-                if current_asset.has_changed(assets[asset_id]):
-                    current_asset.update(assets[asset_id], refresh=True, index=index)
-                del assets[asset_id]
-            elif asset_id not in assets and 'DELETED' not in current_asset.tags:
-                current_asset.tags.append('DELETED')
-                current_asset.save(refresh=True, index=index)
+        paging = [(START if i == START else i + 1, i + STEP) for i in range(0, total, STEP)]
+        for st, en in paging:
+            current_assets = AssetDocument.search(index=index).filter(Q('match', tags=config.name))[st:en]
+            for current_asset in current_assets:
+                asset_id = current_asset.id
+                if asset_id in assets:
+                    if current_asset.has_changed(assets[asset_id]):
+                        current_asset.update(assets[asset_id], refresh=True, index=index)
+                    del assets[asset_id]
+                elif asset_id not in assets and 'DELETED' not in current_asset.tags:
+                    current_asset.tags.append('DELETED')
+                    current_asset.save(refresh=True, index=index)
         for asset in assets.values():
             asset.save(refresh=True, index=index)
 
