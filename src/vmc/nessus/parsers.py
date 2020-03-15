@@ -19,6 +19,7 @@
 """
 
 import logging
+import uuid
 
 from defusedxml.lxml import RestrictedElement
 from vmc.vulnerabilities.documents import VulnerabilityDocument
@@ -91,7 +92,7 @@ class ScanParser:
 
     def parse(self, xml_root, config):
         vuln = dict()
-        index = VulnerabilityDocument.get_index(config)
+#        index = VulnerabilityDocument.get_index(config)
         for host in iter_elements_by_name(xml_root, 'ReportHost'):
             for item in host.iter('ReportItem'):
                 vuln['asset'] = AssetFactory.create(host, config)
@@ -109,13 +110,14 @@ class ScanParser:
                             vuln['port_number'] = None
                             vuln['svc_name'] = None
                             vuln['protocol'] = None
+                        vuln.id = id(vuln['asset'].ip_address, vuln['protocol'], vuln['plugin_id'])
                         self.create(vuln)
         return self.__parsed
 
     def create(self, item: dict):
         vuln = VulnerabilityDocument()
         for field in VulnerabilityDocument.get_fields_name():
-            parser = getattr(self, field, None)
+            parser = getattr(item, field, None)
             try:
                 if parser:
                     setattr(vuln, field, item[field])
@@ -123,4 +125,6 @@ class ScanParser:
                 setattr(vuln, field, 'UNKNOWN')
         self.__parsed[vuln.id] = vuln
 
-    #TODO: uuid, jak nadpisać id??
+    def id(self, ip, protocol, plugin_id) -> str:
+        key = F"{ip}-{protocol}-{plugin_id}"
+        return str(uuid.uuid3(uuid.NAMESPACE_OID, key))
