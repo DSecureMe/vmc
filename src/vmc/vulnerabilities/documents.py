@@ -55,3 +55,20 @@ class VulnerabilityDocument(Document):#TODO: Should we add tags?
         self.environmental_score_v2 = self.prepare_environmental_score_v2()
         self.environmental_score_v3 = self.prepare_environmental_score_v3()
         return super().save(**kwargs)
+
+    @staticmethod
+    def create_or_update(vulnerabilities: dict, scanned_hosts: list, config=None) -> None:
+        index = VulnerabilityDocument.get_index(config)
+        all_vulnerability_docs = VulnerabilityDocument.search(index=index).filter(Q('match', tags=config.name))
+        total = all_vulnerability_docs.count()
+        for current_vuln in all_vulnerability_docs[0:total]:
+            vuln_id = current_vuln.id
+            if vuln_id in vulnerabilities:
+                if current_vuln.has_changed(vulnerabilities[vuln_id]):
+                    current_vuln.update(vulnerabilities[vuln_id], refresh=True, index=index)
+                del vulnerabilities[vuln_id]
+            elif vuln_id not in vulnerabilities and current_vuln.asset.ip_address in scanned_hosts:
+                current_vuln.tags.append('FIXED')
+                current_vuln.save(refresh=True, index=index)
+        for vuln in vulnerabilities:
+            vuln.save(refresh=True, index=index)
