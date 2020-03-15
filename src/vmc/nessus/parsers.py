@@ -89,11 +89,13 @@ class ScanParser:
     def __init__(self, config: Config):
         self.__config = config
         self.__parsed = dict()
+        self.__scanned_hosts = list()
 
     def parse(self, xml_root, config):
         vuln = dict()
 #        index = VulnerabilityDocument.get_index(config)
         for host in iter_elements_by_name(xml_root, 'ReportHost'):
+            self.__scanned_hosts.append(host.get('name'))
             for item in host.iter('ReportItem'):
                 vuln['asset'] = AssetFactory.create(host, config)
                 vuln['plugin_id'] = item.get('pluginID')
@@ -112,7 +114,7 @@ class ScanParser:
                             vuln['protocol'] = None
                         vuln.id = id(vuln['asset'].ip_address, vuln['protocol'], vuln['plugin_id'])
                         self.create(vuln)
-        return self.__parsed
+        return self.__parsed, self.__scanned_hosts
 
     def create(self, item: dict):
         vuln = VulnerabilityDocument()

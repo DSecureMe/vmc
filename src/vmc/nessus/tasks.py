@@ -31,7 +31,7 @@ from vmc.nessus.api import Nessus
 from vmc.nessus.models import Config
 from vmc.nessus.parsers import ReportParser
 
-from vmc.assets.documents import AssetDocument
+from vmc.vulnerabilities.documents import VulnerabilityDocument
 
 TRASH_FOLDER_TYPE = 'trash'
 LOGGER = logging.getLogger(__name__)
@@ -57,11 +57,11 @@ def _update(config: Config, scan_id: int, scanner_api=Nessus):
         if file:
             LOGGER.info(F'Trying to parse nessus file {scan_id}')
             parser = ReportParser(config)
-            vulns = parser.parse(file)
+            vulns, scanned_hosts = parser.parse(file)
             file.close()
             LOGGER.info(F'Nessus file parsed: {scan_id}')
             LOGGER.info(F'Attempting to update vulns data in {config}')
-            AssetDocument.create_or_update(vulns, config)
+            VulnerabilityDocument.create_or_update(vulns, scanned_hosts, config)
         else:
             LOGGER.error('Unable to download nessus file')
 
