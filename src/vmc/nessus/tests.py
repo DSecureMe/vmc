@@ -165,7 +165,7 @@ class UpdateDataTest(ESTestCase, TestCase):
 
         update_data(config_pk=self.config_id,
                     scan_id=1,
-                    scaner_api=self.scanner_api)
+                    scanner_api=self.scanner_api)
 
         self.scanner_api.assert_called_once_with(Config.objects.get(pk=1))
         self.con.download_scan.assert_called_once_with(1)

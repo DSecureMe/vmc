@@ -188,7 +188,7 @@ class VulnerabilityDocumentTest(ESTestCase, TestCase):
         self.assertEqual(uut.port, 22)
         self.assertEqual(uut.svc_name, 'ssh')
         self.assertEqual(uut.protocol, 'tcp')
-        self.assrtEqual(uut.plugin_id, '12345')
+        self.assertEqual(uut.plugin_id, '12345')
 
         self.assertEqual(uut.environmental_score_v2, 4.9)
         self.assertEqual(uut.environmental_score_v3, 6.9)
