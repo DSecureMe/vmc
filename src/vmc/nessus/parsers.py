@@ -113,7 +113,7 @@ class ScanParser:
                             vuln['port_number'] = None
                             vuln['svc_name'] = None
                             vuln['protocol'] = None
-                        vuln.id = id(vuln['asset'].ip_address, vuln['protocol'], vuln['plugin_id'])
+                        vuln.id = self._vuln_id(vuln['asset'].ip_address, vuln['protocol'], vuln['plugin_id'])
                         self.create(vuln)
         return self.__parsed, self.__scanned_hosts
 
@@ -128,6 +128,6 @@ class ScanParser:
                 setattr(vuln, field, 'UNKNOWN')
         self.__parsed[vuln.id] = vuln
 
-    def id(self, ip, protocol, plugin_id) -> str:
+    def _vuln_id(self, ip, protocol, plugin_id) -> str:
         key = F"{ip}-{protocol}-{plugin_id}"
         return str(uuid.uuid3(uuid.NAMESPACE_OID, key))

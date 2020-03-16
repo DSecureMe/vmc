@@ -60,7 +60,7 @@ def _update(config: Config, scan_id: int, scanner_api=Nessus):
         if file:
             LOGGER.info(F'Trying to parse nessus file {scan_id}')
             parser = ScanParser(config)
-            vulns, scanned_hosts = parser.parse(file)
+            vulns, scanned_hosts = parser.parse(file, config)
             file.close()
             LOGGER.info(F'Nessus file parsed: {scan_id}')
             LOGGER.info(F'Attempting to update vulns data in {config}')
