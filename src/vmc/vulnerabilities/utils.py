@@ -20,11 +20,13 @@
 
 import decimal
 
+from vmc.assets.documents import Impact
+
 from vmc.knowledge_base.metrics import ScopeV3
 from vmc.knowledge_base.utils import exploitability_v2, impact_v2, f_impact_v2
 
 TARGET_DISTRIBUTION_NOT_DEFINED_V2 = 1.0
-COLLATERAL_DAMAGE_POTENTIAL_NOT_DEFINED_V2 = 0.0
+
 TEMPORAL_REMEDIATION_LEVEL_NOT_DEFINED_V2 = 1.00
 TEMPORAL_REPORT_CONFIDENCE_NOT_DEFINED_V2 = 1.00
 TEMPORAL_EXPLOITABILITY_NOT_DEFINED_V2 = 1.00
@@ -33,8 +35,29 @@ EXPLOIT_CODE_MATURITY_NOT_DEFINED_V3 = 1.0
 REMEDIATION_LEVEL_NOT_DEFINED_V3 = 1.0
 REPORT_CONFIDENCE_NOT_DEFINED_V3 = 1.0
 
+COLLATERAL_DAMAGE_POTENTIAL_NONE_V2 = 0.0
+COLLATERAL_DAMAGE_POTENTIAL_LOW_V2 = 0.1
+COLLATERAL_DAMAGE_POTENTIAL_LOW_MEDIUM_V2 = 0.3
+COLLATERAL_DAMAGE_POTENTIAL_MEDIUM_HIGH_V2 = 0.4
+COLLATERAL_DAMAGE_POTENTIAL_HIGH_V2 = 0.5
+COLLATERAL_DAMAGE_POTENTIAL_NOT_DEFINED_V2 = 0.0
 
-def collateral_damage_potential_v2() -> float:
+
+def collateral_damage_potential_v2(asset) -> float:
+    req = [asset.confidentiality_requirement, asset.integrity_requirement, asset.availability_requirement]
+
+    if req.count(Impact.HIGH) == 3:
+        return COLLATERAL_DAMAGE_POTENTIAL_HIGH_V2
+
+    if req.count(Impact.HIGH) > 0:
+        return COLLATERAL_DAMAGE_POTENTIAL_MEDIUM_HIGH_V2
+
+    if req.count(Impact.MEDIUM) > 0:
+        return COLLATERAL_DAMAGE_POTENTIAL_LOW_MEDIUM_V2
+
+    if req.count(Impact.LOW) > 1:
+        return COLLATERAL_DAMAGE_POTENTIAL_LOW_V2
+
     return COLLATERAL_DAMAGE_POTENTIAL_NOT_DEFINED_V2
 
 
@@ -75,7 +98,7 @@ def adjusted_temporal_score_v2(cve, asset) -> float:
 
 def environmental_score_v2(cve, asset) -> float:
     at = adjusted_temporal_score_v2(cve, asset)
-    return round((at + (10 - at) * collateral_damage_potential_v2()) * target_distribution_v2(), 1)
+    return round((at + (10 - at) * collateral_damage_potential_v2(asset)) * target_distribution_v2(), 1)
 
 
 def exploitability_v3(cve) -> float:

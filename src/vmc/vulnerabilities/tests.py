@@ -33,7 +33,7 @@ from vmc.config.test_settings import elastic_configured
 from vmc.vulnerabilities.apps import VulnerabilitiesConfig
 
 from vmc.knowledge_base import metrics
-from vmc.vulnerabilities.utils import environmental_score_v2, environmental_score_v3
+from vmc.vulnerabilities import utils
 
 
 def create_cve(cve_id='CVE-2017-0002') -> CveDocument:
@@ -99,18 +99,50 @@ class CalculateEnvironmentalScore(ESTestCase, TestCase):
         self.asset.availability_requirement = ar
 
     @parameterized.expand([
-        (AssetImpact.LOW, AssetImpact.LOW, AssetImpact.LOW, 4.9),
-        (AssetImpact.MEDIUM, AssetImpact.LOW, AssetImpact.LOW, 5.7),
-        (AssetImpact.LOW, AssetImpact.MEDIUM, AssetImpact.LOW, 5.7),
-        (AssetImpact.LOW, AssetImpact.LOW, AssetImpact.MEDIUM, 5.7),
-        (AssetImpact.MEDIUM, AssetImpact.MEDIUM, AssetImpact.LOW, 6.3),
-        (AssetImpact.MEDIUM, AssetImpact.MEDIUM, AssetImpact.MEDIUM, 6.8),
-        (AssetImpact.HIGH, AssetImpact.HIGH, AssetImpact.HIGH, 8.2),
-        (AssetImpact.NOT_DEFINED, AssetImpact.HIGH, AssetImpact.LOW, 6.9),
+        (AssetImpact.NOT_DEFINED, AssetImpact.NOT_DEFINED, AssetImpact.NOT_DEFINED, utils.COLLATERAL_DAMAGE_POTENTIAL_NOT_DEFINED_V2),
+
+        (AssetImpact.NOT_DEFINED, AssetImpact.NOT_DEFINED, AssetImpact.LOW, utils.COLLATERAL_DAMAGE_POTENTIAL_NONE_V2),
+        (AssetImpact.LOW, AssetImpact.NOT_DEFINED, AssetImpact.NOT_DEFINED, utils.COLLATERAL_DAMAGE_POTENTIAL_NONE_V2),
+        (AssetImpact.NOT_DEFINED, AssetImpact.LOW, AssetImpact.NOT_DEFINED, utils.COLLATERAL_DAMAGE_POTENTIAL_NONE_V2),
+
+        (AssetImpact.LOW, AssetImpact.LOW, AssetImpact.NOT_DEFINED, utils.COLLATERAL_DAMAGE_POTENTIAL_LOW_V2),
+        (AssetImpact.NOT_DEFINED, AssetImpact.LOW, AssetImpact.LOW, utils.COLLATERAL_DAMAGE_POTENTIAL_LOW_V2),
+        (AssetImpact.LOW, AssetImpact.NOT_DEFINED, AssetImpact.LOW, utils.COLLATERAL_DAMAGE_POTENTIAL_LOW_V2),
+        (AssetImpact.LOW, AssetImpact.LOW, AssetImpact.LOW, utils.COLLATERAL_DAMAGE_POTENTIAL_LOW_V2),
+
+        (AssetImpact.MEDIUM, AssetImpact.LOW, AssetImpact.NOT_DEFINED, utils.COLLATERAL_DAMAGE_POTENTIAL_LOW_MEDIUM_V2),
+        (AssetImpact.LOW, AssetImpact.MEDIUM, AssetImpact.NOT_DEFINED, utils.COLLATERAL_DAMAGE_POTENTIAL_LOW_MEDIUM_V2),
+        (AssetImpact.NOT_DEFINED, AssetImpact.LOW, AssetImpact.MEDIUM, utils.COLLATERAL_DAMAGE_POTENTIAL_LOW_MEDIUM_V2),
+        (AssetImpact.LOW, AssetImpact.LOW, AssetImpact.MEDIUM, utils.COLLATERAL_DAMAGE_POTENTIAL_LOW_MEDIUM_V2),
+        (AssetImpact.LOW, AssetImpact.MEDIUM, AssetImpact.MEDIUM, utils.COLLATERAL_DAMAGE_POTENTIAL_LOW_MEDIUM_V2),
+        (AssetImpact.MEDIUM, AssetImpact.MEDIUM, AssetImpact.MEDIUM, utils.COLLATERAL_DAMAGE_POTENTIAL_LOW_MEDIUM_V2),
+
+        (AssetImpact.MEDIUM, AssetImpact.LOW, AssetImpact.HIGH, utils.COLLATERAL_DAMAGE_POTENTIAL_MEDIUM_HIGH_V2),
+        (AssetImpact.LOW, AssetImpact.HIGH, AssetImpact.NOT_DEFINED, utils.COLLATERAL_DAMAGE_POTENTIAL_MEDIUM_HIGH_V2),
+        (AssetImpact.HIGH, AssetImpact.LOW, AssetImpact.MEDIUM, utils.COLLATERAL_DAMAGE_POTENTIAL_MEDIUM_HIGH_V2),
+        (AssetImpact.HIGH, AssetImpact.HIGH, AssetImpact.NOT_DEFINED, utils.COLLATERAL_DAMAGE_POTENTIAL_MEDIUM_HIGH_V2),
+        (AssetImpact.HIGH, AssetImpact.MEDIUM, AssetImpact.MEDIUM, utils.COLLATERAL_DAMAGE_POTENTIAL_MEDIUM_HIGH_V2),
+        (AssetImpact.HIGH, AssetImpact.HIGH, AssetImpact.MEDIUM, utils.COLLATERAL_DAMAGE_POTENTIAL_MEDIUM_HIGH_V2),
+
+        (AssetImpact.HIGH, AssetImpact.HIGH, AssetImpact.HIGH, utils.COLLATERAL_DAMAGE_POTENTIAL_HIGH_V2),
+    ])
+    def test_collateral_damage_potential_v2(self, cr, ir, ar, expected):
+        self.prepare_asset(cr, ir, ar)
+        self.assertEqual(utils.collateral_damage_potential_v2(self.asset), expected)
+
+    @parameterized.expand([
+        (AssetImpact.LOW, AssetImpact.LOW, AssetImpact.LOW, 5.4),
+        (AssetImpact.MEDIUM, AssetImpact.LOW, AssetImpact.LOW, 7.0),
+        (AssetImpact.LOW, AssetImpact.MEDIUM, AssetImpact.LOW, 7.0),
+        (AssetImpact.LOW, AssetImpact.LOW, AssetImpact.MEDIUM, 7.0),
+        (AssetImpact.MEDIUM, AssetImpact.MEDIUM, AssetImpact.LOW, 7.4),
+        (AssetImpact.MEDIUM, AssetImpact.MEDIUM, AssetImpact.MEDIUM, 7.8),
+        (AssetImpact.HIGH, AssetImpact.HIGH, AssetImpact.HIGH, 9.1),
+        (AssetImpact.NOT_DEFINED, AssetImpact.HIGH, AssetImpact.LOW, 8.1),
     ])
     def test_environmental_score_v2(self, cr, ir, ar, expected):
         self.prepare_asset(cr, ir, ar)
-        self.assertEqual(environmental_score_v2(self.cve, self.asset), expected)
+        self.assertEqual(utils.environmental_score_v2(self.cve, self.asset), expected)
 
     @parameterized.expand([
         (metrics.ScopeV3.UNCHANGED, AssetImpact.LOW, AssetImpact.LOW, AssetImpact.LOW, 6.9),
@@ -125,7 +157,7 @@ class CalculateEnvironmentalScore(ESTestCase, TestCase):
     def test_environmental_score_v3(self, scope, cr, ir, ar, expected):
         self.prepare_asset(cr, ir, ar)
         self.change_scope(scope)
-        self.assertEqual(environmental_score_v3(self.cve, self.asset), expected)
+        self.assertEqual(utils.environmental_score_v3(self.cve, self.asset), expected)
 
 
 @skipIf(not elastic_configured(), 'Skip if elasticsearch is not configured')
@@ -188,7 +220,7 @@ class VulnerabilityDocumentTest(ESTestCase, TestCase):
         self.assertEqual(uut.svc_name, 'ssh')
         self.assertEqual(uut.protocol, 'tcp')
 
-        self.assertEqual(uut.environmental_score_v2, 4.9)
+        self.assertEqual(uut.environmental_score_v2, 5.4)
         self.assertEqual(uut.environmental_score_v3, 6.9)
 
     def test_asset_updated(self):
@@ -215,7 +247,7 @@ class VulnerabilityDocumentTest(ESTestCase, TestCase):
         self.assertEqual(len(result_1.hits), 3)
         self.assertEqual(result_1.hits[0].asset.confidentiality_requirement, self.asset.confidentiality_requirement)
         self.assertEqual(result_1.hits[0].asset.integrity_requirement, self.asset.integrity_requirement)
-        self.assertEqual(result_1.hits[0].environmental_score_v2, 7.5)
+        self.assertEqual(result_1.hits[0].environmental_score_v2, 8.5)
         self.assertEqual(result_1.hits[0].environmental_score_v3, 8.8)
         self.assertTrue(result_1.hits[0].modified_date > result_1.hits[1].modified_date)
 
@@ -225,7 +257,7 @@ class VulnerabilityDocumentTest(ESTestCase, TestCase):
 
         self.assertEqual(len(result_2.hits), 3)
         self.assertEqual(result_2.hits[0].asset.confidentiality_requirement, self.asset.confidentiality_requirement)
-        self.assertEqual(result_2.hits[0].environmental_score_v2, 7.5)
+        self.assertEqual(result_2.hits[0].environmental_score_v2, 8.5)
         self.assertEqual(result_2.hits[0].environmental_score_v3, 8.8)
         self.assertTrue(result_2.hits[0].modified_date > result_2.hits[1].modified_date)
 
@@ -251,7 +283,7 @@ class VulnerabilityDocumentTest(ESTestCase, TestCase):
 
         self.assertEqual(len(result_1.hits), 3)
         self.assertEqual(result_1.hits[0].cve.access_vector_v2, self.cve.access_vector_v2)
-        self.assertEqual(result_1.hits[0].environmental_score_v2, 2.5)
+        self.assertEqual(result_1.hits[0].environmental_score_v2, 3.2)
         self.assertEqual(result_1.hits[0].environmental_score_v3, 6.9)
         self.assertTrue(result_1.hits[0].modified_date > result_1.hits[1].modified_date)
 
@@ -261,6 +293,6 @@ class VulnerabilityDocumentTest(ESTestCase, TestCase):
 
         self.assertEqual(len(result_2.hits), 3)
         self.assertEqual(result_2.hits[0].cve.access_vector_v2, self.cve.access_vector_v2)
-        self.assertEqual(result_2.hits[0].environmental_score_v2, 2.5)
+        self.assertEqual(result_2.hits[0].environmental_score_v2, 3.2)
         self.assertEqual(result_2.hits[0].environmental_score_v3, 6.9)
         self.assertTrue(result_2.hits[0].modified_date > result_2.hits[1].modified_date)
