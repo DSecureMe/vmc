@@ -24,6 +24,7 @@ import uuid
 from defusedxml.lxml import RestrictedElement
 from vmc.vulnerabilities.documents import VulnerabilityDocument
 
+from vmc.nessus.models import Config
 from vmc.assets.documents import AssetDocument
 from vmc.common.xml import iter_elements_by_name
 from vmc.knowledge_base.documents import CveDocument

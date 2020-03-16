@@ -32,6 +32,7 @@ from vmc.common.tasks import memcache_lock
 from vmc.nessus.api import Nessus
 from vmc.nessus.models import Config
 from vmc.nessus.parsers import ReportParser
+from vmc.nessus.parsers import ScanParser
 
 from vmc.vulnerabilities.documents import VulnerabilityDocument
 
@@ -58,7 +59,7 @@ def _update(config: Config, scan_id: int, scanner_api=Nessus):
         file = api.download_scan(scan_id)
         if file:
             LOGGER.info(F'Trying to parse nessus file {scan_id}')
-            parser = ReportParser(config)
+            parser = ScanParser(config)
             vulns, scanned_hosts = parser.parse(file)
             file.close()
             LOGGER.info(F'Nessus file parsed: {scan_id}')
