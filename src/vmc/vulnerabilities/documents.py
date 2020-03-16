@@ -28,7 +28,7 @@ from vmc.vulnerabilities.utils import environmental_score_v2, environmental_scor
 
 
 @registry.register_document
-class VulnerabilityDocument(Document):#TODO: Should we add tags?
+class VulnerabilityDocument(Document):
     id = Keyword()
     plugin_id = Integer()
     port = Integer()
@@ -72,5 +72,5 @@ class VulnerabilityDocument(Document):#TODO: Should we add tags?
             elif vuln_id not in vulnerabilities and current_vuln.asset.ip_address in scanned_hosts:
                 current_vuln.tags.append('FIXED')
                 current_vuln.save(refresh=True, index=index)
-        for vuln in vulnerabilities:
+        for vuln in vulnerabilities.values():
             vuln.save(refresh=True, index=index)

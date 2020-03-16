@@ -171,10 +171,10 @@ class UpdateDataTest(ESTestCase, TestCase):
         self.con.download_scan.assert_called_once_with(1)
 
         vuln = VulnerabilityDocument.search().filter('term', asset__ip_address='10.0.2.15').execute()
-        print(vuln)
         self.assertEqual(len(vuln.hits), 1)
         self.assertEqual(vuln.hits[0].asset.ip_address, '10.0.2.15')
-        self.assertEqual(vuln.hits[0].port, 22)
+        self.assertEqual(vuln.hits[0].port, 22) 
+        self.assertEqual(vuln.hits[0].plugin_id, 70658)
         self.assertEqual(vuln.hits[0].svc_name, 'ssh')
         self.assertEqual(vuln.hits[0].protocol, 'tcp')
         self.assertEqual(vuln.hits[0].cve.id, 'CVE-2008-5161')
