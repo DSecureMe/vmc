@@ -119,16 +119,14 @@ class ScanParser:
 
     def create(self, item: dict):
         vuln = VulnerabilityDocument()
-        print(VulnerabilityDocument.get_fields_name())
         for field in VulnerabilityDocument.get_fields_name():
             print(F"Item: {item}")
             print(F"Field: {field}")
-            parser = getattr(item, field, None)
-            try:
-                if parser:
+            if field in item:
+                try:
                     setattr(vuln, field, item[field])
-            except (KeyError, IndexError):
-                setattr(vuln, field, 'UNKNOWN')
+                except (KeyError, IndexError):
+                    setattr(vuln, field, 'UNKNOWN')
         self.__parsed[vuln.id] = vuln
 
     def _vuln_id(self, ip, protocol, plugin_id) -> str:
