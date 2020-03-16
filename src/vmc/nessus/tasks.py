@@ -27,6 +27,8 @@ from typing import Dict
 
 from celery import shared_task
 
+from vmc.common.tasks import memcache_lock
+
 from vmc.nessus.api import Nessus
 from vmc.nessus.models import Config
 from vmc.nessus.parsers import ReportParser
@@ -70,19 +72,30 @@ def _update(config: Config, scan_id: int, scanner_api=Nessus):
         traceback.print_exc()
         LOGGER.error(F"Error while loading vulnerabiltiy data {e}")
 
+
 @shared_task
 def update_data(config_pk: int, scan_id: int, scanner_api=Nessus):  # pylint: disable=too-many-locals
     config = Config.objects.get(pk=config_pk)
-    api = scanner_api(config)
-    LOGGER.info('Trying to download nessus file %d', scan_id)
-    file = api.download_scan(scan_id)
-    if file:
-        LOGGER.info('Trying to parse nessus file %d', scan_id)
-        ReportParser.parse(file, config)
-        file.close()
-        LOGGER.info('Parsing nessus file %d done.', scan_id)
-    else:
-        LOGGER.error('Unable to download nessus file')
+    lock_id = F"update-vulnerabilities-loc-{config.id}"
+    with memcache_lock(lock_id, config) as acquired:
+        if acquired:
+            return _update(config, scan_id, scanner_api)
+    LOGGER.info(F"Vulnerability update for {config.name} is already being done by another worker")
+
+
+# @shared_task
+# def update_data(config_pk: int, scan_id: int, scanner_api=Nessus):  # pylint: disable=too-many-locals
+#     config = Config.objects.get(pk=config_pk)
+#     api = scanner_api(config)
+#     LOGGER.info('Trying to download nessus file %d', scan_id)
+#     file = api.download_scan(scan_id)
+#     if file:
+#         LOGGER.info('Trying to parse nessus file %d', scan_id)
+#         ReportParser.parse(file, config)
+#         file.close()
+#         LOGGER.info('Parsing nessus file %d done.', scan_id)
+#     else:
+#         LOGGER.error('Unable to download nessus file')
 
 
 @shared_task
