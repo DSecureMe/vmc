@@ -119,7 +119,10 @@ class ScanParser:
 
     def create(self, item: dict):
         vuln = VulnerabilityDocument()
+        print(VulnerabilityDocument.get_fields_name())
         for field in VulnerabilityDocument.get_fields_name():
+            print(F"Item: {item}")
+            print(F"Field: {field}")
             parser = getattr(item, field, None)
             try:
                 if parser:

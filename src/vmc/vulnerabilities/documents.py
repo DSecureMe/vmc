@@ -20,7 +20,7 @@
 
 from vmc.assets.documents import AssetInnerDoc, AssetDocument
 
-from vmc.elasticsearch import Document, Integer, Keyword, Object, Float
+from vmc.elasticsearch import Document, Integer, Keyword, Object, Float, Q
 from vmc.knowledge_base.documents import CveInnerDoc, CveDocument
 from vmc.elasticsearch.registries import registry
 
@@ -29,6 +29,7 @@ from vmc.vulnerabilities.utils import environmental_score_v2, environmental_scor
 
 @registry.register_document
 class VulnerabilityDocument(Document):#TODO: Should we add tags?
+    id = Keyword()
     plugin_id = Integer()
     port = Integer()
     svc_name = Keyword()
@@ -39,6 +40,7 @@ class VulnerabilityDocument(Document):#TODO: Should we add tags?
     environmental_score_v3 = Float()
     cve = Object(CveInnerDoc, include_in_parent=True)
     asset = Object(AssetInnerDoc, include_in_parent=True)
+    tags = Keyword()
 
     class Index:
         name = 'vulnerability'
