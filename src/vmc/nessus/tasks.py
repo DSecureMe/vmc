@@ -84,21 +84,6 @@ def update_data(config_pk: int, scan_id: int, scanner_api=Nessus):  # pylint: di
     LOGGER.info(F"Vulnerability update for {config.name} is already being done by another worker")
 
 
-# @shared_task
-# def update_data(config_pk: int, scan_id: int, scanner_api=Nessus):  # pylint: disable=too-many-locals
-#     config = Config.objects.get(pk=config_pk)
-#     api = scanner_api(config)
-#     LOGGER.info('Trying to download nessus file %d', scan_id)
-#     file = api.download_scan(scan_id)
-#     if file:
-#         LOGGER.info('Trying to parse nessus file %d', scan_id)
-#         ReportParser.parse(file, config)
-#         file.close()
-#         LOGGER.info('Parsing nessus file %d done.', scan_id)
-#     else:
-#         LOGGER.error('Unable to download nessus file')
-
-
 @shared_task
 def update(scanner_api=Nessus): #TODO: implement memcach_lock
     for config in Config.objects.all():
