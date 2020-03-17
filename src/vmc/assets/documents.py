@@ -80,7 +80,7 @@ class AssetDocument(Document, AssetInnerDoc):
     @staticmethod
     def get_or_create(ip_address, config=None):
         index = AssetDocument.get_index(config)
-        result = AssetDocument.search(index=index).filter(  #Asset musi być not deleted
+        result = AssetDocument.search(index=index).filter(  #Asset must be not deleted
             'term', ip_address=ip_address).execute()
         if result.hits:
             return result.hits[0]
