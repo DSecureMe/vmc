@@ -93,6 +93,7 @@ class ScanParser:
                     setattr(vuln, field, 'UNKNOWN')
         self.__parsed[vuln.id] = vuln
 
-    def _vuln_id(self, ip, protocol, plugin_id) -> str:
+    @staticmethod
+    def _vuln_id(ip, protocol, plugin_id) -> str:
         key = F"{ip}-{protocol}-{plugin_id}"
         return str(uuid.uuid3(uuid.NAMESPACE_OID, key))

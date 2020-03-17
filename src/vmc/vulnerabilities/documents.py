@@ -30,7 +30,6 @@ from vmc.vulnerabilities.utils import environmental_score_v2, environmental_scor
 @registry.register_document
 class VulnerabilityDocument(Document):
     id = Keyword()
-    plugin_id = Integer()
     port = Integer()
     svc_name = Keyword()
     protocol = Keyword()

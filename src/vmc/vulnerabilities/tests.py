@@ -76,6 +76,12 @@ def create_asset(ip_address='10.10.10.10') -> AssetDocument:
     return asset
 
 
+class ConfigMock:
+    def __init__(self):
+        self.name = 'test'
+        self.tenant = None
+
+
 class VulnerabilitiesConfigTest(TestCase):
 
     def test_name(self):
@@ -139,16 +145,17 @@ class VulnerabilityDocumentTest(ESTestCase, TestCase):
     @classmethod
     def create_vulnerability(cls, asset, cve):
         vulnerability = VulnerabilityDocument(
+            id=F"{asset.id}-{cve.id}",
             asset=asset,
             cve=cve,
-            plugin_id=12345,
             description='description',
             solution='solution',
             port=22,
             svc_name='ssh',
-            protocol='tcp'
+            protocol='tcp',
+            tags=['test']
         )
-        vulnerability.save(refresh=True)
+        return vulnerability.save(refresh=True)
 
     def test_document_index_name(self):
         self.assertEqual(VulnerabilityDocument.Index.name, 'vulnerability')
@@ -188,7 +195,6 @@ class VulnerabilityDocumentTest(ESTestCase, TestCase):
         self.assertEqual(uut.port, 22)
         self.assertEqual(uut.svc_name, 'ssh')
         self.assertEqual(uut.protocol, 'tcp')
-        self.assertEqual(uut.plugin_id, 12345)
 
         self.assertEqual(uut.environmental_score_v2, 4.9)
         self.assertEqual(uut.environmental_score_v3, 6.9)
@@ -266,3 +272,44 @@ class VulnerabilityDocumentTest(ESTestCase, TestCase):
         self.assertEqual(result_2.hits[0].environmental_score_v2, 2.5)
         self.assertEqual(result_2.hits[0].environmental_score_v3, 6.9)
         self.assertTrue(result_2.hits[0].modified_date > result_2.hits[1].modified_date)
+
+    def test_update_existing_vulnerability(self):
+        vuln = self.create_vulnerability(self.asset, self.cve)
+        self.assertEqual(VulnerabilityDocument.search().count(), 1)
+
+        updated_vuln = vuln.clone()
+        updated_vuln.description = 'Updated Desc'
+
+        VulnerabilityDocument.create_or_update({updated_vuln.id: updated_vuln}, [], ConfigMock())
+        self.assertEqual(VulnerabilityDocument.search().count(), 1)
+
+        result_2 = VulnerabilityDocument.search().filter(
+            'term', asset__ip_address=self.asset.ip_address).sort('-modified_date').filter(
+            'term', cve__id=self.cve.id).execute()
+        self.assertEqual(result_2.hits[0].description, 'Updated Desc')
+
+    def test_not_updated_existing_vulnerability(self):
+        vuln = self.create_vulnerability(self.asset, self.cve)
+        self.assertEqual(VulnerabilityDocument.search().count(), 1)
+
+        updated_vuln = vuln.clone()
+
+        VulnerabilityDocument.create_or_update({updated_vuln.id: updated_vuln}, [], ConfigMock())
+        self.assertEqual(VulnerabilityDocument.search().count(), 1)
+
+        result_2 = VulnerabilityDocument.search().filter(
+            'term', asset__ip_address=self.asset.ip_address).sort('-modified_date').filter(
+            'term', cve__id=self.cve.id).execute()
+        self.assertEqual(result_2.hits[0].description, 'description')
+
+    def test_fixed_vulnerability(self):
+        self.create_vulnerability(self.asset, self.cve)
+        self.assertEqual(VulnerabilityDocument.search().count(), 1)
+
+        VulnerabilityDocument.create_or_update({}, [self.asset.ip_address], ConfigMock())
+        self.assertEqual(VulnerabilityDocument.search().count(), 1)
+
+        result_2 = VulnerabilityDocument.search().filter(
+            'term', asset__ip_address=self.asset.ip_address).sort('-modified_date').execute()
+
+        self.assertEqual(result_2.hits[0].tags, ['test', 'FIXED'])
