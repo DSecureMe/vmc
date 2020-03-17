@@ -48,7 +48,7 @@ class AssetFactory:
         return AssetDocument.get_or_create(ip_address, config)
 
 
-class ScanParser:
+class ReportParser:
     INFO = '0'
 
     def __init__(self, config: Config):
@@ -56,20 +56,20 @@ class ScanParser:
         self.__parsed = dict()
         self.__scanned_hosts = list()
 
-    def parse(self, xml_root, config):
+    def parse(self, xml_root):
         vuln = dict()
         for host in iter_elements_by_name(xml_root, 'ReportHost'):
             self.__scanned_hosts.append(host.get('name'))
             for item in host.iter('ReportItem'):
-                vuln['asset'] = AssetFactory.create(host, config)
+                vuln['asset'] = AssetFactory.create(host, self.__config)
                 vuln['plugin_id'] = item.get('pluginID')
                 for cve in item.findall('cve'):
                     vuln['cve_id'] = get_value(cve)
-                    if item.get('severity') != ScanParser.INFO and vuln['cve_id']:
+                    if item.get('severity') != ReportParser.INFO and vuln['cve_id']:
                         vuln['cve'] = CveDocument.get_or_create(cve_id=vuln['cve_id'])
                         vuln['port'] = item.get('port')
 
-                        if vuln['port'] != 0:
+                        if vuln['port'] != '0':
                             vuln['svc_name'] = item.get('svc_name')
                             vuln['protocol'] = item.get('protocol')
                         else:

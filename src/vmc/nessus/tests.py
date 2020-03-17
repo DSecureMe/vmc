@@ -17,11 +17,13 @@
  * under the License.
  *
 """
+import uuid
 from unittest import skipIf
 from unittest.mock import patch, MagicMock, call
 
 from django.contrib.auth.models import User
 from django.test import TestCase, LiveServerTestCase
+from vmc.nessus.parsers import ReportParser
 
 from vmc.config.test_settings import elastic_configured
 from vmc.elasticsearch import Search
@@ -45,6 +47,12 @@ class ResponseMock:
 
     def json(self):
         return self.text
+
+
+class ConfigMock:
+    def __init__(self):
+        self.name = 'test'
+        self.tenant = None
 
 
 class NessusConfigTest(TestCase):
@@ -148,6 +156,34 @@ class UpdateTest(ESTestCase, TestCase):
             call(config_pk=1, scan_id=2),
             call(config_pk=1, scan_id=4)
         ], any_order=True)
+
+
+@skipIf(not elastic_configured(), 'Skip if elasticsearch is not configured')
+class ReportParserTest(ESTestCase, TestCase):
+
+    def setUp(self):
+        super().setUp()
+        self.internal_xml = open(get_fixture_location(__file__, 'internal.xml'))
+        self.uut = ReportParser(ConfigMock())
+
+    def test_parse_call(self):
+        parsed, scanned_hosts = self.uut.parse(self.internal_xml)
+        vuln_id = str(uuid.uuid3(uuid.NAMESPACE_OID, '10.0.2.15-tcp-70658'))
+        self.assertEquals(len(parsed), 1)
+        self.assertIsInstance(parsed[vuln_id], VulnerabilityDocument)
+        self.assertEquals(parsed[vuln_id].asset.ip_address, '10.0.2.15')
+        self.assertEquals(parsed[vuln_id].cve.id, 'CVE-2008-5161')
+        self.assertEquals(parsed[vuln_id].port, '22')
+        self.assertEquals(parsed[vuln_id].svc_name, 'ssh')
+        self.assertEquals(parsed[vuln_id].protocol, 'tcp')
+        self.assertEquals(parsed[vuln_id].solution, 'Contact the vendor or consult product documentation to disable CBC mode '
+                                        'cipher encryption, and enable CTR or GCM cipher mode encryption.')
+        self.assertEquals(parsed[vuln_id].description, 'The SSH server is configured to support Cipher Block Chaining (CBC) '
+                                                 'encryption.  This may allow an attacker to recover the plaintext '
+                                                 'message from the ciphertext. Note that this plugin only checks for '
+                                                 'the options of the SSH server and does not check for vulnerable'
+                                                 ' software versions.')
+        self.assertEquals(scanned_hosts, ['10.0.2.15', '10.0.2.4', '10.0.2.3', '10.0.2.2'])
 
 
 @skipIf(not elastic_configured(), 'Skip if elasticsearch is not configured')
