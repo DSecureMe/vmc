@@ -85,7 +85,7 @@ class Nessus:
         return result
 
     def get_scan_list(self, last_modification_date=0) -> Dict:
-        if last_modification_date == 0:           
+        if last_modification_date == 0:
             return self._action(action="scans", method="GET")
         return self._action(action=F"scans?last_modification_date={last_modification_date}", method="GET")
 
