@@ -18,7 +18,8 @@
  *
 """
 import uuid
-from unittest import skipIf
+import datetime
+from unittest import skipIf, mock
 from unittest.mock import patch, MagicMock, call
 
 from django.contrib.auth.models import User
@@ -33,7 +34,7 @@ from vmc.nessus.apps import NessusConfig
 from vmc.assets.documents import AssetDocument
 from vmc.nessus.api import Nessus
 from vmc.nessus.models import Config
-from vmc.nessus.tasks import get_trash_folder_id, update, update_data
+from vmc.nessus.tasks import get_trash_folder_id, update, update_data, get_epoch_from_lsp
 from vmc.vulnerabilities.documents import VulnerabilityDocument
 
 from vmc.common.tests import get_fixture_location
@@ -89,6 +90,10 @@ class NessusTest(TestCase):
         scan_list = self.uut.get_scan_list()
         self.assert_request(request_mock, 'GET', 'scans')
         self.assertEqual(scan_list, {'scan': 1})
+
+        scan_list2 = self.uut.get_scan_list(last_modification_date=1551398400)
+        self.assert_request(request_mock, 'GET', 'scans?last_modification_date=1551398400')
+        self.assertEqual(scan_list2, {'scan': 1})
 
     @patch('vmc.nessus.api.requests')
     def test_call_get_scan_detail(self, request_mock):
@@ -157,6 +162,17 @@ class UpdateTest(ESTestCase, TestCase):
             call(config_pk=1, scan_id=4)
         ], any_order=True)
 
+    def test_call_lsp_update(self):
+        with mock.patch('vmc.nessus.tasks.now') as mock_now:
+            mock_now.return_value = datetime.datetime(2020, 3, 21, 0, 0, 0, tzinfo=datetime.timezone.utc)
+            self.assertEquals(Config.objects.first().last_scans_pull, datetime.datetime(2019, 3, 1, 0, 0, 0,
+                                                                                        tzinfo=datetime.timezone.utc))
+            update(scanner_api=self.scanner_api)
+            self.scanner_api.assert_called_once_with(Config.objects.first())
+            self.assertEquals(Config.objects.first().last_scans_pull, datetime.datetime(2020, 3, 21, 0, 0, 0,
+                                                                                        tzinfo=datetime.timezone.utc))
+
+
 
 @skipIf(not elastic_configured(), 'Skip if elasticsearch is not configured')
 class ReportParserTest(ESTestCase, TestCase):
@@ -194,6 +210,7 @@ class UpdateDataTest(ESTestCase, TestCase):
         super().setUp()
         self.con = MagicMock()
         self.scanner_api = MagicMock(return_value=self.con)
+        self.config = Config.objects.first()
         self.config_id = Config.objects.first().id
 
     def test_call(self):
@@ -206,6 +223,7 @@ class UpdateDataTest(ESTestCase, TestCase):
         self.scanner_api.assert_called_once_with(Config.objects.get(pk=1))
         self.con.download_scan.assert_called_once_with(1)
 
+
         vuln = VulnerabilityDocument.search().filter('term', asset__ip_address='10.0.2.15').execute()
         self.assertEqual(len(vuln.hits), 1)
         self.assertEqual(vuln.hits[0].asset.ip_address, '10.0.2.15')
@@ -215,6 +233,12 @@ class UpdateDataTest(ESTestCase, TestCase):
         self.assertEqual(vuln.hits[0].cve.id, 'CVE-2008-5161')
         self.assertEqual(vuln.hits[0].solution, 'Contact the vendor or consult product documentation to disable CBC mode '
                                         'cipher encryption, and enable CTR or GCM cipher mode encryption.')
+
+    def test_get_epoch_from_lsp(self):
+        c = Config.objects.get(pk=1)
+        self.assertEqual(get_epoch_from_lsp(c.last_scans_pull), 1551398400)
+        c.last_scans_pull = None
+        self.assertEqual(get_epoch_from_lsp(c.last_scans_pull), 0)
 
 
 class AdminPanelTest(LiveServerTestCase):

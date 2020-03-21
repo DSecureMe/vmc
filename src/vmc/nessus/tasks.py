@@ -22,6 +22,7 @@ from __future__ import absolute_import, unicode_literals
 
 import logging
 import datetime
+from django.utils.timezone import now
 
 from typing import Dict
 
@@ -47,8 +48,8 @@ def get_trash_folder_id(scan_list: Dict) -> [int, None]:
     return None
 
 
-def calculate_epoch_from_interval(interval: int) -> int:
-    return int(datetime.datetime.now().timestamp()) - (interval*60)
+def get_epoch_from_lsp(last_pull: datetime.datetime) -> int:
+    return int(last_pull.timestamp()) if last_pull else 0
 
 
 def _update(config: Config, scan_id: int, scanner_api=Nessus):
@@ -84,10 +85,11 @@ def update_data(config_pk: int, scan_id: int, scanner_api=Nessus):  # pylint: di
 
 
 @shared_task
-def update(scanner_api=Nessus): #TODO: implement memcach_lock
+def update(scanner_api=Nessus):
     for config in Config.objects.all():
         con = scanner_api(config)
-        scan_list = con.get_scan_list(last_modification_date=calculate_epoch_from_interval(config.update_interval))
+        now_date = now()
+        scan_list = con.get_scan_list(last_modification_date=get_epoch_from_lsp(config.last_scans_pull))
 
         if scan_list:
             trash_folder_id = get_trash_folder_id(scan_list)
@@ -98,3 +100,5 @@ def update(scanner_api=Nessus): #TODO: implement memcach_lock
                     update_data.delay(config_pk=config.pk, scan_id=int(scan['id']))
         else:
             LOGGER.info('Scan list is empty')
+        config.last_scans_pull = now_date
+        config.save()
