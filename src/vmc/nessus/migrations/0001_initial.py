@@ -26,6 +26,7 @@ class Migration(migrations.Migration):
                 ('api_key', models.TextField()),
                 ('secret_key', models.TextField()),
                 ('insecure', models.BooleanField(default=False)),
+                ('last_scans_pull',  models.DateTimeField(default=None)),
                 ('tenant', models.ForeignKey(null=True, on_delete=django.db.models.deletion.DO_NOTHING, to='elasticsearch.Tenant')),
             ],
             options={

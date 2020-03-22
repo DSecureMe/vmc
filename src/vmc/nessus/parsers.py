@@ -19,10 +19,12 @@
 """
 
 import logging
+import uuid
 
 from defusedxml.lxml import RestrictedElement
 from vmc.vulnerabilities.documents import VulnerabilityDocument
 
+from vmc.nessus.models import Config
 from vmc.assets.documents import AssetDocument
 from vmc.common.xml import iter_elements_by_name
 from vmc.knowledge_base.documents import CveDocument
@@ -49,33 +51,49 @@ class AssetFactory:
 class ReportParser:
     INFO = '0'
 
-    @staticmethod
-    def parse(xml_root, config) -> None:
-        index = VulnerabilityDocument.get_index(config)
+    def __init__(self, config: Config):
+        self.__config = config
+        self.__parsed = dict()
+        self.__scanned_hosts = list()
+
+    def parse(self, xml_root):
+        vuln = dict()
         for host in iter_elements_by_name(xml_root, 'ReportHost'):
+            self.__scanned_hosts.append(host.get('name'))
             for item in host.iter('ReportItem'):
-                asset = AssetFactory.create(host, config)
-
+                vuln['asset'] = AssetFactory.create(host, self.__config)
+                vuln['plugin_id'] = item.get('pluginID')
                 for cve in item.findall('cve'):
-                    cve_id = get_value(cve)
-                    if item.get('severity') != ReportParser.INFO and cve_id:
-                        cve = CveDocument.get_or_create(cve_id=cve_id)
-                        port_number = item.get('port')
+                    vuln['cve_id'] = get_value(cve)
+                    if item.get('severity') != ReportParser.INFO and vuln['cve_id']:
+                        vuln['cve'] = CveDocument.get_or_create(cve_id=vuln['cve_id'])
+                        vuln['port'] = item.get('port')
 
-                        if port_number != 0:
-                            svc_name = item.get('svc_name')
-                            protocol = item.get('protocol')
+                        if vuln['port'] != '0':
+                            vuln['svc_name'] = item.get('svc_name')
+                            vuln['protocol'] = item.get('protocol')
                         else:
-                            port_number = None
-                            svc_name = None
-                            protocol = None
-                        VulnerabilityDocument(
-                            asset=asset,
-                            cve=cve,
-                            port=port_number,
-                            svc_name=svc_name,
-                            protocol=protocol,
-                            description=get_value(item.find('description')),
-                            solution=get_value(item.find('solution')),
-                            exploit_available=True if get_value(item.find('exploit_available')) == 'true' else False
-                        ).save(index=index, refresh=True)
+                            vuln['port'] = None
+                            vuln['svc_name'] = None
+                            vuln['protocol'] = None
+                        vuln['description'] = get_value(item.find('description'))
+                        vuln['solution'] = get_value(item.find('solution'))
+                        vuln['exploit_available'] = True if get_value(item.find('exploit_available')) == 'true' else False
+                        vuln['id'] = self._vuln_id(vuln['asset'].ip_address, vuln['protocol'], vuln['plugin_id'])
+                        self.create(vuln)
+        return self.__parsed, self.__scanned_hosts
+
+    def create(self, item: dict):
+        vuln = VulnerabilityDocument()
+        for field in VulnerabilityDocument.get_fields_name():
+            if field in item:
+                try:
+                    setattr(vuln, field, item[field])
+                except (KeyError, IndexError):
+                    setattr(vuln, field, 'UNKNOWN')
+        self.__parsed[vuln.id] = vuln
+
+    @staticmethod
+    def _vuln_id(ip, protocol, plugin_id) -> str:
+        key = F"{ip}-{protocol}-{plugin_id}"
+        return str(uuid.uuid3(uuid.NAMESPACE_OID, key))

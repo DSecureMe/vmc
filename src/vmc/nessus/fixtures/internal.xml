@@ -5763,9 +5763,7 @@ Runtime : 1.856873 seconds
 <cvss_vector>CVSS2#AV:N/AC:H/Au:N/C:P/I:N/A:N</cvss_vector>
 <cwe>200</cwe>
 <dependency>ssh_supported_algorithms.nasl</dependency>
-<description>The SSH server is configured to support Cipher Block Chaining (CBC) encryption.  This may allow an attacker to recover the plaintext message from the ciphertext. 
-
-Note that this plugin only checks for the options of the SSH server and does not check for vulnerable software versions.</description>
+<description>The SSH server is configured to support Cipher Block Chaining (CBC) encryption.  This may allow an attacker to recover the plaintext message from the ciphertext. Note that this plugin only checks for the options of the SSH server and does not check for vulnerable software versions.</description>
 <exploit_available>false</exploit_available>
 <exploitability_ease>No known exploits are available</exploitability_ease>
 <fname>ssh_cbc_supported_ciphers.nasl</fname>

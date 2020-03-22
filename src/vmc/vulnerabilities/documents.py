@@ -20,7 +20,7 @@
 
 from vmc.assets.documents import AssetInnerDoc, AssetDocument
 
-from vmc.elasticsearch import Document, Integer, Keyword, Object, Float
+from vmc.elasticsearch import Document, Integer, Keyword, Object, Float, Q
 from vmc.knowledge_base.documents import CveInnerDoc, CveDocument
 from vmc.elasticsearch.registries import registry
 
@@ -29,6 +29,7 @@ from vmc.vulnerabilities.utils import environmental_score_v2, environmental_scor
 
 @registry.register_document
 class VulnerabilityDocument(Document):
+    id = Keyword()
     port = Integer()
     svc_name = Keyword()
     protocol = Keyword()
@@ -38,6 +39,7 @@ class VulnerabilityDocument(Document):
     environmental_score_v3 = Float()
     cve = Object(CveInnerDoc, include_in_parent=True)
     asset = Object(AssetInnerDoc, include_in_parent=True)
+    tags = Keyword()
 
     class Index:
         name = 'vulnerability'
@@ -54,3 +56,20 @@ class VulnerabilityDocument(Document):
         self.environmental_score_v2 = self.prepare_environmental_score_v2()
         self.environmental_score_v3 = self.prepare_environmental_score_v3()
         return super().save(**kwargs)
+
+    @staticmethod
+    def create_or_update(vulnerabilities: dict, scanned_hosts: list, config=None) -> None:
+        index = VulnerabilityDocument.get_index(config)
+        all_vulnerability_docs = VulnerabilityDocument.search(index=index).filter(Q('match', tags=config.name))
+        total = all_vulnerability_docs.count()
+        for current_vuln in all_vulnerability_docs[0:total]:
+            vuln_id = current_vuln.id
+            if vuln_id in vulnerabilities:
+                if current_vuln.has_changed(vulnerabilities[vuln_id]):
+                    current_vuln.update(vulnerabilities[vuln_id], refresh=True, index=index)
+                del vulnerabilities[vuln_id]
+            elif vuln_id not in vulnerabilities and current_vuln.asset.ip_address in scanned_hosts:
+                current_vuln.tags.append('FIXED')
+                current_vuln.save(refresh=True, index=index)
+        for vuln in vulnerabilities.values():
+            vuln.save(refresh=True, index=index)
