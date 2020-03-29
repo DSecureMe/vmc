@@ -33,8 +33,7 @@ from vmc.config.test_settings import elastic_configured
 
 
 class AssetConfigMock:
-    def __init__(self, name):
-        self.name = name
+    def __init__(self):
         self.tenant = None
 
 
@@ -76,7 +75,7 @@ class AssetDocumentTest(ESTestCase, TestCase):
     def test_document_index_name(self):
         self.assertEqual(AssetDocument.Index.name, 'asset')
 
-    def create_asset(self, ip_address, tags, asset_id=1, hostname='test-hostname'):
+    def create_asset(self, ip_address, asset_id=1, hostname='test-hostname'):
         asset = AssetDocument(
             ip_address=ip_address,
             os='Windows',
@@ -84,15 +83,14 @@ class AssetDocumentTest(ESTestCase, TestCase):
             confidentiality_requirement='NOT_DEFINED',
             integrity_requirement='NOT_DEFINED',
             availability_requirement='NOT_DEFINED',
-            hostname=hostname,
-            tags=tags
+            hostname=hostname
         )
         asset.technical_owner.append(self.to)
         asset.business_owner.append(self.bo)
         return asset.save(refresh=True)
 
     def test_document(self):
-        self.create_asset(ip_address='10.10.10.1', tags=[])
+        self.create_asset(ip_address='10.10.10.1')
 
         result = AssetDocument.search().filter('term', ip_address='10.10.10.1').execute()
         self.assertEqual(len(result.hits), 1)
@@ -111,38 +109,70 @@ class AssetDocumentTest(ESTestCase, TestCase):
             'name': 'to_name', 'email': 'to_nam@dsecure.me', 'department': 'department', 'team': ['team']}])
         self.assertEqual(uut.hostname, 'test-hostname')
         self.assertTrue(uut.created_date)
+        self.assertEqual(uut.tags, [])
         self.assertTrue(uut.modified_date)
 
-    def test_tags(self):
-        a_1_tag_1 = self.create_asset(asset_id=1, ip_address='10.0.0.1', tags=['TAG1', 'OTHER'], hostname='hostname_1')
-        self.create_asset(asset_id=2, ip_address='10.0.0.2', tags=['TAG1', 'OTHER'], hostname='hostname_2')
-        self.create_asset(asset_id=1, ip_address='10.0.0.1', tags=['TAG2'], hostname='hostname_1')
-        self.create_asset(asset_id=2, ip_address='10.0.0.2', tags=['TAG2'], hostname='hostname_2')
-
-        self.assertEqual(4, Search().index(AssetDocument.Index.name).count())
-
-        a_1_tag_1_copy = a_1_tag_1.clone()
-        a_1_tag_1_copy.hostname = 'hostname_1_copy'
-        AssetDocument.create_or_update({a_1_tag_1_copy.id: a_1_tag_1_copy}, AssetConfigMock('TAG1'))
-        self.assertEqual(4, Search().index(AssetDocument.Index.name).count())
-
-        result = AssetDocument.search().filter(
-            Q('term', ip_address=a_1_tag_1_copy.ip_address) &
-            Q('term', id=a_1_tag_1_copy.id) &
-            Q('match', tags='TAG1')
-        ).sort('-modified_date')[0].execute()
-        self.assertEqual(result.hits[0].hostname, a_1_tag_1_copy.hostname)
-
     def test_delete_asset(self):
-        asset_1 = self.create_asset(asset_id=1, ip_address='10.0.0.1', tags=['TAG1'], hostname='hostname_1')
-        asset_2 = self.create_asset(asset_id=2, ip_address='10.0.0.2', tags=['TAG1'], hostname='hostname_2')
-        self.create_asset(asset_id=1, ip_address='10.0.0.1', tags=['TAG2'], hostname='hostname_1')
-        self.create_asset(asset_id=2, ip_address='10.0.0.2', tags=['TAG2'], hostname='hostname_2')
+        asset_1 = self.create_asset(asset_id=1, ip_address='10.0.0.1', hostname='hostname_1')
+        asset_2 = self.create_asset(asset_id=2, ip_address='10.0.0.2', hostname='hostname_2')
 
-        self.assertEqual(4, Search().index(AssetDocument.Index.name).count())
-        AssetDocument.create_or_update({asset_1.id: asset_1}, AssetConfigMock('TAG1'))
+        self.assertEqual(2, Search().index(AssetDocument.Index.name).count())
+        AssetDocument.create_or_update({asset_1.id: asset_1}, AssetConfigMock())
 
         result = AssetDocument.search().filter(Q('match', tags='DELETED')).execute()
         self.assertEqual(1, len(result.hits))
         self.assertEqual(result.hits[0].ip_address, asset_2.ip_address)
         self.assertEqual(result.hits[0].id, asset_2.id)
+
+    def test_get_or_create_call_create_new_asset(self):
+        asset_1 = self.create_asset(asset_id=1, ip_address='10.0.0.1', hostname='hostname_1')
+        self.create_asset(asset_id=2, ip_address='10.0.0.2', hostname='hostname_2')
+
+        self.assertEqual(2, Search().index(AssetDocument.Index.name).count())
+        AssetDocument.create_or_update({asset_1.id: asset_1}, AssetConfigMock())
+
+        asset_3 = AssetDocument.get_or_create('10.0.0.2')
+        self.assertEqual(3, Search().index(AssetDocument.Index.name).count())
+
+        result = AssetDocument.search().filter(Q('match', tags='DISCOVERED')).execute()
+        self.assertEqual(1, len(result.hits))
+        self.assertEqual(result.hits[0].ip_address, asset_3.ip_address)
+        self.assertEqual(result.hits[0].id, asset_3.ip_address)
+
+    def test_get_or_create_call_get_existing_asset(self):
+        asset_1 = self.create_asset(asset_id=1, ip_address='10.0.0.1', hostname='hostname_1')
+        self.create_asset(asset_id=2, ip_address='10.0.0.2', hostname='hostname_2')
+
+        self.assertEqual(2, Search().index(AssetDocument.Index.name).count())
+        AssetDocument.create_or_update({asset_1.id: asset_1}, AssetConfigMock())
+
+        asset_3 = AssetDocument.get_or_create('10.0.0.1')
+        self.assertEqual(2, Search().index(AssetDocument.Index.name).count())
+
+        self.assertEqual(asset_3.ip_address, asset_1.ip_address)
+        self.assertEqual(asset_3.hostname, asset_1.hostname)
+        self.assertEqual(asset_3.id, asset_1.id)
+        self.assertEqual(asset_3.confidentiality_requirement, asset_1.confidentiality_requirement)
+        self.assertEqual(asset_3.integrity_requirement, asset_1.integrity_requirement)
+        self.assertEqual(asset_3.availability_requirement, asset_1.availability_requirement)
+
+    def test_update_discovered_asset(self):
+        asset = AssetDocument.get_or_create('10.0.0.1')
+        self.assertEqual(asset.tags, ["DISCOVERED"])
+        self.assertEqual(1, Search().index(AssetDocument.Index.name).count())
+
+        asset = AssetDocument(ip_address='10.0.0.1', os='Windows', id=1, confidentiality_requirement='NOT_DEFINED',
+                              integrity_requirement='NOT_DEFINED', availability_requirement='NOT_DEFINED',
+                              hostname='hostname_1')
+
+        AssetDocument.create_or_update({asset.id: asset}, AssetConfigMock())
+
+        self.assertEqual(1, Search().index(AssetDocument.Index.name).count())
+
+        result = AssetDocument.search().filter('term', ip_address='10.0.0.1').execute()
+        uut = result.hits[0]
+
+        self.assertEqual(uut.os, 'Windows')
+        self.assertEqual(uut.ip_address, '10.0.0.1')
+        self.assertEqual(uut.hostname, 'hostname_1')
+        self.assertEqual(uut.tags, [])

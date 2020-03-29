@@ -21,7 +21,7 @@
 from django.utils.module_loading import autodiscover_modules
 
 from elasticsearch_dsl import Keyword, InnerDoc, Nested, Q, Date, Float, Object, Search, Integer
-from .documents import Document, TupleValueField, EnumField
+from .documents import Document, TupleValueField, EnumField, ListField
 
 
 def autodiscover():
@@ -29,7 +29,7 @@ def autodiscover():
 
 
 __all__ = ['Document', 'TupleValueField', 'EnumField', 'Keyword', 'InnerDoc', 'Nested',
-           'Q', 'Date', 'Float', 'Object', 'Search', 'Integer']
+           'Q', 'Date', 'Float', 'Object', 'Search', 'Integer', 'ListField']
 
 
 default_app_config = 'vmc.elasticsearch.apps.ElasticSearchConfig'

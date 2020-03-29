@@ -71,7 +71,7 @@ def _update(config: Config, scan_id: int, scanner_api=Nessus):
     except Exception as e:
         import traceback
         traceback.print_exc()
-        LOGGER.error(F"Error while loading vulnerabiltiy data {e}")
+        LOGGER.error(F"Error while loading vulnerability data {e}")
 
 
 @shared_task

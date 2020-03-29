@@ -65,7 +65,6 @@ def create_asset(ip_address='10.10.10.10') -> AssetDocument:
         id=ip_address,
         ip_address=ip_address,
         mac_address='mac_address',
-        cmdb_id=ip_address,
         os='OS',
         hostname='HOSTNAME',
         confidentiality_requirement=AssetImpact.LOW,
@@ -74,6 +73,21 @@ def create_asset(ip_address='10.10.10.10') -> AssetDocument:
     )
     asset.save(refresh=True)
     return asset
+
+
+def create_vulnerability(asset, cve):
+    vulnerability = VulnerabilityDocument(
+        id=F"{asset.id}-{cve.id}",
+        asset=asset,
+        cve=cve,
+        description='description',
+        solution='solution',
+        port=22,
+        svc_name='ssh',
+        protocol='tcp',
+        tags=['test']
+    )
+    return vulnerability.save(refresh=True)
 
 
 class ConfigMock:
@@ -174,26 +188,11 @@ class VulnerabilityDocumentTest(ESTestCase, TestCase):
         self.cve = create_cve()
         self.asset = create_asset()
 
-    @classmethod
-    def create_vulnerability(cls, asset, cve):
-        vulnerability = VulnerabilityDocument(
-            id=F"{asset.id}-{cve.id}",
-            asset=asset,
-            cve=cve,
-            description='description',
-            solution='solution',
-            port=22,
-            svc_name='ssh',
-            protocol='tcp',
-            tags=['test']
-        )
-        return vulnerability.save(refresh=True)
-
     def test_document_index_name(self):
         self.assertEqual(VulnerabilityDocument.Index.name, 'vulnerability')
 
     def test_document_fields(self):
-        self.create_vulnerability(self.asset, self.cve)
+        create_vulnerability(self.asset, self.cve)
         search = VulnerabilityDocument.search().filter('term', port=22).execute()
         self.assertEqual(len(search.hits), 1)
 
@@ -232,14 +231,14 @@ class VulnerabilityDocumentTest(ESTestCase, TestCase):
         self.assertEqual(uut.environmental_score_v3, 6.9)
 
     def test_asset_updated(self):
-        self.create_vulnerability(self.asset, self.cve)
-        self.create_vulnerability(self.asset, self.cve)
-        self.create_vulnerability(self.asset, self.cve)
+        create_vulnerability(self.asset, self.cve)
+        create_vulnerability(self.asset, self.cve)
+        create_vulnerability(self.asset, self.cve)
 
         self.cve_2 = create_cve('CVE-2017-0003')
-        self.create_vulnerability(self.asset, self.cve_2)
-        self.create_vulnerability(self.asset, self.cve_2)
-        self.create_vulnerability(self.asset, self.cve_2)
+        create_vulnerability(self.asset, self.cve_2)
+        create_vulnerability(self.asset, self.cve_2)
+        create_vulnerability(self.asset, self.cve_2)
         self.assertEqual(Search().index(VulnerabilityDocument.Index.name).count(), 6)
 
         self.asset.confidentiality_requirement = AssetImpact.HIGH
@@ -270,14 +269,14 @@ class VulnerabilityDocumentTest(ESTestCase, TestCase):
         self.assertTrue(result_2.hits[0].modified_date > result_2.hits[1].modified_date)
 
     def test_cve_updated(self):
-        self.create_vulnerability(self.asset, self.cve)
-        self.create_vulnerability(self.asset, self.cve)
-        self.create_vulnerability(self.asset, self.cve)
+        create_vulnerability(self.asset, self.cve)
+        create_vulnerability(self.asset, self.cve)
+        create_vulnerability(self.asset, self.cve)
 
         self.asset_2 = create_asset('10.10.10.11')
-        self.create_vulnerability(self.asset_2, self.cve)
-        self.create_vulnerability(self.asset_2, self.cve)
-        self.create_vulnerability(self.asset_2, self.cve)
+        create_vulnerability(self.asset_2, self.cve)
+        create_vulnerability(self.asset_2, self.cve)
+        create_vulnerability(self.asset_2, self.cve)
         self.assertEqual(Search().index(VulnerabilityDocument.Index.name).count(), 6)
 
         self.cve.access_vector_v2 = metrics.AccessVectorV2.LOCAL
@@ -306,7 +305,7 @@ class VulnerabilityDocumentTest(ESTestCase, TestCase):
         self.assertTrue(result_2.hits[0].modified_date > result_2.hits[1].modified_date)
 
     def test_update_existing_vulnerability(self):
-        vuln = self.create_vulnerability(self.asset, self.cve)
+        vuln = create_vulnerability(self.asset, self.cve)
         self.assertEqual(VulnerabilityDocument.search().count(), 1)
 
         updated_vuln = vuln.clone()
@@ -321,7 +320,7 @@ class VulnerabilityDocumentTest(ESTestCase, TestCase):
         self.assertEqual(result_2.hits[0].description, 'Updated Desc')
 
     def test_not_updated_existing_vulnerability(self):
-        vuln = self.create_vulnerability(self.asset, self.cve)
+        vuln = create_vulnerability(self.asset, self.cve)
         self.assertEqual(VulnerabilityDocument.search().count(), 1)
 
         updated_vuln = vuln.clone()
@@ -335,7 +334,7 @@ class VulnerabilityDocumentTest(ESTestCase, TestCase):
         self.assertEqual(result_2.hits[0].description, 'description')
 
     def test_fixed_vulnerability(self):
-        self.create_vulnerability(self.asset, self.cve)
+        create_vulnerability(self.asset, self.cve)
         self.assertEqual(VulnerabilityDocument.search().count(), 1)
 
         VulnerabilityDocument.create_or_update({}, [self.asset.ip_address], ConfigMock())

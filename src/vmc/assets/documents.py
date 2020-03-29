@@ -20,7 +20,7 @@
 from decimal import Decimal
 
 from vmc.common.enum import TupleValueEnum
-from vmc.elasticsearch import Document, TupleValueField, Keyword, InnerDoc, Nested, Q
+from vmc.elasticsearch import Document, TupleValueField, Keyword, InnerDoc, Nested, Q, ListField
 from vmc.elasticsearch.registries import registry
 
 
@@ -43,19 +43,15 @@ class AssetInnerDoc(InnerDoc):
     ip_address = Keyword()
     mac_address = Keyword()
     os = Keyword()
-    confidentiality_requirement = TupleValueField(choice_type=Impact)
-    integrity_requirement = TupleValueField(choice_type=Impact)
-    availability_requirement = TupleValueField(choice_type=Impact)
+    confidentiality_requirement = TupleValueField(choice_type=Impact, default=Impact.NOT_DEFINED)
+    integrity_requirement = TupleValueField(choice_type=Impact, default=Impact.NOT_DEFINED)
+    availability_requirement = TupleValueField(choice_type=Impact, default=Impact.NOT_DEFINED)
     business_owner = Nested(OwnerInnerDoc, include_in_parent=True)
     technical_owner = Nested(OwnerInnerDoc, include_in_parent=True)
     hostname = Keyword()
     change_reason = Keyword()
-    tags = Keyword()
+    tags = ListField()
     url = Keyword()
-
-
-STEP = 500
-START = 0
 
 
 @registry.register_document
@@ -67,28 +63,52 @@ class AssetDocument(Document, AssetInnerDoc):
     @staticmethod
     def create_or_update(assets: dict, config=None) -> None:
         index = AssetDocument.get_index(config)
-        total = AssetDocument.search(index=index).filter(Q('match', tags=config.name)).count()
-        paging = [(START if i == START else i + 1, i + STEP) for i in range(0, total, STEP)]
-        for st, en in paging:
-            current_assets = AssetDocument.search(index=index).filter(Q('match', tags=config.name))[st:en]
-            for current_asset in current_assets:
-                asset_id = current_asset.id
-                if asset_id in assets:
-                    if current_asset.has_changed(assets[asset_id]):
-                        current_asset.update(assets[asset_id], refresh=True, index=index)
-                    del assets[asset_id]
-                elif asset_id not in assets and 'DELETED' not in current_asset.tags:
-                    current_asset.tags.append('DELETED')
-                    current_asset.save(refresh=True, index=index)
+        assets = AssetDocument._update_existing_assets(assets, index)
+        assets = AssetDocument._update_discovered_assets(assets, index)
+
         for asset in assets.values():
             asset.save(refresh=True, index=index)
 
     @staticmethod
+    def _update_existing_assets(assets: dict, index):
+        if assets:
+            assets_search = AssetDocument.search(index=index).filter(~Q('match', tags='DISCOVERED'))
+            for st, en in AssetDocument._create_paging_steps(assets_search.count()):
+                for current_asset in assets_search[st:en]:
+                    asset_id = current_asset.id
+                    if asset_id in assets:
+                        if current_asset.has_changed(assets[asset_id]):
+                            current_asset.update(assets[asset_id], refresh=True, index=index)
+                        del assets[asset_id]
+                    elif asset_id not in assets and 'DELETED' not in current_asset.tags:
+                        current_asset.tags.append('DELETED')
+                        current_asset.save(refresh=True, index=index)
+        return assets
+
+    @staticmethod
+    def _update_discovered_assets(assets: dict, index):
+        if assets:
+            assets = {a.ip_address: a for a in assets.values()}
+            assets_search = AssetDocument.search(index=index).filter(Q('match', tags='DISCOVERED'))
+            for st, en in AssetDocument._create_paging_steps(assets_search.count()):
+
+                for discovered_asset in assets_search[st:en]:
+                    if discovered_asset.ip_address in assets:
+                        discovered_asset.update(assets[discovered_asset.ip_address], refresh=True, index=index)
+                        del assets[discovered_asset.ip_address]
+
+        return assets
+
+    @staticmethod
+    def _create_paging_steps(total):
+        step, start = 500, 0
+        return [(start if i == start else i + 1, i + step) for i in range(0, total, step)]
+
+    @staticmethod
     def get_or_create(ip_address, config=None):
         index = AssetDocument.get_index(config)
-        result = AssetDocument.search(index=index).filter(  #Asset must be not deleted
-            'term', ip_address=ip_address).execute()
+        result = AssetDocument.search(index=index).filter(
+            Q('term', ip_address=ip_address) & ~Q('match', tags='DELETED')).execute()
         if result.hits:
             return result.hits[0]
-        asset = AssetDocument(id=ip_address, ip_address=ip_address, tags=config.name)
-        return asset.save(index=index, refresh=True)
+        return AssetDocument(id=ip_address, ip_address=ip_address, tags=["DISCOVERED"]).save(index=index, refresh=True)

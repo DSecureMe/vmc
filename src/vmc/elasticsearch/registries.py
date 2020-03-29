@@ -77,17 +77,18 @@ class DocumentRegistry:
                 for snap_index in SnapShotMode:
                     document.init(index='{}.{}'.format(index_name, snap_index.value))
 
-    def update_related(self, sender, instance, **kwargs):
-        for document in self._get_related_doc(sender):
-            for field_name in document.get_fields_name():
-                field_type = document._doc_type.mapping[field_name]
-                if isinstance(field_type, Object) and issubclass(sender, field_type._doc_class):
-                    for index in self._get_indexes(instance, field_type._doc_class):
-                        result = document.search(index=index).filter(
-                            'term', **{'{}__id'.format(field_name): instance.id}).execute()
-                        for hit in result.hits:
-                            setattr(hit, field_name, instance)
-                            hit.save(index=index, refresh=True)
+    def update_related(self, sender, new_version, old_version, **kwargs):
+        if old_version:
+            for document in self._get_related_doc(sender):
+                for field_name in document.get_fields_name():
+                    field_type = document._doc_type.mapping[field_name]
+                    if isinstance(field_type, Object) and issubclass(sender, field_type._doc_class):
+                        for index in self._get_indexes(new_version, field_type._doc_class):
+                            result = document.search(index=index).filter(
+                                'term', **{'{}__id'.format(field_name): old_version.id}).execute()
+                            for hit in result.hits:
+                                setattr(hit, field_name, new_version)
+                                hit.save(index=index, refresh=True)
 
     def _get_indexes(self, instance, receiver):
         if getattr(instance.Index, 'tenant_separation', False):

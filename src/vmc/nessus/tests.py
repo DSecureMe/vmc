@@ -173,7 +173,6 @@ class UpdateTest(ESTestCase, TestCase):
                                                                                         tzinfo=datetime.timezone.utc))
 
 
-
 @skipIf(not elastic_configured(), 'Skip if elasticsearch is not configured')
 class ReportParserTest(ESTestCase, TestCase):
 

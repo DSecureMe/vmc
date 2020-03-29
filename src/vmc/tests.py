@@ -20,14 +20,16 @@
 from unittest import skipIf
 
 from django.test import TestCase
-
+from elasticsearch_dsl import Search
+from vmc.vulnerabilities.documents import VulnerabilityDocument
 
 from vmc.apps import VMCConfig
 from vmc.elasticsearch.tests import ESTestCase
 from vmc.config.test_settings import elastic_configured
 
 from vmc.ralph.models import Config as RalphConfig
-from vmc.assets.documents import AssetDocument
+from vmc.assets.documents import AssetDocument, Impact
+from vmc.vulnerabilities.tests import create_cve, create_vulnerability
 
 
 class VMCConfigTest(TestCase):
@@ -50,9 +52,7 @@ class TenantTest(ESTestCase, TestCase):
             ip_address='10.10.10.1',
             os='Windows',
             id=1,
-            confidentiality_requirement='NOT_DEFINED',
-            integrity_requirement='NOT_DEFINED',
-            availability_requirement='NOT_DEFINED',
+            confidentiality_requirement=Impact.LOW,
             hostname='test-hostname',
             tags=[tags]
         )
@@ -71,3 +71,22 @@ class TenantTest(ESTestCase, TestCase):
         self.assertEqual(1, len(result.hits))
         self.assertEqual(result.hits[0].ip_address, '10.10.10.1')
         self.assertEqual(result.hits[0].hostname, 'tenant-test')
+
+    def test_update_discovered_asset(self):
+        asset_tenant_1 = self.create_asset(self.config_tenant_1.name)
+        discovered_asset = AssetDocument.get_or_create(asset_tenant_1.ip_address)
+
+        cve = create_cve()
+        create_vulnerability(discovered_asset, cve)
+
+        self.assertEqual(1, Search().index(AssetDocument.Index.name).count())
+
+        AssetDocument.create_or_update({asset_tenant_1.id: asset_tenant_1})
+        self.assertEqual(1, Search().index(AssetDocument.Index.name).count())
+
+        self.assertEqual(1, Search().index(VulnerabilityDocument.Index.name).count())
+        result = VulnerabilityDocument.search().filter('term', cve__id='CVE-2017-0002').execute()
+        self.assertEqual(result.hits[0].asset.id, asset_tenant_1.id)
+        self.assertEqual(result.hits[0].asset.ip_address, asset_tenant_1.ip_address)
+        self.assertEqual(result.hits[0].asset.confidentiality_requirement, asset_tenant_1.confidentiality_requirement)
+        self.assertEqual(result.hits[0].asset.availability_requirement, asset_tenant_1.availability_requirement)

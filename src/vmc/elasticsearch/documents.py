@@ -17,6 +17,7 @@
  * under the License.
  */
 """
+import copy
 from enum import Enum
 from typing import Type
 from fnmatch import fnmatch
@@ -33,15 +34,19 @@ from vmc.elasticsearch.signals import post_save
 class TupleValueField(CustomField):
     builtin_type = Keyword()
 
-    def __init__(self, *args, choice_type: Type[TupleValueEnum] = None, **kwargs):
+    def __init__(self, *args, choice_type: Type[TupleValueEnum] = None, default=None, **kwargs):
         super().__init__(*args, **kwargs)
         self.choice_type = choice_type
+        self.default = default
 
     def _serialize(self, data):
         return self.choice_type(data).name
 
     def _deserialize(self, data):
         return self.choice_type(data)
+
+    def _empty(self):
+        return self.default
 
     @property
     def name(self):
@@ -59,9 +64,12 @@ class TupleValueField(CustomField):
 class EnumField(CustomField):
     builtin_type = Keyword()
 
-    def __init__(self, *args, choice_type: Type[Enum] = None, **kwargs):
+    def __init__(self, *args, choice_type: Type[Enum] = None, default=None, **kwargs):
         super().__init__(*args, **kwargs)
         self.choice_type = choice_type
+
+    def _empty(self):
+        return self.default
 
     def _serialize(self, data):
         return self.choice_type(data).name
@@ -70,20 +78,35 @@ class EnumField(CustomField):
         return self.choice_type(data)
 
 
+class ListField(CustomField):
+    builtin_type = Keyword()
+
+    def _empty(self):
+        return []
+
+
 class Document(ESDocument):
-    BASE_DOCUMENT_FIELDS = ['_id', 'created_date', 'modified_date', 'change_reason', 'BASE_DOCUMENT_FIELDS']
+    BASE_DOCUMENT_FIELDS = ['created_date', 'modified_date', 'change_reason', 'BASE_DOCUMENT_FIELDS']
     created_date = Date()
     modified_date = Date()
     change_reason = Keyword()
     snapshot_date = Date()
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.__old_version = None
 
     def save(self, **kwargs):
         date = now()
         if not self.created_date:
             self.created_date = date
         self.modified_date = date
-        super().save(** kwargs)
-        post_save.send(sender=type(self), instance=self, created=(self.created_date == self.modified_date))
+        super().save(**kwargs)
+        post_save.send(sender=type(self),
+                       old_version=self.__old_version,
+                       new_version=self,
+                       created=(self.created_date == self.modified_date))
+        self.__old_version = copy.copy(self)
         return self
 
     def update(self, document, using=None, index=None, refresh=False):
@@ -96,6 +119,12 @@ class Document(ESDocument):
     @classmethod
     def _matches(cls, hit):
         return fnmatch(hit['_index'], '*{}'.format(cls.Index.name))
+
+    @classmethod
+    def from_es(cls, hit):
+        doc = super().from_es(hit)
+        doc.__old_version = copy.copy(doc)
+        return doc
 
     def has_changed(self, other):
         changed_fields = []
