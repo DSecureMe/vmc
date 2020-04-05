@@ -73,16 +73,15 @@ class AssetDocument(Document, AssetInnerDoc):
     def _update_existing_assets(assets: dict, index):
         if assets:
             assets_search = AssetDocument.search(index=index).filter(~Q('match', tags='DISCOVERED'))
-            for st, en in AssetDocument._create_paging_steps(assets_search.count()):
-                for current_asset in assets_search[st:en]:
-                    asset_id = current_asset.id
-                    if asset_id in assets:
-                        if current_asset.has_changed(assets[asset_id]):
-                            current_asset.update(assets[asset_id], refresh=True, index=index)
-                        del assets[asset_id]
-                    elif asset_id not in assets and 'DELETED' not in current_asset.tags:
-                        current_asset.tags.append('DELETED')
-                        current_asset.save(refresh=True, index=index)
+            for current_asset in assets_search.scan():
+                asset_id = current_asset.id
+                if asset_id in assets:
+                    if current_asset.has_changed(assets[asset_id]):
+                        current_asset.update(assets[asset_id], refresh=True, index=index)
+                    del assets[asset_id]
+                elif asset_id not in assets and 'DELETED' not in current_asset.tags:
+                    current_asset.tags.append('DELETED')
+                    current_asset.save(refresh=True, index=index)
         return assets
 
     @staticmethod
@@ -90,19 +89,12 @@ class AssetDocument(Document, AssetInnerDoc):
         if assets:
             assets = {a.ip_address: a for a in assets.values()}
             assets_search = AssetDocument.search(index=index).filter(Q('match', tags='DISCOVERED'))
-            for st, en in AssetDocument._create_paging_steps(assets_search.count()):
-
-                for discovered_asset in assets_search[st:en]:
-                    if discovered_asset.ip_address in assets:
-                        discovered_asset.update(assets[discovered_asset.ip_address], refresh=True, index=index)
-                        del assets[discovered_asset.ip_address]
+            for discovered_asset in assets_search.scan():
+                if discovered_asset.ip_address in assets:
+                    discovered_asset.update(assets[discovered_asset.ip_address], refresh=True, index=index)
+                    del assets[discovered_asset.ip_address]
 
         return assets
-
-    @staticmethod
-    def _create_paging_steps(total):
-        step, start = 500, 0
-        return [(start if i == start else i + 1, i + step) for i in range(0, total, step)]
 
     @staticmethod
     def get_or_create(ip_address, config=None):

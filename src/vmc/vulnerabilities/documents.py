@@ -61,8 +61,7 @@ class VulnerabilityDocument(Document):
     def create_or_update(vulnerabilities: dict, scanned_hosts: list, config=None) -> None:
         index = VulnerabilityDocument.get_index(config)
         all_vulnerability_docs = VulnerabilityDocument.search(index=index).filter(Q('match', tags=config.name))
-        total = all_vulnerability_docs.count()
-        for current_vuln in all_vulnerability_docs[0:total]:
+        for current_vuln in all_vulnerability_docs.scan():
             vuln_id = current_vuln.id
             if vuln_id in vulnerabilities:
                 if current_vuln.has_changed(vulnerabilities[vuln_id]):
