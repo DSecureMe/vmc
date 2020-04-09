@@ -17,6 +17,7 @@
  * under the License.
  *
 """
+
 import uuid
 import datetime
 from unittest import skipIf, mock
@@ -24,7 +25,7 @@ from unittest.mock import patch, MagicMock, call
 
 from django.contrib.auth.models import User
 from django.test import TestCase, LiveServerTestCase
-from vmc.nessus.parsers import ReportParser
+from vmc.nessus.parsers import NessusReportParser
 
 from vmc.config.test_settings import elastic_configured
 from vmc.elasticsearch import Search
@@ -32,7 +33,7 @@ from vmc.elasticsearch.tests import ESTestCase
 from vmc.nessus.apps import NessusConfig
 
 from vmc.assets.documents import AssetDocument
-from vmc.nessus.api import Nessus
+from vmc.nessus.clients import NessusClient
 from vmc.nessus.models import Config
 from vmc.nessus.tasks import get_trash_folder_id, update, update_data, get_epoch_from_lsp
 from vmc.vulnerabilities.documents import VulnerabilityDocument
@@ -67,7 +68,7 @@ class NessusTest(TestCase):
 
     def setUp(self):
         self.config = Config.objects.get(pk=1)
-        self.uut = Nessus(self.config)
+        self.uut = NessusClient(self.config)
         self.headers = {
             'X-ApiKeys': 'accessKey={};secretKey={}'.format(self.config.api_key, self.config.secret_key),
             'Content-type': 'application/json',
@@ -83,7 +84,7 @@ class NessusTest(TestCase):
             verify=not self.config.insecure
         )
 
-    @patch('vmc.nessus.api.requests')
+    @patch('vmc.nessus.clients.requests')
     def test_call_get_scan_list(self, request_mock):
         request_mock.request.return_value = ResponseMock({'scan': 1}, 200)
 
@@ -95,7 +96,7 @@ class NessusTest(TestCase):
         self.assert_request(request_mock, 'GET', 'scans?last_modification_date=1551398400')
         self.assertEqual(scan_list2, {'scan': 1})
 
-    @patch('vmc.nessus.api.requests')
+    @patch('vmc.nessus.clients.requests')
     def test_call_get_scan_detail(self, request_mock):
         request_mock.request.return_value = ResponseMock({'foo': 1}, 200)
 
@@ -179,7 +180,7 @@ class ReportParserTest(ESTestCase, TestCase):
     def setUp(self):
         super().setUp()
         self.internal_xml = open(get_fixture_location(__file__, 'internal.xml'))
-        self.uut = ReportParser(ConfigMock())
+        self.uut = NessusReportParser(ConfigMock())
 
     def test_parse_call(self):
         parsed, scanned_hosts = self.uut.parse(self.internal_xml)

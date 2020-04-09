@@ -30,9 +30,9 @@ from celery import shared_task
 
 from vmc.common.tasks import memcache_lock
 
-from vmc.nessus.api import Nessus
+from vmc.nessus.clients import NessusClient
 from vmc.nessus.models import Config
-from vmc.nessus.parsers import ReportParser
+from vmc.nessus.parsers import NessusReportParser
 
 from vmc.vulnerabilities.documents import VulnerabilityDocument
 
@@ -52,14 +52,14 @@ def get_epoch_from_lsp(last_pull: datetime.datetime) -> int:
     return int(last_pull.timestamp()) if last_pull else 0
 
 
-def _update(config: Config, scan_id: int, scanner_api=Nessus):
+def _update(config: Config, scan_id: int, scanner_api=NessusClient):
     try:
         api = scanner_api(config)
         LOGGER.info(F'Trying to download nessus file {scan_id}')
         file = api.download_scan(scan_id)
         if file:
             LOGGER.info(F'Trying to parse nessus file {scan_id}')
-            parser = ReportParser(config)
+            parser = NessusReportParser(config)
             vulns, scanned_hosts = parser.parse(file)
             file.close()
             LOGGER.info(F'Nessus file parsed: {scan_id}')
@@ -75,7 +75,7 @@ def _update(config: Config, scan_id: int, scanner_api=Nessus):
 
 
 @shared_task
-def update_data(config_pk: int, scan_id: int, scanner_api=Nessus):  # pylint: disable=too-many-locals
+def update_data(config_pk: int, scan_id: int, scanner_api=NessusClient):  # pylint: disable=too-many-locals
     config = Config.objects.get(pk=config_pk)
     lock_id = F"update-vulnerabilities-loc-{config.id}"
     with memcache_lock(lock_id, config) as acquired:
@@ -85,7 +85,7 @@ def update_data(config_pk: int, scan_id: int, scanner_api=Nessus):  # pylint: di
 
 
 @shared_task
-def update(scanner_api=Nessus):
+def update(scanner_api=NessusClient):
     for config in Config.objects.all():
         con = scanner_api(config)
         now_date = now()

@@ -49,6 +49,7 @@ INTERNAL_APPS = [
     'vmc.ralph',
     'vmc.vulnerabilities',
     'vmc.nessus',
+    'vmc.open_vas',
 ]
 
 THIRD_PARTY_APPS = [

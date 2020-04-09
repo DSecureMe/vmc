@@ -48,7 +48,7 @@ class AssetFactory:
         return AssetDocument.get_or_create(ip_address, config)
 
 
-class ReportParser:
+class NessusReportParser:
     INFO = '0'
 
     def __init__(self, config: Config):
@@ -65,7 +65,7 @@ class ReportParser:
                 vuln['plugin_id'] = item.get('pluginID')
                 for cve in item.findall('cve'):
                     vuln['cve_id'] = get_value(cve)
-                    if item.get('severity') != ReportParser.INFO and vuln['cve_id']:
+                    if item.get('severity') != NessusReportParser.INFO and vuln['cve_id']:
                         vuln['cve'] = CveDocument.get_or_create(cve_id=vuln['cve_id'])
                         vuln['port'] = item.get('port')
 
@@ -80,10 +80,10 @@ class ReportParser:
                         vuln['solution'] = get_value(item.find('solution'))
                         vuln['exploit_available'] = True if get_value(item.find('exploit_available')) == 'true' else False
                         vuln['id'] = self._vuln_id(vuln['asset'].ip_address, vuln['protocol'], vuln['plugin_id'])
-                        self.create(vuln)
+                        self._create(vuln)
         return self.__parsed, self.__scanned_hosts
 
-    def create(self, item: dict):
+    def _create(self, item: dict):
         vuln = VulnerabilityDocument()
         for field in VulnerabilityDocument.get_fields_name():
             if field in item:
