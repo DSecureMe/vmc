@@ -84,10 +84,11 @@ class DocumentRegistry:
                     field_type = document._doc_type.mapping[field_name]
                     if isinstance(field_type, Object) and issubclass(sender, field_type._doc_class):
                         for index in self._get_indexes(new_version, field_type._doc_class):
-                            for result in document.search(index=index).filter(
-                                    'term', **{'{}__id'.format(field_name): old_version.id}).scan():
-                                setattr(result, field_name, new_version)
-                                result.save(index=index, refresh=True)
+                            result = document.search(index=index).filter(
+                                'term', **{'{}__id'.format(field_name): old_version.id}).execute()
+                            for hit in result.hits:
+                                setattr(hit, field_name, new_version)
+                                hit.save(index=index, refresh=True)
 
     def _get_indexes(self, instance, receiver):
         if getattr(instance.Index, 'tenant_separation', False):
