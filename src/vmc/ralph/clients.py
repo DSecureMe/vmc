@@ -74,34 +74,34 @@ class RalphClient:
                     break
 
         else:
-            LOGGER.info('Empty response from Ralph %s', self._config.name)
+            LOGGER.info(F'Empty response from Ralph {self._config.name}')
         return results
 
     def _action(self, method: str, url: str, **kwargs) -> Dict:
         try:
 
             if 'http' not in url:
-                url = '{}{}'.format(self._config.get_url(), url)
+                url = F'{self._config.get_url()}{url}'
 
             resp = requests.request(method, url, verify=not self._config.insecure, **kwargs)
 
             if resp.status_code != 200:
                 self._print_debug(kwargs['headers'], url, resp.status_code,
                                   kwargs['data'] if 'data' in kwargs else 'None')
-                return []
+                return dict()
 
         except requests.exceptions.SSLError as ssl_error:
-            raise SSLException('{} for {}.'.format(ssl_error, url))
+            raise SSLException(F'{ssl_error} for {url}.')
         except requests.exceptions.ConnectionError:
-            raise Exception("Could not connect to {}. Exiting!".format(url))
+            raise Exception(F"Could not connect to {url}. Exiting!")
 
         return resp.json()
 
     @staticmethod
     def _print_debug(headers, endpoint, status_code, data=None):
         LOGGER.debug("*****************START ERROR*****************")
-        LOGGER.debug("JSON    : %s", data)
-        LOGGER.debug("HEADERS : %s", headers)
-        LOGGER.debug("URL     : %s", endpoint)
+        LOGGER.debug(F"JSON    : {data}")
+        LOGGER.debug(F"HEADERS : {headers}")
+        LOGGER.debug(F"URL     : {endpoint}")
         LOGGER.debug("******************END ERROR******************")
-        LOGGER.debug("RESPONSE CODE: %d", status_code)
+        LOGGER.debug(F"RESPONSE CODE: {status_code}")

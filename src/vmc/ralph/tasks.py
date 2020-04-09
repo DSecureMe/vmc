@@ -36,27 +36,27 @@ def _update(config: Config):
     try:
         client = RalphClient(config)
         parser = AssetsParser(config)
-        LOGGER.info('Start loading data from Ralph: %s', config.name)
+        LOGGER.info(F'Start loading data from Ralph: {config.name}')
         users = client.get_users()
         users = OwnerParser.parse(users)
         assets = client.get_assets()
         assets = parser.parse(assets, users)
         AssetDocument.create_or_update(assets, config)
-        LOGGER.info('Finish loading data from Ralph: %s', config.name)
+        LOGGER.info(F'Finish loading data from Ralph: {config.name}')
     except Exception as ex:
         import traceback
         traceback.print_exc()
-        LOGGER.error('Error with loading data from Ralph: %s', ex)
+        LOGGER.error(F'Error with loading data from Ralph: {ex}')
 
 
 @shared_task
 def update_assets(config_id: int):
     config = Config.objects.get(pk=config_id)
-    lock_id = 'update-assets-lock-{}'.format(config.id)
+    lock_id = F'update-assets-lock-{config.id}'
     with memcache_lock(lock_id, config.id) as acquired:
         if acquired:
             return _update(config)
-    LOGGER.info('Update assets for %s is already being imported by another worker', config.name)
+    LOGGER.info(F'Update assets for {config.name} is already being imported by another worker')
 
 
 @shared_task

@@ -45,4 +45,4 @@ class Config(BaseModel):
         return self.name
 
     def get_url(self) -> str:
-        return '{}://{}:{}'.format(self.schema, self.host, self.port)
+        return F'{self.schema}://{self.host}:{self.port}'

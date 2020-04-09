@@ -118,7 +118,7 @@ class Document(ESDocument):
 
     @classmethod
     def _matches(cls, hit):
-        return fnmatch(hit['_index'], '*{}'.format(cls.Index.name))
+        return fnmatch(hit['_index'], F'*{cls.Index.name}')
 
     @classmethod
     def from_es(cls, hit):

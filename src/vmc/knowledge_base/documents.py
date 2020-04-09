@@ -30,7 +30,7 @@ class ExploitInnerDoc(InnerDoc):
 
     @staticmethod
     def create(exp_id: int):
-        url = 'https://www.exploit-db.com/exploits/{}'.format(exp_id)
+        url = F'https://www.exploit-db.com/exploits/{exp_id}'
         return ExploitInnerDoc(id=exp_id, url=url)
 
 

@@ -58,7 +58,7 @@ class NessusClient:
         payload = json.dumps(payload)
         result = dict()
 
-        url = "{}/{}".format(self.url, action)
+        url = F'{self.url}/{action}'
 
         try:
 
@@ -66,17 +66,17 @@ class NessusClient:
 
             if resp.status_code != 200:
                 LOGGER.error("*****************START ERROR*****************")
-                LOGGER.error("JSON    : %s", payload)
-                LOGGER.error("HEADERS : %s", self.headers)
-                LOGGER.error("URL     : %s", url)
-                LOGGER.error("METHOD  : %s", method)
+                LOGGER.error(F"JSON    : {payload}")
+                LOGGER.error(F"HEADERS : {self.headers}")
+                LOGGER.error(F"URL     : {url}")
+                LOGGER.error(F"METHOD  : {method}")
                 LOGGER.error("******************END ERROR******************")
-                LOGGER.debug("RESPONSE CODE: %d", resp.status_code)
+                LOGGER.debug(F"RESPONSE CODE: {resp.status_code}")
 
         except requests.exceptions.SSLError as ssl_error:
-            raise SSLException('{} for {}.'.format(ssl_error, url))
+            raise SSLException(F'{ssl_error} for {url}.')
         except requests.exceptions.ConnectionError:
-            raise Exception("Could not connect to {}. Exiting!".format(url))
+            raise Exception(F'Could not connect to {url}. Exiting!')
 
         if download:
             result = resp.content
@@ -90,21 +90,21 @@ class NessusClient:
         return self._action(action=F"scans?last_modification_date={last_modification_date}", method="GET")
 
     def get_scan_detail(self, scan_id: int) -> Dict:
-        return self._action(action='scans/{}'.format(scan_id), method='GET')
+        return self._action(action=F'scans/{scan_id}', method='GET')
 
     def download_scan(self, scan_id: int):
         extra = {"format": "nessus"}
-        res = self._action("scans/{}/export".format(scan_id), method="POST", extra=extra)
+        res = self._action(F'scans/{scan_id}/export', method="POST", extra=extra)
 
         if 'file' in res:
             file_id = res["file"]
             while self._export_in_progress(scan_id, file_id):
                 time.sleep(2)
 
-            content = self._action('scans/{}/export/{}/download'.format(scan_id, file_id), method="GET", download=True)
+            content = self._action(F'scans/{scan_id}/export/{file_id}/download', method="GET", download=True)
             return BytesIO(content)
         return None
 
     def _export_in_progress(self, scan_id, file_id):
-        res = self._action('scans/{}/export/{}/status'.format(scan_id, file_id), method="GET")
+        res = self._action(F'scans/{scan_id}/export/{file_id}/status', method="GET")
         return res["status"] != "ready"

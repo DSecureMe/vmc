@@ -140,7 +140,7 @@ class CveFactory:
                         try:
                             setattr(cve, field, parser(item))
                         except Exception as err:
-                            logging.debug('cve id %s, field %s, err %s', cve.id, field, err)
+                            logging.debug(F'cve id {cve.id}, field {field}, err {err}')
 
                 for cpe in CveFactory.get_cpe(item):
                     cve.cpe.append(cpe)
@@ -150,7 +150,7 @@ class CveFactory:
                     cve.save(refresh=True)
             return None
 
-        logging.info('cve id %s is rejected', CveFactory.get_id(item))
+        logging.info(F'cve id {CveFactory.get_id(item)} is rejected')
         return None
 
     @staticmethod

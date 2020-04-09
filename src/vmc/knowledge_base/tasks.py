@@ -59,15 +59,15 @@ def update_cwe():
 @shared_task
 def update_cve(year: int):
     try:
-        LOGGER.info('Trying to get file for %d year', year)
+        LOGGER.info(F'Trying to get file for {year} year')
         file = get_file(CVE_NVD_URL.format(year))
         if file:
-            LOGGER.info('File downloaded for %d year, parsing...', year)
+            LOGGER.info(F'File downloaded for {year} year, parsing...')
             CveFactory.process(file)
             file.close()
-            LOGGER.info('Parsing for %d, done.', year)
+            LOGGER.info(F'Parsing for {year}, done.')
         else:
-            LOGGER.info('Unable to download file for %d year', year)
+            LOGGER.info(F'Unable to download file for {year} year')
     except Exception as ex:
         LOGGER.error(ex)
 
@@ -75,14 +75,14 @@ def update_cve(year: int):
 @shared_task
 def update_exploits():
     try:
-        LOGGER.info('Trying to get %s', VIA4_URL)
+        LOGGER.info(F'Trying to get {VIA4_URL}')
         file = get_file(VIA4_URL)
         if file:
             LOGGER.info('File downloaded, updating database.')
             ExploitFactory.process(file)
             LOGGER.info('Database updated')
         else:
-            LOGGER.error('Unable do download file %s', VIA4_URL)
+            LOGGER.error(F'Unable do download file {VIA4_URL}')
     except Exception as ex:
         LOGGER.error(ex)
 

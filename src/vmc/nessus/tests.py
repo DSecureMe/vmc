@@ -70,7 +70,7 @@ class NessusTest(TestCase):
         self.config = Config.objects.get(pk=1)
         self.uut = NessusClient(self.config)
         self.headers = {
-            'X-ApiKeys': 'accessKey={};secretKey={}'.format(self.config.api_key, self.config.secret_key),
+            'X-ApiKeys': F'accessKey={self.config.api_key};secretKey={self.config.secret_key}',
             'Content-type': 'application/json',
             'Accept': 'text/plain'
         }
@@ -78,7 +78,7 @@ class NessusTest(TestCase):
     def assert_request(self, request_mock, method, action):
         request_mock.request.assert_called_with(
             method,
-            'http://test:80/{}'.format(action),
+            F'http://test:80/{action}',
             data='{}',
             headers=self.headers,
             verify=not self.config.insecure

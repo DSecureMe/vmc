@@ -45,7 +45,7 @@ def snapshot(name: str) -> None:
 @shared_task
 def _snapshot_documents(name: str, index: str) -> None:
     docs = []
-    LOGGER.info('Creating snapshot for %s %s', index, name)
+    LOGGER.info(F'Creating snapshot for {index} {name}')
     total = Search(index=index).count()
     paging = [(START if i == START else i + 1, i + STEP) for i in range(START, total, STEP)]
     for st, en in paging:
@@ -54,5 +54,5 @@ def _snapshot_documents(name: str, index: str) -> None:
             docs.append(current.to_dict())
 
         if docs:
-            bulk(get_connection(), docs, refresh=True, index='{}.{}'.format(index, name))
-    LOGGER.info('Snapshot for %s %s done', index, name)
+            bulk(get_connection(), docs, refresh=True, index=F'{index}.{name}')
+    LOGGER.info('Snapshot for {index} {name} done')

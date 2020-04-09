@@ -85,7 +85,7 @@ class DocumentRegistry:
                     if isinstance(field_type, Object) and issubclass(sender, field_type._doc_class):
                         for index in self._get_indexes(new_version, field_type._doc_class):
                             result = document.search(index=index).filter(
-                                'term', **{'{}__id'.format(field_name): old_version.id}).execute()
+                                'term', **{F'{field_name}__id': old_version.id}).execute()
                             for hit in result.hits:
                                 setattr(hit, field_name, new_version)
                                 hit.save(index=index, refresh=True)
@@ -116,7 +116,7 @@ class DocumentRegistry:
             documents.update({obj.index_name: obj.get_document()})
 
             for value in SnapShotMode.values():
-                snap_index = '{}.{}'.format(obj.index_name, value)
+                snap_index = F'{obj.index_name}.{value}'
                 documents.update({snap_index: obj.get_document()})
 
         return documents
