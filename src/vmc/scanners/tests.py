@@ -27,6 +27,8 @@ from vmc.common.tasks import memcache_lock
 from vmc.scanners.models import Config
 from vmc.scanners.registries import scanners_registry
 from vmc.scanners.tasks import update, update_data, _update
+from vmc.scanners.parsers import Parser
+from vmc.scanners.clients import Client
 
 
 class AdminPanelTest(LiveServerTestCase):
@@ -47,6 +49,35 @@ class AdminPanelTest(LiveServerTestCase):
 
     def tearDown(self):
         self.client.logout()
+
+
+class ParserTest(TestCase):
+
+    def test_get_scans_ids_call(self):
+        with self.assertRaises(NotImplementedError):
+            Parser.get_scans_ids('aa')
+
+    def test_parse_call(self):
+        with self.assertRaises(NotImplementedError):
+            Parser().parse('a')
+
+
+class ClientTest(TestCase):
+
+    def setUp(self):
+        self.uut = Client()
+
+    def test_connect_call(self):
+        with self.assertRaises(NotImplementedError):
+            self.uut.connect()
+
+    def test_get_scans_call(self):
+        with self.assertRaises(NotImplementedError):
+            self.uut.get_scans('asaasd')
+
+    def test_download_scan_call(self):
+        with self.assertRaises(NotImplementedError):
+            self.uut.download_scan('scan')
 
 
 class TasksTest(TestCase):

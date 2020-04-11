@@ -24,7 +24,7 @@ class Parser:
 
     @staticmethod
     def get_scans_ids(reports) -> List:
-        raise NotImplemented()
+        raise NotImplementedError()
 
     def parse(self, report) -> [Dict, Dict]:
-        raise NotImplemented()
+        raise NotImplementedError()

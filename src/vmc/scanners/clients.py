@@ -26,14 +26,14 @@ from typing import Dict
 class Client:
 
     def connect(self):
-        raise NotImplemented()
+        raise NotImplementedError()
 
     def get_scans(self, last_modification_date=None) -> Dict:
-        raise NotImplemented()
+        raise NotImplementedError()
 
     @staticmethod
     def _get_epoch_from_lsp(last_pull: datetime.datetime) -> int:
         return int(last_pull.timestamp()) if last_pull else 0
 
     def download_scan(self, scan_id):
-        raise NotImplemented()
+        raise NotImplementedError()

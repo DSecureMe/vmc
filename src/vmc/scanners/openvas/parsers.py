@@ -19,6 +19,7 @@
 """
 
 import uuid
+from typing import List, Dict
 
 from vmc.knowledge_base import metrics
 from vmc.knowledge_base.utils import calculate_base_score_v2
@@ -38,10 +39,10 @@ class GmpParser(Parser):
         self.__scanned_host = list()
 
     @staticmethod
-    def get_scans_ids(reports):
+    def get_scans_ids(reports) -> List:
         return [r.attrib.get('id') for r in reports.findall('report') if r.attrib.get('type') == 'scan']
 
-    def parse(self, report):
+    def parse(self, report) -> [Dict, Dict]:
         for r in report.findall('.//results/result'):
             if float(r.find('nvt//cvss_base').text) > 0:
                 ip_address = r.find('./host').text

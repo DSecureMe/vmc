@@ -20,7 +20,6 @@
 
 import logging
 import uuid
-import datetime
 
 from typing import Dict, List
 
@@ -74,9 +73,9 @@ class NessusReportParser(Parser):
                     return folder['id']
         return scan_list
 
-    def parse(self, xml_root):
+    def parse(self, report) -> [Dict, Dict]:
         vuln = dict()
-        for host in iter_elements_by_name(xml_root, 'ReportHost'):
+        for host in iter_elements_by_name(report, 'ReportHost'):
             self.__scanned_hosts.append(host.get('name'))
             for item in host.iter('ReportItem'):
                 vuln['asset'] = AssetFactory.create(host, self.__config)
