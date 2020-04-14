@@ -25,9 +25,6 @@ from typing import Dict
 
 class Client:
 
-    def connect(self):
-        raise NotImplementedError()
-
     def get_scans(self, last_modification_date=None) -> Dict:
         raise NotImplementedError()
 

@@ -1,0 +1,19 @@
+[
+  {
+    "model": "scanners.config",
+    "pk": 1,
+    "fields": {
+      "name": "Test Config",
+      "schema": "http",
+      "host": "test",
+      "port": 80,
+      "username": "API_KEY",
+      "password": "SECRET_KEY",
+      "insecure": 1,
+      "created_date": "2019-03-06T22:37:31.540Z",
+      "modified_date": "2019-03-06T22:37:31.540Z",
+      "last_scans_pull":  "2019-03-01T00:00:00.0Z",
+      "scanner": "vmc.scanners.openvas"
+    }
+  }
+]

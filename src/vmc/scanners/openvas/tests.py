@@ -18,11 +18,15 @@
  *
 """
 from unittest import skipIf
+from unittest.mock import patch
 
 import defusedxml.ElementTree as ET
 
 from django.test import TestCase
+from gvm.transforms import EtreeTransform
 
+from vmc.scanners.clients import Client
+from vmc.scanners.models import Config
 from vmc.scanners.registries import scanners_registry
 from vmc.config.test_settings import elastic_configured
 from vmc.common.tests import get_fixture_location
@@ -33,24 +37,28 @@ from vmc.scanners.openvas.parsers import GmpParser
 from vmc.scanners.openvas.clients import OpenVasClient
 
 
-class ConfigMock:
-    name = 'test'
-    tenant = None
-    scanner = OpenVasConfig.name
-
-
 class OpenVasConfigTest(TestCase):
+    fixtures = ['openvas_config.json']
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.config = Config.objects.first()
 
     def test_name(self):
         self.assertEqual(OpenVasConfig.name, 'vmc.scanners.openvas')
 
     def test_registry(self):
-        self.assertIsInstance(scanners_registry.get_parser(ConfigMock), GmpParser)
-        self.assertIsInstance(scanners_registry.get_client(ConfigMock), OpenVasClient)
+        self.assertIsInstance(scanners_registry.get_parser(self.config), GmpParser)
+        self.assertIsInstance(scanners_registry.get_client(self.config), OpenVasClient)
 
 
 @skipIf(not elastic_configured(), 'Skip if elasticsearch is not configured')
 class GmpResultParserTest(ESTestCase, TestCase):
+    fixtures = ['openvas_config.json']
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.config = Config.objects.first()
 
     def test_get_reports_ids_call(self):
         xml = ET.parse(get_fixture_location(__file__, 'reports.xml'))
@@ -59,7 +67,7 @@ class GmpResultParserTest(ESTestCase, TestCase):
 
     def test_parse(self):
         xml = ET.parse(get_fixture_location(__file__, 'report.xml'))
-        parser = GmpParser(ConfigMock)
+        parser = GmpParser(self.config)
         vulns, scanned_hosts = parser.parse(xml)
         self.assertEquals(
             ['10.10.10.21', '10.10.10.21', '10.10.10.23',
@@ -74,3 +82,14 @@ class GmpResultParserTest(ESTestCase, TestCase):
         self.assertEquals(vuln.port, '135')
         self.assertEquals(vuln.protocol, 'tcp')
         self.assertEquals(vuln.solution, 'Filter incoming traffic to this ports.')
+
+
+class OpenVasClientTest(TestCase):
+    fixtures = ['openvas_config.json']
+
+    def setUp(self):
+        self.config = Config.objects.first()
+        self.uut = OpenVasClient(self.config)
+
+    def test_is_instance(self):
+        self.assertIsInstance(self.uut, Client)

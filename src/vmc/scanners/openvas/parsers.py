@@ -87,7 +87,7 @@ class GmpParser(Parser):
             vector = tags['cvss_base_vector']
             vector = dict(x.split(':') for x in vector.split('/'))
             cve = CveDocument(
-                id=oid,
+                id=F'NOCVE-{oid}',
                 access_vector_v2=metrics.AccessVectorV2(vector['AV']),
                 access_complexity_v2=metrics.AccessComplexityV2(vector['AC']),
                 authentication_v2=metrics.AuthenticationV2(vector['Au']),

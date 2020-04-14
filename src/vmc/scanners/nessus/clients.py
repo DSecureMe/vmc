@@ -51,9 +51,6 @@ class NessusClient(Client):
         if self.insecure and hasattr(requests, 'packages'):
             requests.packages.urllib3.disable_warnings()
 
-    def connect(self):
-        pass
-
     def _action(self, action: str, method: str, extra: dict = None, download: bool = False) -> dict:
         payload = dict()
         if extra:

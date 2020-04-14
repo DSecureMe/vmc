@@ -17,6 +17,8 @@
  * under the License.
  */
 """
+from contextlib import contextmanager
+
 from gvm.connections import TLSConnection
 from gvm.protocols.gmp import Gmp
 from gvm.transforms import EtreeTransform
@@ -29,17 +31,20 @@ class OpenVasClient(Client):
 
     def __init__(self, config: Config):
         self._config = config
-        self._gmp = None
 
-    def connect(self):
-        if not self._gmp:
-            conn = TLSConnection(hostname=self._config.host, port=self._config.port)
-            self._gmp = Gmp(connection=conn, transform=EtreeTransform())
-            self._gmp.authenticate(self._config.username, self._config.password)
+    @contextmanager
+    def _connect(self):
+        conn = TLSConnection(hostname=self._config.host, port=self._config.port)
+        with Gmp(connection=conn, transform=EtreeTransform()) as gmp:
+            gmp.authenticate(self._config.username, self._config.password)
+            yield gmp
 
     def get_scans(self, last_modification_date=None):
-        # TODO: time filter
-        return self._gmp.get_reports()
+        with self._connect() as gmp:
+            if last_modification_date:
+                return gmp.get_reports(filter=F'created>{last_modification_date}')
+            return gmp.get_reports()
 
     def download_scan(self, scan_id):
-        return self._gmp.get_report(scan_id)
+        with self._connect() as gmp:
+            return gmp.get_report(scan_id)

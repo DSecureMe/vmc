@@ -67,10 +67,6 @@ class ClientTest(TestCase):
     def setUp(self):
         self.uut = Client()
 
-    def test_connect_call(self):
-        with self.assertRaises(NotImplementedError):
-            self.uut.connect()
-
     def test_get_scans_call(self):
         with self.assertRaises(NotImplementedError):
             self.uut.get_scans('asaasd')
@@ -91,22 +87,19 @@ class TasksTest(TestCase):
 
     @patch('vmc.scanners.tasks.update_data')
     def test_call_update(self, update_data):
-        self.client().get_scan_list.return_value = 'get_scan_list'
+        self.client().get_scans.return_value = 'get_scans'
         self.parser().get_scans_ids.return_value = [1]
 
         update()
 
-        self.client().connect.assert_called()
-        self.client().get_scan_list.assert_called_once_with(last_modification_date=self.config.last_scans_pull)
-        self.parser().get_scans_ids.assert_called_once_with('get_scan_list')
+        self.client().get_scans.assert_called_once_with(last_modification_date=self.config.last_scans_pull)
+        self.parser().get_scans_ids.assert_called_once_with('get_scans')
         update_data.delay.assert_called_once_with(config_pk=self.config.id, scan_id=1)
 
     def test_call_update_exception(self):
-        self.client().get_scan_list.side_effect = Exception
+        self.client().get_scans.side_effect = Exception
 
         update()
-
-        self.client().connect.assert_called()
         self.parser().get_scans_ids.assert_not_called()
 
     @patch('vmc.scanners.tasks._update')
@@ -130,7 +123,6 @@ class TasksTest(TestCase):
 
         self.assertTrue(_update(self.config, 1))
 
-        self.client().connect.assert_called()
         self.client().download_scan.assert_called_once_with(1)
         self.parser().parse.assert_called_once_with('download_scan')
         document.create_or_update.assert_called_once_with('first', 'second', self.config)
@@ -141,6 +133,5 @@ class TasksTest(TestCase):
 
         self.assertFalse(_update(self.config, 1))
 
-        self.client().connect.assert_called()
         self.parser().get_scans_ids.assert_not_called()
         document.create_or_update.assert_not_called()

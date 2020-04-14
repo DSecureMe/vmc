@@ -36,7 +36,6 @@ LOGGER = logging.getLogger(__name__)
 def _update(config: Config, scan_id: int):
     try:
         client, parser = scanners_registry.get(config)
-        client.connect()
 
         LOGGER.info(F'Trying to download report form {config.name}')
         file = client.download_scan(scan_id)
@@ -73,10 +72,9 @@ def update():
     for config in Config.objects.all():
         try:
             client, parser = scanners_registry.get(config)
-            client.connect()
 
             now_date = now()
-            scan_list = client.get_scan_list(last_modification_date=config.last_scans_pull)
+            scan_list = client.get_scans(last_modification_date=config.last_scans_pull)
             scan_list = parser.get_scans_ids(scan_list)
 
             for scan_id in scan_list:
