@@ -42,7 +42,8 @@ class OpenVasClient(Client):
     def get_scans(self, last_modification_date=None):
         with self._connect() as gmp:
             if last_modification_date:
-                return gmp.get_reports(filter=F'created>{last_modification_date}')
+                date = last_modification_date.strftime('%Y-%m-%dT%Hh%M')
+                return gmp.get_reports(filter=F'created>{date}')
             return gmp.get_reports()
 
     def download_scan(self, scan_id):

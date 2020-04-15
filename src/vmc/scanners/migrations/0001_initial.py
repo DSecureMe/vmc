@@ -28,7 +28,7 @@ class Migration(migrations.Migration):
                 ('insecure', models.BooleanField(default=False)),
                 ('last_scans_pull', models.DateTimeField(blank=True, default=None, null=True)),
                 ('scanner', models.CharField(max_length=128)),
-                ('tenant', models.ForeignKey(null=True, on_delete=django.db.models.deletion.DO_NOTHING, to='elasticsearch.Tenant')),
+                ('tenant', models.ForeignKey(null=True, blank=True, on_delete=django.db.models.deletion.DO_NOTHING, to='elasticsearch.Tenant')),
             ],
             options={
                 'db_table': 'scanners',

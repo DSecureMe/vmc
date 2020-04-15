@@ -23,7 +23,7 @@ from __future__ import absolute_import, unicode_literals
 import logging
 from django.utils.timezone import now
 
-from celery import shared_task
+from celery import shared_task, group
 
 from vmc.common.tasks import memcache_lock
 from vmc.scanners.models import Config
@@ -33,7 +33,7 @@ from vmc.vulnerabilities.documents import VulnerabilityDocument
 LOGGER = logging.getLogger(__name__)
 
 
-def _update(config: Config, scan_id: int):
+def _update_scan(config: Config, scan_id: int):
     try:
         client, parser = scanners_registry.get(config)
 
@@ -56,15 +56,23 @@ def _update(config: Config, scan_id: int):
     return False
 
 
-@shared_task
-def update_data(config_pk: int, scan_id: int):
+@shared_task(trail=True)
+def update_scan(config_pk: int, scan_id: int):
     config = Config.objects.get(pk=config_pk)
     lock_id = F'update-vulnerabilities-loc-{scan_id}'
     with memcache_lock(lock_id, config.id) as acquired:
         if acquired:
-            return _update(config, scan_id)
+            return _update_scan(config, scan_id)
     LOGGER.info(F'Vulnerability update for {config.name} is already being done by another worker')
     return False
+
+
+@shared_task
+def update_last_scans_pull(result, config_pk: int, date):
+    config = Config.objects.get(pk=config_pk)
+    if all(result):
+        config.last_scans_pull = date
+        config.save()
 
 
 @shared_task
@@ -77,12 +85,9 @@ def update():
             scan_list = client.get_scans(last_modification_date=config.last_scans_pull)
             scan_list = parser.get_scans_ids(scan_list)
 
-            for scan_id in scan_list:
-                LOGGER.debug(F'scan_id {scan_id} from {config.name}')
-                update_data.delay(config_pk=config.pk, scan_id=scan_id)
-
-            config.last_scans_pull = now_date
-            config.save()  # FIXME:  update in result tasks
+            scans = group(update_scan.si(config_pk=config.pk, scan_id=scan_id) for scan_id in scan_list)
+            chain = scans | update_last_scans_pull.s(config.id, now_date)
+            chain()
 
         except Exception as e:
             import traceback

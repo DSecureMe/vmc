@@ -18,12 +18,10 @@
  *
 """
 from unittest import skipIf
-from unittest.mock import patch
 
 import defusedxml.ElementTree as ET
 
 from django.test import TestCase
-from gvm.transforms import EtreeTransform
 
 from vmc.scanners.clients import Client
 from vmc.scanners.models import Config

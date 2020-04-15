@@ -38,7 +38,7 @@ class Config(BaseModel):
     password = models.TextField()
     insecure = models.BooleanField(default=False)
     last_scans_pull = models.DateTimeField(default=None, null=True, blank=True)
-    tenant = models.ForeignKey(Tenant, null=True, on_delete=models.DO_NOTHING)
+    tenant = models.ForeignKey(Tenant, null=True, blank=True, on_delete=models.DO_NOTHING)
     scanner = models.CharField(choices=scanners_registry.get_scanners(), max_length=128)
 
     class Meta:
