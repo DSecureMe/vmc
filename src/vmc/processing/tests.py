@@ -181,7 +181,8 @@ class CalculateEnvironmentalScore(ESTestCase, TestCase):
         super().setUp()
         self.cve = create_cve(save=False)
 
-    def generate_assets(self):
+    @staticmethod
+    def generate_assets():
         docs = []
         for i in range(1000):
             docs.append(create_asset(F'10.10.10.{i}', save=False).to_dict())

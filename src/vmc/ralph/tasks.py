@@ -19,7 +19,7 @@
 """
 
 import logging
-from celery import shared_task, group, chain
+from celery import shared_task, group
 
 from vmc.common.tasks import memcache_lock
 from vmc.assets.documents import AssetDocument

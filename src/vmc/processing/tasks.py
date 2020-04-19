@@ -211,6 +211,8 @@ def get_vulnerability_count(cve_id, vulnerability_index):
 def _start_processing_per_tenant(vulnerability_index: str, asset_index: str):
     docs = []
 
+    LOGGER.info(F'Calculation for {vulnerability_index} and {asset_index} started')
+
     assets_count = AssetDocument.search(
         index=asset_index).filter(~Q('match', tags=AssetStatus.DELETED)).count()
     vuln_search = VulnerabilityDocument.search(
@@ -227,6 +229,7 @@ def _start_processing_per_tenant(vulnerability_index: str, asset_index: str):
 
     if docs:
         bulk(get_connection(), docs, refresh=True, index=vulnerability_index)
+    LOGGER.info(F'Calculation for {vulnerability_index} and {asset_index} done')
 
 
 @shared_task(ignore_result=True)

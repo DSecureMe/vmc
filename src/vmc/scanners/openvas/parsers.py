@@ -64,7 +64,8 @@ class GmpParser(Parser):
                         description=r.find('./description').text,
                         solution=tags['solution'],
                         cve=cve,
-                        asset=asset
+                        asset=asset,
+                        tags=['OpenVas']
                     )
 
         return self.__parsed, self.__scanned_host

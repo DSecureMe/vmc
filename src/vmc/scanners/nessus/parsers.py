@@ -108,6 +108,7 @@ class NessusReportParser(Parser):
                     setattr(vuln, field, item[field])
                 except (KeyError, IndexError):
                     setattr(vuln, field, 'UNKNOWN')
+        vuln.tags = ['Nessus']
         self.__parsed[vuln.id] = vuln
 
     @staticmethod
