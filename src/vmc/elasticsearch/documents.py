@@ -67,6 +67,7 @@ class EnumField(CustomField):
     def __init__(self, *args, choice_type: Type[Enum] = None, default=None, **kwargs):
         super().__init__(*args, **kwargs)
         self.choice_type = choice_type
+        self.default = default
 
     def _empty(self):
         return self.default

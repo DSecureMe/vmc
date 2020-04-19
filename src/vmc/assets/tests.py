@@ -27,9 +27,28 @@ from vmc.elasticsearch import Q
 from vmc.elasticsearch.tests import ESTestCase
 from vmc.assets.apps import AssetsConfig
 
-from vmc.assets.documents import AssetDocument, OwnerInnerDoc, Impact
+from vmc.assets.documents import AssetDocument, OwnerInnerDoc, Impact, AssetStatus
 
 from vmc.config.test_settings import elastic_configured
+
+
+def create_asset(ip_address='10.10.10.10', asset_id=None, hostname='HOSTNAME', save=True) -> AssetDocument:
+    if not asset_id:
+        asset_id = ip_address
+
+    asset = AssetDocument(
+        id=asset_id,
+        ip_address=ip_address,
+        mac_address='mac_address',
+        os='Windows',
+        hostname=hostname,
+        confidentiality_requirement=Impact.LOW,
+        integrity_requirement=Impact.LOW,
+        availability_requirement=Impact.LOW
+    )
+    if save:
+        asset.save(refresh=True)
+    return asset
 
 
 class AssetConfigMock:
@@ -76,15 +95,7 @@ class AssetDocumentTest(ESTestCase, TestCase):
         self.assertEqual(AssetDocument.Index.name, 'asset')
 
     def create_asset(self, ip_address, asset_id=1, hostname='test-hostname'):
-        asset = AssetDocument(
-            ip_address=ip_address,
-            os='Windows',
-            id=asset_id,
-            confidentiality_requirement='NOT_DEFINED',
-            integrity_requirement='NOT_DEFINED',
-            availability_requirement='NOT_DEFINED',
-            hostname=hostname
-        )
+        asset = create_asset(ip_address, asset_id, hostname, save=False)
         asset.technical_owner.append(self.to)
         asset.business_owner.append(self.bo)
         return asset.save(refresh=True)
@@ -97,12 +108,12 @@ class AssetDocumentTest(ESTestCase, TestCase):
 
         uut = result.hits[0]
         self.assertEqual(uut.os, 'Windows')
-        self.assertEqual(uut.confidentiality_requirement.name, Impact.NOT_DEFINED.name)
-        self.assertEqual(uut.integrity_requirement.name, Impact.NOT_DEFINED.name)
-        self.assertEqual(uut.availability_requirement.name, Impact.NOT_DEFINED.name)
-        self.assertEqual(uut.confidentiality_requirement.second_value, Impact.NOT_DEFINED.second_value)
-        self.assertEqual(uut.integrity_requirement.second_value, Impact.NOT_DEFINED.second_value)
-        self.assertEqual(uut.availability_requirement.second_value, Impact.NOT_DEFINED.second_value)
+        self.assertEqual(uut.confidentiality_requirement.name, Impact.LOW.name)
+        self.assertEqual(uut.integrity_requirement.name, Impact.LOW.name)
+        self.assertEqual(uut.availability_requirement.name, Impact.LOW.name)
+        self.assertEqual(uut.confidentiality_requirement.second_value, Impact.LOW.second_value)
+        self.assertEqual(uut.integrity_requirement.second_value, Impact.LOW.second_value)
+        self.assertEqual(uut.availability_requirement.second_value, Impact.LOW.second_value)
         self.assertEqual(uut.business_owner, [{
             'name': 'bo_name', 'email': 'bo_name@dsecure.me', 'department': 'department', 'team': ['team']}])
         self.assertEqual(uut.technical_owner, [{
@@ -119,7 +130,7 @@ class AssetDocumentTest(ESTestCase, TestCase):
         self.assertEqual(2, Search().index(AssetDocument.Index.name).count())
         AssetDocument.create_or_update({asset_1.id: asset_1}, AssetConfigMock())
 
-        result = AssetDocument.search().filter(Q('match', tags='DELETED')).execute()
+        result = AssetDocument.search().filter(Q('match', tags=AssetStatus.DELETED)).execute()
         self.assertEqual(1, len(result.hits))
         self.assertEqual(result.hits[0].ip_address, asset_2.ip_address)
         self.assertEqual(result.hits[0].id, asset_2.id)
@@ -134,7 +145,7 @@ class AssetDocumentTest(ESTestCase, TestCase):
         asset_3 = AssetDocument.get_or_create('10.0.0.2')
         self.assertEqual(3, Search().index(AssetDocument.Index.name).count())
 
-        result = AssetDocument.search().filter(Q('match', tags='DISCOVERED')).execute()
+        result = AssetDocument.search().filter(Q('match', tags=AssetStatus.DISCOVERED)).execute()
         self.assertEqual(1, len(result.hits))
         self.assertEqual(result.hits[0].ip_address, asset_3.ip_address)
         self.assertEqual(result.hits[0].id, asset_3.ip_address)
@@ -158,7 +169,7 @@ class AssetDocumentTest(ESTestCase, TestCase):
 
     def test_update_discovered_asset(self):
         asset = AssetDocument.get_or_create('10.0.0.1')
-        self.assertEqual(asset.tags, ["DISCOVERED"])
+        self.assertEqual(asset.tags, [AssetStatus.DISCOVERED])
         self.assertEqual(1, Search().index(AssetDocument.Index.name).count())
 
         asset = AssetDocument(ip_address='10.0.0.1', os='Windows', id=1, confidentiality_requirement='NOT_DEFINED',

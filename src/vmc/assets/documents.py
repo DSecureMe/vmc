@@ -38,6 +38,11 @@ class OwnerInnerDoc(InnerDoc):
     team = Keyword()
 
 
+class AssetStatus:
+    DISCOVERED = 'DISCOVERED'
+    DELETED = 'DELETED'
+
+
 class AssetInnerDoc(InnerDoc):
     id = Keyword()
     ip_address = Keyword()
@@ -72,15 +77,15 @@ class AssetDocument(Document, AssetInnerDoc):
     @staticmethod
     def _update_existing_assets(assets: dict, index):
         if assets:
-            assets_search = AssetDocument.search(index=index).filter(~Q('match', tags='DISCOVERED'))
+            assets_search = AssetDocument.search(index=index).filter(~Q('match', tags=AssetStatus.DISCOVERED))
             for current_asset in assets_search.scan():
                 asset_id = current_asset.id
                 if asset_id in assets:
                     if current_asset.has_changed(assets[asset_id]):
                         current_asset.update(assets[asset_id], refresh=True, index=index)
                     del assets[asset_id]
-                elif asset_id not in assets and 'DELETED' not in current_asset.tags:
-                    current_asset.tags.append('DELETED')
+                elif asset_id not in assets and AssetStatus.DELETED not in current_asset.tags:
+                    current_asset.tags.append(AssetStatus.DELETED)
                     current_asset.save(refresh=True, index=index)
         return assets
 
@@ -88,7 +93,7 @@ class AssetDocument(Document, AssetInnerDoc):
     def _update_discovered_assets(assets: dict, index):
         if assets:
             assets = {a.ip_address: a for a in assets.values()}
-            assets_search = AssetDocument.search(index=index).filter(Q('match', tags='DISCOVERED'))
+            assets_search = AssetDocument.search(index=index).filter(Q('match', tags=AssetStatus.DISCOVERED))
             for discovered_asset in assets_search.scan():
                 if discovered_asset.ip_address in assets:
                     discovered_asset.update(assets[discovered_asset.ip_address], refresh=True, index=index)
@@ -100,7 +105,9 @@ class AssetDocument(Document, AssetInnerDoc):
     def get_or_create(ip_address, config=None):
         index = AssetDocument.get_index(config)
         result = AssetDocument.search(index=index).filter(
-            Q('term', ip_address=ip_address) & ~Q('match', tags='DELETED')).execute()
+            Q('term', ip_address=ip_address) & ~Q('match', tags=AssetStatus.DELETED)).execute()
         if result.hits:
             return result.hits[0]
-        return AssetDocument(id=ip_address, ip_address=ip_address, tags=["DISCOVERED"]).save(index=index, refresh=True)
+        return AssetDocument(id=ip_address,
+                             ip_address=ip_address,
+                             tags=[AssetStatus.DISCOVERED]).save(index=index, refresh=True)

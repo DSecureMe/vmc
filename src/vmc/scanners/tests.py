@@ -86,7 +86,11 @@ class TasksTest(TestCase):
         scanners_registry.register('test-scanner', self.client, self.parser)
 
     @patch('vmc.scanners.tasks.update_scan')
-    def test_call_update(self, update_scan_mock):
+    @patch('vmc.scanners.tasks.update_last_scans_pull')
+    @patch('vmc.scanners.tasks.now')
+    @patch('vmc.scanners.tasks.start_processing')
+    def test_call_update(self, start_processing, now, update_last_scans_pull, update_scan_mock):
+        now.return_value = 'now'
         self.client().get_scans.return_value = 'get_scans'
         self.parser().get_scans_ids.return_value = [1]
 
@@ -95,6 +99,8 @@ class TasksTest(TestCase):
         self.client().get_scans.assert_called_once_with(last_modification_date=self.config.last_scans_pull)
         self.parser().get_scans_ids.assert_called_once_with('get_scans')
         update_scan_mock.si.assert_called_once_with(config_pk=self.config.id, scan_id=1)
+        update_last_scans_pull.si.assert_called_once_with(self.config.id, 'now')
+        start_processing.si.assert_called_once()
 
     def test_call_update_exception(self):
         self.client().get_scans.side_effect = Exception

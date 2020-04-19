@@ -19,10 +19,11 @@
 """
 
 import logging
-from celery import shared_task
+from celery import shared_task, group, chain
 
 from vmc.common.tasks import memcache_lock
 from vmc.assets.documents import AssetDocument
+from vmc.processing.tasks import start_processing
 
 from vmc.ralph.clients import RalphClient
 from vmc.ralph.models import Config
@@ -61,5 +62,8 @@ def update_assets(config_id: int):
 
 @shared_task
 def start_update_assets():
-    for config in Config.objects.all().values_list('id', flat=True):
-        update_assets.delay(config_id=config)
+    configs = Config.objects.all().values_list('id', flat=True)
+    (
+        group(update_assets.si(config_id=config) for config in configs) |
+        start_processing.si()
+    )()

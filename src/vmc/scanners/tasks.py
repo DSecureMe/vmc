@@ -29,6 +29,8 @@ from vmc.common.tasks import memcache_lock
 from vmc.scanners.models import Config
 from vmc.scanners.registries import scanners_registry
 from vmc.vulnerabilities.documents import VulnerabilityDocument
+from vmc.processing.tasks import start_processing
+
 
 LOGGER = logging.getLogger(__name__)
 
@@ -86,7 +88,7 @@ def update():
             scan_list = parser.get_scans_ids(scan_list)
 
             scans = group(update_scan.si(config_pk=config.pk, scan_id=scan_id) for scan_id in scan_list)
-            chain = scans | update_last_scans_pull.s(config.id, now_date)
+            chain = scans | update_last_scans_pull.si(config.id, now_date) | start_processing.si()
             chain()
 
         except Exception as e:

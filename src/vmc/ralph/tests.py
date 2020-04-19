@@ -205,11 +205,6 @@ class UpdateAssetsTaskTest(TestCase):
         super().setUp()
         self.config = Config.objects.first()
 
-    @patch('vmc.ralph.tasks.update_assets')
-    def test_start_update_assets_call(self, update_assets_mock):
-        start_update_assets()
-        update_assets_mock.delay.assert_called_once_with(config_id=self.config.id)
-
     @patch('vmc.ralph.tasks.RalphClient')
     @patch('vmc.ralph.tasks.OwnerParser')
     @patch('vmc.ralph.tasks.AssetsParser')

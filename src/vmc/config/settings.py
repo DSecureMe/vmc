@@ -59,6 +59,7 @@ INTERNAL_APPS = [
     'vmc.assets',
     'vmc.ralph',
     'vmc.vulnerabilities',
+    'vmc.processing',
     'vmc.scanners',
     'vmc.scanners.openvas',
     'vmc.scanners.nessus',

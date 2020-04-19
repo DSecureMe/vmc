@@ -24,7 +24,9 @@ from vmc.elasticsearch import Document, Integer, Keyword, Object, Float, Q
 from vmc.knowledge_base.documents import CveInnerDoc, CveDocument
 from vmc.elasticsearch.registries import registry
 
-from vmc.vulnerabilities.utils import environmental_score_v2, environmental_score_v3
+
+class VulnerabilityStatus:
+    FIXED = 'FIXED'
 
 
 @registry.register_document
@@ -46,17 +48,6 @@ class VulnerabilityDocument(Document):
         related_documents = [CveDocument, AssetDocument]
         tenant_separation = True
 
-    def prepare_environmental_score_v2(self):
-        return environmental_score_v2(self.cve, self.asset) if self.cve.base_score_v2 else 0.0
-
-    def prepare_environmental_score_v3(self):
-        return environmental_score_v3(self.cve, self.asset) if self.cve.base_score_v3 else 0.0
-
-    def save(self, **kwargs):
-        self.environmental_score_v2 = self.prepare_environmental_score_v2()
-        self.environmental_score_v3 = self.prepare_environmental_score_v3()
-        return super().save(**kwargs)
-
     @staticmethod
     def create_or_update(vulnerabilities: dict, scanned_hosts: list, config=None) -> None:
         index = VulnerabilityDocument.get_index(config)
@@ -68,7 +59,7 @@ class VulnerabilityDocument(Document):
                     current_vuln.update(vulnerabilities[vuln_id], refresh=True, index=index)
                 del vulnerabilities[vuln_id]
             elif vuln_id not in vulnerabilities and current_vuln.asset.ip_address in scanned_hosts:
-                current_vuln.tags.append('FIXED')
+                current_vuln.tags.append(VulnerabilityStatus.FIXED)
                 current_vuln.save(refresh=True, index=index)
         for vuln in vulnerabilities.values():
             vuln.save(refresh=True, index=index)

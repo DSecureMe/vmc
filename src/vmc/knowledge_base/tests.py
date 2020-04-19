@@ -38,6 +38,31 @@ from vmc.knowledge_base.utils import calculate_base_score_v2, calculate_base_sco
 from vmc.knowledge_base.tasks import update_exploits, update_cwe, update_cve
 
 
+def create_cve(cve_id='CVE-2017-0002', save=True) -> CveDocument:
+    cve = CveDocument(
+        id=cve_id,
+        base_score_v2=6.8,
+        access_vector_v2=metrics.AccessVectorV2.NETWORK,
+        access_complexity_v2=metrics.AccessComplexityV2.MEDIUM,
+        authentication_v2=metrics.AuthenticationV2.NONE,
+        confidentiality_impact_v2=metrics.ImpactV2.PARTIAL,
+        integrity_impact_v2=metrics.ImpactV2.PARTIAL,
+        availability_impact_v2=metrics.ImpactV2.PARTIAL,
+        base_score_v3=8.8,
+        attack_vector_v3=metrics.AttackVectorV3.NETWORK,
+        attack_complexity_v3=metrics.AttackComplexityV3.LOW,
+        privileges_required_v3=metrics.PrivilegesRequiredV3.NONE,
+        user_interaction_v3=metrics.UserInteractionV3.REQUIRED,
+        scope_v3=metrics.ScopeV3.UNCHANGED,
+        confidentiality_impact_v3=metrics.ImpactV3.HIGH,
+        integrity_impact_v3=metrics.ImpactV3.HIGH,
+        availability_impact_v3=metrics.ImpactV3.HIGH
+    )
+    if save:
+        cve.save(refresh=True)
+    return cve
+
+
 @skipIf(not elastic_configured(), 'Skip if elasticsearch is not configured')
 class CWEFactoryTest(ESTestCase, TestCase):
 

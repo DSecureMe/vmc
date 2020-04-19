@@ -29,6 +29,7 @@ from celery import shared_task, group
 
 from vmc.common.tasks import memcache_lock
 from vmc.common.utils import get_file
+from vmc.processing.tasks import start_processing
 from vmc.knowledge_base.factories import CveFactory, CWEFactory, ExploitFactory
 
 
@@ -91,7 +92,8 @@ def _update_cve_cwe():
     (
             group(update_cve.si(year) for year in range(START_YEAR, datetime.now().year + 1)) |
             update_cwe.si() |
-            update_exploits.si()
+            update_exploits.si() |
+            start_processing.si()
     )()
 
 
