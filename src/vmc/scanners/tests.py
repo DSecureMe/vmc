@@ -26,7 +26,7 @@ from vmc.common.tasks import memcache_lock
 
 from vmc.scanners.models import Config
 from vmc.scanners.registries import scanners_registry
-from vmc.scanners.tasks import update, update_scans, _update_scans
+from vmc.scanners.tasks import update_scans, _update_scans
 from vmc.scanners.parsers import Parser
 from vmc.scanners.clients import Client
 
