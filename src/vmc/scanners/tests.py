@@ -26,7 +26,7 @@ from vmc.common.tasks import memcache_lock
 
 from vmc.scanners.models import Config
 from vmc.scanners.registries import scanners_registry
-from vmc.scanners.tasks import update, update_scan, _update_scan
+from vmc.scanners.tasks import update, update_scans, _update_scans
 from vmc.scanners.parsers import Parser
 from vmc.scanners.clients import Client
 
@@ -85,49 +85,28 @@ class TasksTest(TestCase):
         self.config = Config.objects.first()
         scanners_registry.register('test-scanner', self.client, self.parser)
 
-    @patch('vmc.scanners.tasks.update_scan')
-    @patch('vmc.scanners.tasks.update_last_scans_pull')
-    @patch('vmc.scanners.tasks.now')
-    @patch('vmc.scanners.tasks.start_processing')
-    def test_call_update(self, start_processing, now, update_last_scans_pull, update_scan_mock):
-        now.return_value = 'now'
-        self.client().get_scans.return_value = 'get_scans'
-        self.parser().get_scans_ids.return_value = [1]
-
-        update()
-
-        self.client().get_scans.assert_called_once_with(last_modification_date=self.config.last_scans_pull)
-        self.parser().get_scans_ids.assert_called_once_with('get_scans')
-        update_scan_mock.si.assert_called_once_with(config_pk=self.config.id, scan_id=1)
-        update_last_scans_pull.si.assert_called_once_with(self.config.id, 'now')
-        start_processing.si.assert_called_once()
-
-    def test_call_update_exception(self):
-        self.client().get_scans.side_effect = Exception
-
-        update()
-        self.parser().get_scans_ids.assert_not_called()
-
-    @patch('vmc.scanners.tasks._update_scan')
+    @patch('vmc.scanners.tasks._update_scans')
     def test_update_scan_call(self, _update):
         _update.return_value = True
 
-        self.assertTrue(update_scan(self.config.id, 1))
-        _update.assert_called_with(self.config, 1)
+        self.assertTrue(update_scans(self.config.id))
+        _update.assert_called_with(self.config)
 
-    @patch('vmc.scanners.tasks._update_scan')
+    @patch('vmc.scanners.tasks._update_scans')
     def test_update_scan_memcache_lock(self, _update):
-        lock_id = F'update-vulnerabilities-loc-99'
+        lock_id = F'update-vulnerabilities-loc-{self.config.id}'
         with memcache_lock(lock_id, self.config.id):
-            self.assertFalse(update_scan(self.config.id, 99))
+            self.assertFalse(update_scans(self.config.id))
             _update.assert_not_called()
 
     @patch('vmc.scanners.tasks.VulnerabilityDocument')
     def test__update_call(self, document):
+        self.client().get_scans.return_value = 'get_scans'
+        self.parser().get_scans_ids.return_value = [1]
         self.client().download_scan.return_value = 'download_scan'
         self.parser().parse.return_value = 'first', 'second'
 
-        self.assertTrue(_update_scan(self.config, 1))
+        self.assertTrue(_update_scans(self.config))
 
         self.client().download_scan.assert_called_once_with(1)
         self.parser().parse.assert_called_once_with('download_scan')
@@ -135,9 +114,8 @@ class TasksTest(TestCase):
 
     @patch('vmc.scanners.tasks.VulnerabilityDocument')
     def test___update_scan_exception(self, document):
-        self.client().download_scan.side_effect = Exception
+        self.client().get_scans.side_effect = Exception
 
-        self.assertFalse(_update_scan(self.config, 1))
+        self.assertFalse(_update_scans(self.config))
 
-        self.parser().get_scans_ids.assert_not_called()
         document.create_or_update.assert_not_called()

@@ -26,7 +26,7 @@ class Migration(migrations.Migration):
                 ('username', models.TextField()),
                 ('password', models.TextField()),
                 ('insecure', models.BooleanField(default=False)),
-                ('tenant', models.ForeignKey(null=True, on_delete=django.db.models.deletion.DO_NOTHING, related_name='tenant', to='elasticsearch.Tenant')),
+                ('tenant', models.ForeignKey(null=True, blank=True, on_delete=django.db.models.deletion.DO_NOTHING, related_name='tenant', to='elasticsearch.Tenant')),
             ],
             options={
                 'db_table': 'ralph_config',

@@ -113,9 +113,20 @@ class Document(ESDocument):
     def update(self, document, using=None, index=None, refresh=False):
         for name in self.get_fields_name():
             if name not in Document.BASE_DOCUMENT_FIELDS:
-                setattr(self, name, getattr(document, name))
+                if getattr(document, name, None) is not None:
+                    setattr(self, name, getattr(document, name))
         self.save(using=using, index=index, refresh=refresh)
         return self
+
+    def to_dict(self, include_meta=False, skip_empty=True):
+        result = super().to_dict(include_meta=include_meta, skip_empty=skip_empty)
+
+        if '_Document__old_version' in result:
+            del result['_Document__old_version']
+        if '_source' in result and '_Document__old_version' in result['_source']:
+            del result['_source']['_Document__old_version']
+
+        return result
 
     @classmethod
     def _matches(cls, hit):
@@ -130,7 +141,7 @@ class Document(ESDocument):
     def has_changed(self, other):
         changed_fields = []
         for name in self.get_fields_name():
-            if name not in Document.BASE_DOCUMENT_FIELDS and getattr(self, name) != getattr(other, name):
+            if name not in Document.BASE_DOCUMENT_FIELDS and getattr(self, name, None) != getattr(other, name, None):
                 changed_fields.append(name)
         return changed_fields
 

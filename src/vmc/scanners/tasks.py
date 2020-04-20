@@ -35,19 +35,26 @@ from vmc.processing.tasks import start_processing
 LOGGER = logging.getLogger(__name__)
 
 
-def _update_scan(config: Config, scan_id: int):
+def _update_scans(config: Config):
     try:
         client, parser = scanners_registry.get(config)
 
-        LOGGER.info(F'Trying to download report form {config.name}')
-        file = client.download_scan(scan_id)
+        now_date = now()
+        scan_list = client.get_scans(last_modification_date=config.last_scans_pull)
+        scan_list = parser.get_scans_ids(scan_list)
+        for scan_id in scan_list:
+            LOGGER.info(F'Trying to download report form {config.name}')
+            file = client.download_scan(scan_id)
 
-        LOGGER.info(F'Trying to parse scan file {scan_id}')
-        vulns, scanned_hosts = parser.parse(file)
+            LOGGER.info(F'Trying to parse scan file {scan_id}')
+            vulns, scanned_hosts = parser.parse(file)
 
-        LOGGER.info(F'File parsed: {scan_id}')
-        LOGGER.info(F'Attempting to update vulns data in {config.name}')
-        VulnerabilityDocument.create_or_update(vulns, scanned_hosts, config)
+            LOGGER.info(F'File parsed: {scan_id}')
+            LOGGER.info(F'Attempting to update vulns data in {config.name}')
+            VulnerabilityDocument.create_or_update(vulns, scanned_hosts, config)
+        config.last_scans_pull = now_date
+        config.save()
+
         return True
 
     except Exception as e:
@@ -59,40 +66,20 @@ def _update_scan(config: Config, scan_id: int):
 
 
 @shared_task(trail=True)
-def update_scan(config_pk: int, scan_id: int):
+def update_scans(config_pk: int):
     config = Config.objects.get(pk=config_pk)
-    lock_id = F'update-vulnerabilities-loc-{scan_id}'
+    lock_id = F'update-vulnerabilities-loc-{config_pk}'
     with memcache_lock(lock_id, config.id) as acquired:
         if acquired:
-            return _update_scan(config, scan_id)
+            return _update_scans(config)
     LOGGER.info(F'Vulnerability update for {config.name} is already being done by another worker')
     return False
 
 
 @shared_task
-def update_last_scans_pull(result, config_pk: int, date):
-    config = Config.objects.get(pk=config_pk)
-    if all(result):
-        config.last_scans_pull = date
-        config.save()
-
-
-@shared_task
 def update():
-    for config in Config.objects.all():
-        try:
-            client, parser = scanners_registry.get(config)
-
-            now_date = now()
-            scan_list = client.get_scans(last_modification_date=config.last_scans_pull)
-            scan_list = parser.get_scans_ids(scan_list)
-
-            scans = group(update_scan.si(config_pk=config.pk, scan_id=scan_id) for scan_id in scan_list)
-            chain = scans | update_last_scans_pull.si(config.id, now_date) | start_processing.si()
-            chain()
-
-        except Exception as e:
-            import traceback
-            traceback.print_exc()
-            LOGGER.error(F"Error while loading vulnerability data {e}")
-
+    configs = Config.objects.all().values_list('id', flat=True)
+    (
+        group(update_scans.si(config_pk=config) for config in configs) |
+        start_processing.si()
+    )()

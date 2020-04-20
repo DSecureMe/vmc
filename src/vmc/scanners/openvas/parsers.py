@@ -59,6 +59,7 @@ class GmpParser(Parser):
                         protocol = None
                     uid = self._vuln_id(ip_address, port, oid)
                     self.__parsed[uid] = VulnerabilityDocument(
+                        id=uid,
                         port=port,
                         protocol=protocol,
                         description=r.find('./description').text,
@@ -84,18 +85,23 @@ class GmpParser(Parser):
 
     @staticmethod
     def get_cve(cve_id, oid, tags):
+
         if cve_id == 'NOCVE':
+            cve_id = F'NOCVE-{oid}'
+            cve = CveDocument.get_or_create(cve_id=cve_id)
+
             vector = tags['cvss_base_vector']
             vector = dict(x.split(':') for x in vector.split('/'))
-            cve = CveDocument(
-                id=F'NOCVE-{oid}',
-                access_vector_v2=metrics.AccessVectorV2(vector['AV']),
-                access_complexity_v2=metrics.AccessComplexityV2(vector['AC']),
-                authentication_v2=metrics.AuthenticationV2(vector['Au']),
-                confidentiality_impact_v2=metrics.ImpactV2(vector['C']),
-                integrity_impact_v2=metrics.ImpactV2(vector['I']),
-                availability_impact_v2=metrics.ImpactV2(vector['A'])
-            )
-            cve.base_score_v2 = calculate_base_score_v2(cve)
-            return cve.save(refresh=True)
+            new_cve = CveDocument(id=cve_id)
+            new_cve.access_vector_v2 = metrics.AccessVectorV2(vector['AV'])
+            new_cve.access_complexity_v2 = metrics.AccessComplexityV2(vector['AC'])
+            new_cve.authentication_v2 = metrics.AuthenticationV2(vector['Au'])
+            new_cve.confidentiality_impact_v2 = metrics.ImpactV2(vector['C'])
+            new_cve.integrity_impact_v2 = metrics.ImpactV2(vector['I'])
+            new_cve.availability_impact_v2 = metrics.ImpactV2(vector['A'])
+            new_cve.base_score_v2 = calculate_base_score_v2(new_cve)
+            if cve.has_changed(new_cve):
+                return cve.update(new_cve, refresh=True)
+            return cve
+
         return CveDocument.get_or_create(cve_id=cve_id)

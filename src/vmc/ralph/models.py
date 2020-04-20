@@ -35,7 +35,7 @@ class Config(BaseModel):
     username = models.TextField()
     password = models.TextField()
     insecure = models.BooleanField(default=False)
-    tenant = models.ForeignKey(Tenant, null=True, related_name='tenant', on_delete=models.DO_NOTHING)
+    tenant = models.ForeignKey(Tenant, null=True, blank=True, related_name='tenant', on_delete=models.DO_NOTHING)
 
     class Meta:
         db_table = 'ralph_config'

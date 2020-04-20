@@ -32,7 +32,7 @@ class VulnerabilityStatus:
 @registry.register_document
 class VulnerabilityDocument(Document):
     id = Keyword()
-    port = Integer()
+    port = Keyword()
     svc_name = Keyword()
     protocol = Keyword()
     description = Keyword()
@@ -51,7 +51,7 @@ class VulnerabilityDocument(Document):
     @staticmethod
     def create_or_update(vulnerabilities: dict, scanned_hosts: list, config=None) -> None:
         index = VulnerabilityDocument.get_index(config)
-        all_vulnerability_docs = VulnerabilityDocument.search(index=index).filter(Q('match', tags=config.name))
+        all_vulnerability_docs = VulnerabilityDocument.search(index=index)
         for current_vuln in all_vulnerability_docs.scan():
             vuln_id = current_vuln.id
             if vuln_id in vulnerabilities:
