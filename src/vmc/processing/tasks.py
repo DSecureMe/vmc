@@ -61,40 +61,42 @@ COLLATERAL_DAMAGE_POTENTIAL_HIGH_V2 = 0.5
 COLLATERAL_DAMAGE_POTENTIAL_NOT_DEFINED_V2 = 0.0
 
 
-def collateral_damage_potential_v2(asset) -> float:
+def collateral_damage_potential_v2(asset) -> (float, str):
     req = [asset.confidentiality_requirement, asset.integrity_requirement, asset.availability_requirement]
 
     if req.count(Impact.HIGH) == 3:
-        return COLLATERAL_DAMAGE_POTENTIAL_HIGH_V2
+        return COLLATERAL_DAMAGE_POTENTIAL_HIGH_V2, 'H'
 
     if req.count(Impact.HIGH) > 0:
-        return COLLATERAL_DAMAGE_POTENTIAL_MEDIUM_HIGH_V2
+        return COLLATERAL_DAMAGE_POTENTIAL_MEDIUM_HIGH_V2, 'MH'
 
     if req.count(Impact.MEDIUM) > 0:
-        return COLLATERAL_DAMAGE_POTENTIAL_LOW_MEDIUM_V2
+        return COLLATERAL_DAMAGE_POTENTIAL_LOW_MEDIUM_V2, 'LM'
 
     if req.count(Impact.LOW) > 1:
-        return COLLATERAL_DAMAGE_POTENTIAL_LOW_V2
+        return COLLATERAL_DAMAGE_POTENTIAL_LOW_V2, 'L'
 
-    return COLLATERAL_DAMAGE_POTENTIAL_NOT_DEFINED_V2
+    if req.count(Impact.NOT_DEFINED) == 3:
+        return COLLATERAL_DAMAGE_POTENTIAL_NOT_DEFINED_V2, 'ND'
+    return COLLATERAL_DAMAGE_POTENTIAL_NONE_V2, 'N'
 
 
-def target_distribution_v2(vuln_count, assets_count) -> float:
+def target_distribution_v2(vuln_count, assets_count) -> (float, str):
     distribution = round(vuln_count / assets_count, 3)
 
     if distribution < 0.01:
-        return TARGET_DISTRIBUTION_NONE_V2
+        return TARGET_DISTRIBUTION_NONE_V2, 'N'
 
     if 0.01 <= distribution <= TARGET_DISTRIBUTION_LOW_V2:
-        return TARGET_DISTRIBUTION_LOW_V2
+        return TARGET_DISTRIBUTION_LOW_V2, 'L'
 
     if TARGET_DISTRIBUTION_LOW_V2 < distribution <= TARGET_DISTRIBUTION_MEDIUM_V2:
-        return TARGET_DISTRIBUTION_MEDIUM_V2
+        return TARGET_DISTRIBUTION_MEDIUM_V2, 'M'
 
     if TARGET_DISTRIBUTION_MEDIUM_V2 < distribution <= TARGET_DISTRIBUTION_HIGH_V2:
-        return TARGET_DISTRIBUTION_HIGH_V2
+        return TARGET_DISTRIBUTION_HIGH_V2, 'H'
 
-    return TARGET_DISTRIBUTION_NOT_DEFINED_V2
+    return TARGET_DISTRIBUTION_NOT_DEFINED_V2, 'ND'
 
 
 def adjusted_impact_v2(cve, asset) -> float:
@@ -128,14 +130,29 @@ def adjusted_temporal_score_v2(cve, asset) -> float:
                  temporal_report_confidence_v2(), 1)
 
 
+def cvss_vector_v2(vuln, cdp_flag, fg_flag) -> str:
+    vector = F'AV:{vuln.cve.access_vector_v2.value}/'
+    vector += F'AC:{vuln.cve.access_complexity_v2.value}/'
+    vector += F'Au:{vuln.cve.authentication_v2.value}/'
+    vector += F'C:{vuln.cve.confidentiality_impact_v2.value}/'
+    vector += F'I:{vuln.cve.integrity_impact_v2.value}/'
+    vector += F'A:{vuln.cve.availability_impact_v2.value}/'
+    vector += F'CDP:{cdp_flag}/'
+    vector += F'TD:{fg_flag}/'
+    vector += F'CR:{vuln.asset.confidentiality_requirement.value}/'
+    vector += F'IR:{vuln.asset.integrity_requirement.value}/'
+    vector += F'AR:{vuln.asset.availability_requirement.value}'
+    return vector
+
+
 def calculate_environmental_score_v2(vuln, vuln_count, assets_count):
     if vuln.cve.base_score_v2:
         at = adjusted_temporal_score_v2(vuln.cve, vuln.asset)
-        cdp = collateral_damage_potential_v2(vuln.asset)
-        tg = target_distribution_v2(vuln_count, assets_count)
-        return round((at + (10 - at) * cdp) * tg, 1)
+        cdp, cdp_flag = collateral_damage_potential_v2(vuln.asset)
+        tg, fg_flag = target_distribution_v2(vuln_count, assets_count)
+        return round((at + (10 - at) * cdp) * tg, 1), cvss_vector_v2(vuln, cdp_flag, fg_flag)
 
-    return 0.0
+    return 0.0, '-'
 
 
 def exploitability_v3(cve) -> float:
@@ -171,7 +188,33 @@ def report_confidence_v3() -> float:
     return REPORT_CONFIDENCE_NOT_DEFINED_V3
 
 
-def calculate_environmental_score_v3(vuln) -> float:
+def cvss_vector_v3(vuln) -> str:
+    vector = F'AV:{vuln.cve.attack_vector_v3.value}/'
+    vector += F'AC:{vuln.cve.attack_complexity_v3.value}/'
+    vector += F'PR:{vuln.cve.privileges_required_v3.value}/'
+    vector += F'UI:{vuln.cve.user_interaction_v3.value}/'
+    vector += F'S:{vuln.cve.scope_v3}/'
+    vector += F'C:{vuln.cve.confidentiality_impact_v3.value}/'
+    vector += F'I:{vuln.cve.integrity_impact_v3.value}/'
+    vector += F'A:{vuln.cve.availability_impact_v3.value}/'
+
+    vector += F'CR:{vuln.asset.confidentiality_requirement.value}/'
+    vector += F'IR:{vuln.asset.integrity_requirement.value}/'
+    vector += F'AR:{vuln.asset.availability_requirement.value}/'
+
+    vector += F'MAV:{vuln.cve.attack_vector_v3.value}/'
+    vector += F'MAC:{vuln.cve.attack_complexity_v3.value}/'
+    vector += F'MPR:{vuln.cve.privileges_required_v3.value}/'
+    vector += F'MUI:{vuln.cve.user_interaction_v3.value}/'
+    vector += F'MS:{vuln.cve.scope_v3}/'
+    vector += F'MC:{vuln.cve.confidentiality_impact_v3.value}/'
+    vector += F'MI:{vuln.cve.integrity_impact_v3.value}/'
+    vector += F'MA:{vuln.cve.availability_impact_v3.value}'
+
+    return vector
+
+
+def calculate_environmental_score_v3(vuln) -> (float, str):
     if vuln.cve.base_score_v3:
         isc = impact_sub_score_v3(vuln.cve, vuln.asset)
         exploitability = exploitability_v3(vuln.cve)
@@ -188,8 +231,8 @@ def calculate_environmental_score_v3(vuln) -> float:
                                      exploit_code_maturity_v3() *
                                      remediation_level_v3() *
                                      report_confidence_v3())
-                     .quantize(decimal.Decimal('0.1'), rounding=decimal.ROUND_UP))
-    return 0.0
+                     .quantize(decimal.Decimal('0.1'), rounding=decimal.ROUND_UP)), cvss_vector_v3(vuln)
+    return 0.0, '-'
 
 
 def get_vulnerability_count(cve_id, vulnerability_index):
@@ -222,9 +265,15 @@ def _start_processing_per_tenant(vulnerability_index: str, asset_index: str):
     )
 
     for vuln in vuln_search.scan():
+        score, vector = calculate_environmental_score_v3(vuln)
+        vuln.environmental_score_vector_v3 = vector
+        vuln.environmental_score_v3 = score
+
         vuln_count = get_vulnerability_count(vuln.cve.id, vulnerability_index)
-        vuln.environmental_score_v3 = calculate_environmental_score_v3(vuln)
-        vuln.environmental_score_v2 = calculate_environmental_score_v2(vuln, vuln_count, assets_count)
+        score, vector = calculate_environmental_score_v2(vuln, vuln_count, assets_count)
+        vuln.environmental_score_vector_v2 = vector
+        vuln.environmental_score_v2 = score
+
         docs.append(vuln.to_dict(include_meta=True))
 
     if docs:

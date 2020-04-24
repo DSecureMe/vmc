@@ -10,7 +10,7 @@ start () {
     wait_for
     case $1 in
        worker)
-            echo "Starting VMC Scheduler"
+            echo "Starting VMC Worker"
             celery worker -A vmc.config.celery --concurrency=4
             ;;
        scheduler)

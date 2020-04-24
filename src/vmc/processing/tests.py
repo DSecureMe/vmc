@@ -61,46 +61,46 @@ class CalculateEnvironmentalScoreHelpersTests(TestCase):
         self.asset.availability_requirement = ar
 
     @parameterized.expand([
-        (AssetImpact.NOT_DEFINED, AssetImpact.NOT_DEFINED, AssetImpact.NOT_DEFINED, tasks.COLLATERAL_DAMAGE_POTENTIAL_NOT_DEFINED_V2),
+        (AssetImpact.NOT_DEFINED, AssetImpact.NOT_DEFINED, AssetImpact.NOT_DEFINED, (tasks.COLLATERAL_DAMAGE_POTENTIAL_NOT_DEFINED_V2, 'ND')),
 
-        (AssetImpact.NOT_DEFINED, AssetImpact.NOT_DEFINED, AssetImpact.LOW, tasks.COLLATERAL_DAMAGE_POTENTIAL_NONE_V2),
-        (AssetImpact.LOW, AssetImpact.NOT_DEFINED, AssetImpact.NOT_DEFINED, tasks.COLLATERAL_DAMAGE_POTENTIAL_NONE_V2),
-        (AssetImpact.NOT_DEFINED, AssetImpact.LOW, AssetImpact.NOT_DEFINED, tasks.COLLATERAL_DAMAGE_POTENTIAL_NONE_V2),
+        (AssetImpact.NOT_DEFINED, AssetImpact.NOT_DEFINED, AssetImpact.LOW, (tasks.COLLATERAL_DAMAGE_POTENTIAL_NONE_V2, 'N')),
+        (AssetImpact.LOW, AssetImpact.NOT_DEFINED, AssetImpact.NOT_DEFINED, (tasks.COLLATERAL_DAMAGE_POTENTIAL_NONE_V2, 'N')),
+        (AssetImpact.NOT_DEFINED, AssetImpact.LOW, AssetImpact.NOT_DEFINED, (tasks.COLLATERAL_DAMAGE_POTENTIAL_NONE_V2, 'N')),
 
-        (AssetImpact.LOW, AssetImpact.LOW, AssetImpact.NOT_DEFINED, tasks.COLLATERAL_DAMAGE_POTENTIAL_LOW_V2),
-        (AssetImpact.NOT_DEFINED, AssetImpact.LOW, AssetImpact.LOW, tasks.COLLATERAL_DAMAGE_POTENTIAL_LOW_V2),
-        (AssetImpact.LOW, AssetImpact.NOT_DEFINED, AssetImpact.LOW, tasks.COLLATERAL_DAMAGE_POTENTIAL_LOW_V2),
-        (AssetImpact.LOW, AssetImpact.LOW, AssetImpact.LOW, tasks.COLLATERAL_DAMAGE_POTENTIAL_LOW_V2),
+        (AssetImpact.LOW, AssetImpact.LOW, AssetImpact.NOT_DEFINED, (tasks.COLLATERAL_DAMAGE_POTENTIAL_LOW_V2, 'L')),
+        (AssetImpact.NOT_DEFINED, AssetImpact.LOW, AssetImpact.LOW, (tasks.COLLATERAL_DAMAGE_POTENTIAL_LOW_V2, 'L')),
+        (AssetImpact.LOW, AssetImpact.NOT_DEFINED, AssetImpact.LOW, (tasks.COLLATERAL_DAMAGE_POTENTIAL_LOW_V2, 'L')),
+        (AssetImpact.LOW, AssetImpact.LOW, AssetImpact.LOW, (tasks.COLLATERAL_DAMAGE_POTENTIAL_LOW_V2, 'L')),
 
-        (AssetImpact.MEDIUM, AssetImpact.LOW, AssetImpact.NOT_DEFINED, tasks.COLLATERAL_DAMAGE_POTENTIAL_LOW_MEDIUM_V2),
-        (AssetImpact.LOW, AssetImpact.MEDIUM, AssetImpact.NOT_DEFINED, tasks.COLLATERAL_DAMAGE_POTENTIAL_LOW_MEDIUM_V2),
-        (AssetImpact.NOT_DEFINED, AssetImpact.LOW, AssetImpact.MEDIUM, tasks.COLLATERAL_DAMAGE_POTENTIAL_LOW_MEDIUM_V2),
-        (AssetImpact.LOW, AssetImpact.LOW, AssetImpact.MEDIUM, tasks.COLLATERAL_DAMAGE_POTENTIAL_LOW_MEDIUM_V2),
-        (AssetImpact.LOW, AssetImpact.MEDIUM, AssetImpact.MEDIUM, tasks.COLLATERAL_DAMAGE_POTENTIAL_LOW_MEDIUM_V2),
-        (AssetImpact.MEDIUM, AssetImpact.MEDIUM, AssetImpact.MEDIUM, tasks.COLLATERAL_DAMAGE_POTENTIAL_LOW_MEDIUM_V2),
+        (AssetImpact.MEDIUM, AssetImpact.LOW, AssetImpact.NOT_DEFINED, (tasks.COLLATERAL_DAMAGE_POTENTIAL_LOW_MEDIUM_V2, 'LM')),
+        (AssetImpact.LOW, AssetImpact.MEDIUM, AssetImpact.NOT_DEFINED, (tasks.COLLATERAL_DAMAGE_POTENTIAL_LOW_MEDIUM_V2, 'LM')),
+        (AssetImpact.NOT_DEFINED, AssetImpact.LOW, AssetImpact.MEDIUM, (tasks.COLLATERAL_DAMAGE_POTENTIAL_LOW_MEDIUM_V2, 'LM')),
+        (AssetImpact.LOW, AssetImpact.LOW, AssetImpact.MEDIUM, (tasks.COLLATERAL_DAMAGE_POTENTIAL_LOW_MEDIUM_V2, 'LM')),
+        (AssetImpact.LOW, AssetImpact.MEDIUM, AssetImpact.MEDIUM, (tasks.COLLATERAL_DAMAGE_POTENTIAL_LOW_MEDIUM_V2, 'LM')),
+        (AssetImpact.MEDIUM, AssetImpact.MEDIUM, AssetImpact.MEDIUM, (tasks.COLLATERAL_DAMAGE_POTENTIAL_LOW_MEDIUM_V2, 'LM')),
 
-        (AssetImpact.MEDIUM, AssetImpact.LOW, AssetImpact.HIGH, tasks.COLLATERAL_DAMAGE_POTENTIAL_MEDIUM_HIGH_V2),
-        (AssetImpact.LOW, AssetImpact.HIGH, AssetImpact.NOT_DEFINED, tasks.COLLATERAL_DAMAGE_POTENTIAL_MEDIUM_HIGH_V2),
-        (AssetImpact.HIGH, AssetImpact.LOW, AssetImpact.MEDIUM, tasks.COLLATERAL_DAMAGE_POTENTIAL_MEDIUM_HIGH_V2),
-        (AssetImpact.HIGH, AssetImpact.HIGH, AssetImpact.NOT_DEFINED, tasks.COLLATERAL_DAMAGE_POTENTIAL_MEDIUM_HIGH_V2),
-        (AssetImpact.HIGH, AssetImpact.MEDIUM, AssetImpact.MEDIUM, tasks.COLLATERAL_DAMAGE_POTENTIAL_MEDIUM_HIGH_V2),
-        (AssetImpact.HIGH, AssetImpact.HIGH, AssetImpact.MEDIUM, tasks.COLLATERAL_DAMAGE_POTENTIAL_MEDIUM_HIGH_V2),
+        (AssetImpact.MEDIUM, AssetImpact.LOW, AssetImpact.HIGH, (tasks.COLLATERAL_DAMAGE_POTENTIAL_MEDIUM_HIGH_V2, 'MH')),
+        (AssetImpact.LOW, AssetImpact.HIGH, AssetImpact.NOT_DEFINED, (tasks.COLLATERAL_DAMAGE_POTENTIAL_MEDIUM_HIGH_V2, 'MH')),
+        (AssetImpact.HIGH, AssetImpact.LOW, AssetImpact.MEDIUM, (tasks.COLLATERAL_DAMAGE_POTENTIAL_MEDIUM_HIGH_V2, 'MH')),
+        (AssetImpact.HIGH, AssetImpact.HIGH, AssetImpact.NOT_DEFINED, (tasks.COLLATERAL_DAMAGE_POTENTIAL_MEDIUM_HIGH_V2, 'MH')),
+        (AssetImpact.HIGH, AssetImpact.MEDIUM, AssetImpact.MEDIUM, (tasks.COLLATERAL_DAMAGE_POTENTIAL_MEDIUM_HIGH_V2, 'MH')),
+        (AssetImpact.HIGH, AssetImpact.HIGH, AssetImpact.MEDIUM, (tasks.COLLATERAL_DAMAGE_POTENTIAL_MEDIUM_HIGH_V2, 'MH')),
 
-        (AssetImpact.HIGH, AssetImpact.HIGH, AssetImpact.HIGH, tasks.COLLATERAL_DAMAGE_POTENTIAL_HIGH_V2),
+        (AssetImpact.HIGH, AssetImpact.HIGH, AssetImpact.HIGH, (tasks.COLLATERAL_DAMAGE_POTENTIAL_HIGH_V2, 'H')),
     ])
     def test_collateral_damage_potential_v2(self, cr, ir, ar, expected):
         self.prepare_asset(cr, ir, ar)
         self.assertEqual(tasks.collateral_damage_potential_v2(self.asset), expected)
 
     @parameterized.expand([
-        (0, 1, tasks.TARGET_DISTRIBUTION_NONE_V2),
-        (1, 1000, tasks.TARGET_DISTRIBUTION_NONE_V2),
-        (10, 1000, tasks.TARGET_DISTRIBUTION_LOW_V2),
-        (250, 1000, tasks.TARGET_DISTRIBUTION_LOW_V2),
-        (251, 1000, tasks.TARGET_DISTRIBUTION_MEDIUM_V2),
-        (750, 1000, tasks.TARGET_DISTRIBUTION_MEDIUM_V2),
-        (751, 1000, tasks.TARGET_DISTRIBUTION_HIGH_V2),
-        (1000, 1000, tasks.TARGET_DISTRIBUTION_HIGH_V2),
+        (0, 1, (tasks.TARGET_DISTRIBUTION_NONE_V2, 'N')),
+        (1, 1000, (tasks.TARGET_DISTRIBUTION_NONE_V2, 'N')),
+        (10, 1000, (tasks.TARGET_DISTRIBUTION_LOW_V2, 'L')),
+        (250, 1000, (tasks.TARGET_DISTRIBUTION_LOW_V2, 'L')),
+        (251, 1000, (tasks.TARGET_DISTRIBUTION_MEDIUM_V2, 'M')),
+        (750, 1000, (tasks.TARGET_DISTRIBUTION_MEDIUM_V2, 'M')),
+        (751, 1000, (tasks.TARGET_DISTRIBUTION_HIGH_V2, 'H')),
+        (1000, 1000, (tasks.TARGET_DISTRIBUTION_HIGH_V2, 'H')),
     ])
     def test_target_distribution_v2(self, vuln_count, assets_cunt, expected):
         self.assertEqual(tasks.target_distribution_v2(vuln_count, assets_cunt), expected)
@@ -115,14 +115,14 @@ class CalculateEnvironmentalScoreHelpersTests(TestCase):
         self.assertEqual(tasks.temporal_exploitability_v2(), tasks.TEMPORAL_EXPLOITABILITY_NOT_DEFINED_V2)
 
     @parameterized.expand([
-        (AssetImpact.LOW, AssetImpact.LOW, AssetImpact.LOW, 5.4),
-        (AssetImpact.MEDIUM, AssetImpact.LOW, AssetImpact.LOW, 7.0),
-        (AssetImpact.LOW, AssetImpact.MEDIUM, AssetImpact.LOW, 7.0),
-        (AssetImpact.LOW, AssetImpact.LOW, AssetImpact.MEDIUM, 7.0),
-        (AssetImpact.MEDIUM, AssetImpact.MEDIUM, AssetImpact.LOW, 7.4),
-        (AssetImpact.MEDIUM, AssetImpact.MEDIUM, AssetImpact.MEDIUM, 7.8),
-        (AssetImpact.HIGH, AssetImpact.HIGH, AssetImpact.HIGH, 9.1),
-        (AssetImpact.NOT_DEFINED, AssetImpact.HIGH, AssetImpact.LOW, 8.1),
+        (AssetImpact.LOW, AssetImpact.LOW, AssetImpact.LOW, (5.4, 'AV:N/AC:M/Au:N/C:P/I:P/A:P/CDP:L/TD:H/CR:L/IR:L/AR:L')),
+        (AssetImpact.MEDIUM, AssetImpact.LOW, AssetImpact.LOW, (7.0, 'AV:N/AC:M/Au:N/C:P/I:P/A:P/CDP:LM/TD:H/CR:M/IR:L/AR:L')),
+        (AssetImpact.LOW, AssetImpact.MEDIUM, AssetImpact.LOW, (7.0, 'AV:N/AC:M/Au:N/C:P/I:P/A:P/CDP:LM/TD:H/CR:L/IR:M/AR:L')),
+        (AssetImpact.LOW, AssetImpact.LOW, AssetImpact.MEDIUM, (7.0, 'AV:N/AC:M/Au:N/C:P/I:P/A:P/CDP:LM/TD:H/CR:L/IR:L/AR:M')),
+        (AssetImpact.MEDIUM, AssetImpact.MEDIUM, AssetImpact.LOW, (7.4, 'AV:N/AC:M/Au:N/C:P/I:P/A:P/CDP:LM/TD:H/CR:M/IR:M/AR:L')),
+        (AssetImpact.MEDIUM, AssetImpact.MEDIUM, AssetImpact.MEDIUM, (7.8, 'AV:N/AC:M/Au:N/C:P/I:P/A:P/CDP:LM/TD:H/CR:M/IR:M/AR:M')),
+        (AssetImpact.HIGH, AssetImpact.HIGH, AssetImpact.HIGH, (9.1, 'AV:N/AC:M/Au:N/C:P/I:P/A:P/CDP:H/TD:H/CR:H/IR:H/AR:H')),
+        (AssetImpact.NOT_DEFINED, AssetImpact.HIGH, AssetImpact.LOW, (8.1, 'AV:N/AC:M/Au:N/C:P/I:P/A:P/CDP:MH/TD:H/CR:N/IR:H/AR:L')),
     ])
     def test_calculate_environmental_score_v2(self, cr, ir, ar, expected):
         self.prepare_asset(cr, ir, ar)
@@ -158,14 +158,22 @@ class CalculateEnvironmentalScoreHelpersTests(TestCase):
         self.assertEqual(tasks.report_confidence_v3(), tasks.REPORT_CONFIDENCE_NOT_DEFINED_V3)
 
     @parameterized.expand([
-        (metrics.ScopeV3.UNCHANGED, AssetImpact.LOW, AssetImpact.LOW, AssetImpact.LOW, 6.9),
-        (metrics.ScopeV3.CHANGED, AssetImpact.MEDIUM, AssetImpact.LOW, AssetImpact.LOW, 9.1),
-        (metrics.ScopeV3.UNCHANGED, AssetImpact.LOW, AssetImpact.MEDIUM, AssetImpact.LOW, 7.8),
-        (metrics.ScopeV3.CHANGED, AssetImpact.LOW, AssetImpact.LOW, AssetImpact.MEDIUM, 9.1),
-        (metrics.ScopeV3.UNCHANGED, AssetImpact.MEDIUM, AssetImpact.MEDIUM, AssetImpact.LOW, 8.4),
-        (metrics.ScopeV3.CHANGED, AssetImpact.MEDIUM, AssetImpact.MEDIUM, AssetImpact.MEDIUM, 9.6),
-        (metrics.ScopeV3.UNCHANGED, AssetImpact.HIGH, AssetImpact.HIGH, AssetImpact.HIGH, 8.8),
-        (metrics.ScopeV3.CHANGED, AssetImpact.NOT_DEFINED, AssetImpact.HIGH, AssetImpact.LOW, 9.6),
+        (metrics.ScopeV3.UNCHANGED, AssetImpact.LOW, AssetImpact.LOW, AssetImpact.LOW,
+         (6.9, 'AV:N/AC:L/PR:N/UI:R/S:U/C:H/I:H/A:H/CR:L/IR:L/AR:L/MAV:N/MAC:L/MPR:N/MUI:R/MS:U/MC:H/MI:H/MA:H')),
+        (metrics.ScopeV3.CHANGED, AssetImpact.MEDIUM, AssetImpact.LOW, AssetImpact.LOW,
+         (9.1, 'AV:N/AC:L/PR:N/UI:R/S:C/C:H/I:H/A:H/CR:M/IR:L/AR:L/MAV:N/MAC:L/MPR:N/MUI:R/MS:C/MC:H/MI:H/MA:H')),
+        (metrics.ScopeV3.UNCHANGED, AssetImpact.LOW, AssetImpact.MEDIUM, AssetImpact.LOW,
+         (7.8, 'AV:N/AC:L/PR:N/UI:R/S:U/C:H/I:H/A:H/CR:L/IR:M/AR:L/MAV:N/MAC:L/MPR:N/MUI:R/MS:U/MC:H/MI:H/MA:H')),
+        (metrics.ScopeV3.CHANGED, AssetImpact.LOW, AssetImpact.LOW, AssetImpact.MEDIUM,
+         (9.1, 'AV:N/AC:L/PR:N/UI:R/S:C/C:H/I:H/A:H/CR:L/IR:L/AR:M/MAV:N/MAC:L/MPR:N/MUI:R/MS:C/MC:H/MI:H/MA:H')),
+        (metrics.ScopeV3.UNCHANGED, AssetImpact.MEDIUM, AssetImpact.MEDIUM, AssetImpact.LOW,
+         (8.4, 'AV:N/AC:L/PR:N/UI:R/S:U/C:H/I:H/A:H/CR:M/IR:M/AR:L/MAV:N/MAC:L/MPR:N/MUI:R/MS:U/MC:H/MI:H/MA:H')),
+        (metrics.ScopeV3.CHANGED, AssetImpact.MEDIUM, AssetImpact.MEDIUM, AssetImpact.MEDIUM,
+         (9.6, 'AV:N/AC:L/PR:N/UI:R/S:C/C:H/I:H/A:H/CR:M/IR:M/AR:M/MAV:N/MAC:L/MPR:N/MUI:R/MS:C/MC:H/MI:H/MA:H')),
+        (metrics.ScopeV3.UNCHANGED, AssetImpact.HIGH, AssetImpact.HIGH, AssetImpact.HIGH,
+         (8.8, 'AV:N/AC:L/PR:N/UI:R/S:U/C:H/I:H/A:H/CR:H/IR:H/AR:H/MAV:N/MAC:L/MPR:N/MUI:R/MS:U/MC:H/MI:H/MA:H')),
+        (metrics.ScopeV3.CHANGED, AssetImpact.NOT_DEFINED, AssetImpact.HIGH, AssetImpact.LOW,
+         (9.6, 'AV:N/AC:L/PR:N/UI:R/S:C/C:H/I:H/A:H/CR:N/IR:H/AR:L/MAV:N/MAC:L/MPR:N/MUI:R/MS:C/MC:H/MI:H/MA:H')),
     ])
     def test_environmental_score_v3(self, scope, cr, ir, ar, expected):
         self.prepare_asset(cr, ir, ar)
@@ -219,10 +227,14 @@ class CalculateEnvironmentalScore(ESTestCase, TestCase):
 
         self.assertEqual(vuln_search.count(), 300)
         self.assertEqual(vuln_search.filter('exists', field='environmental_score_v2').count(), 0)
+        self.assertEqual(vuln_search.filter('exists', field='environmental_score_vector_v2').count(), 0)
         self.assertEqual(vuln_search.filter('exists', field='environmental_score_v3').count(), 0)
+        self.assertEqual(vuln_search.filter('exists', field='environmental_score_vector_v3').count(), 0)
 
         tasks._start_processing_per_tenant(VulnerabilityDocument.Index.name, AssetDocument.Index.name)
 
         self.assertEqual(vuln_search.count(), 300)
         self.assertEqual(vuln_search.filter('exists', field='environmental_score_v2').count(), 100)
+        self.assertEqual(vuln_search.filter('exists', field='environmental_score_vector_v2').count(), 100)
         self.assertEqual(vuln_search.filter('exists', field='environmental_score_v3').count(), 100)
+        self.assertEqual(vuln_search.filter('exists', field='environmental_score_vector_v3').count(), 100)
