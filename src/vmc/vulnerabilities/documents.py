@@ -41,6 +41,8 @@ class VulnerabilityDocument(Document):
     environmental_score_vector_v2 = Keyword()
     environmental_score_v3 = Float()
     environmental_score_vector_v3 = Keyword()
+    environmental_score_v3_td = Float()
+    environmental_score_vector_v3_td = Keyword()
     cve = Object(CveInnerDoc, include_in_parent=True)
     asset = Object(AssetInnerDoc, include_in_parent=True)
     tags = Keyword()

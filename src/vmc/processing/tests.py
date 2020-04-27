@@ -159,21 +159,21 @@ class CalculateEnvironmentalScoreHelpersTests(TestCase):
 
     @parameterized.expand([
         (metrics.ScopeV3.UNCHANGED, AssetImpact.LOW, AssetImpact.LOW, AssetImpact.LOW,
-         (6.9, 'AV:N/AC:L/PR:N/UI:R/S:U/C:H/I:H/A:H/CR:L/IR:L/AR:L/MAV:N/MAC:L/MPR:N/MUI:R/MS:U/MC:H/MI:H/MA:H')),
+         (6.9, 'AV:N/AC:L/PR:N/UI:R/S:U/C:H/I:H/A:H/CR:L/IR:L/AR:L')),
         (metrics.ScopeV3.CHANGED, AssetImpact.MEDIUM, AssetImpact.LOW, AssetImpact.LOW,
-         (9.1, 'AV:N/AC:L/PR:N/UI:R/S:C/C:H/I:H/A:H/CR:M/IR:L/AR:L/MAV:N/MAC:L/MPR:N/MUI:R/MS:C/MC:H/MI:H/MA:H')),
+         (9.1, 'AV:N/AC:L/PR:N/UI:R/S:C/C:H/I:H/A:H/CR:M/IR:L/AR:L')),
         (metrics.ScopeV3.UNCHANGED, AssetImpact.LOW, AssetImpact.MEDIUM, AssetImpact.LOW,
-         (7.8, 'AV:N/AC:L/PR:N/UI:R/S:U/C:H/I:H/A:H/CR:L/IR:M/AR:L/MAV:N/MAC:L/MPR:N/MUI:R/MS:U/MC:H/MI:H/MA:H')),
+         (7.8, 'AV:N/AC:L/PR:N/UI:R/S:U/C:H/I:H/A:H/CR:L/IR:M/AR:L')),
         (metrics.ScopeV3.CHANGED, AssetImpact.LOW, AssetImpact.LOW, AssetImpact.MEDIUM,
-         (9.1, 'AV:N/AC:L/PR:N/UI:R/S:C/C:H/I:H/A:H/CR:L/IR:L/AR:M/MAV:N/MAC:L/MPR:N/MUI:R/MS:C/MC:H/MI:H/MA:H')),
+         (9.1, 'AV:N/AC:L/PR:N/UI:R/S:C/C:H/I:H/A:H/CR:L/IR:L/AR:M')),
         (metrics.ScopeV3.UNCHANGED, AssetImpact.MEDIUM, AssetImpact.MEDIUM, AssetImpact.LOW,
-         (8.4, 'AV:N/AC:L/PR:N/UI:R/S:U/C:H/I:H/A:H/CR:M/IR:M/AR:L/MAV:N/MAC:L/MPR:N/MUI:R/MS:U/MC:H/MI:H/MA:H')),
+         (8.4, 'AV:N/AC:L/PR:N/UI:R/S:U/C:H/I:H/A:H/CR:M/IR:M/AR:L')),
         (metrics.ScopeV3.CHANGED, AssetImpact.MEDIUM, AssetImpact.MEDIUM, AssetImpact.MEDIUM,
-         (9.6, 'AV:N/AC:L/PR:N/UI:R/S:C/C:H/I:H/A:H/CR:M/IR:M/AR:M/MAV:N/MAC:L/MPR:N/MUI:R/MS:C/MC:H/MI:H/MA:H')),
+         (9.6, 'AV:N/AC:L/PR:N/UI:R/S:C/C:H/I:H/A:H/CR:M/IR:M/AR:M')),
         (metrics.ScopeV3.UNCHANGED, AssetImpact.HIGH, AssetImpact.HIGH, AssetImpact.HIGH,
-         (8.8, 'AV:N/AC:L/PR:N/UI:R/S:U/C:H/I:H/A:H/CR:H/IR:H/AR:H/MAV:N/MAC:L/MPR:N/MUI:R/MS:U/MC:H/MI:H/MA:H')),
+         (8.8, 'AV:N/AC:L/PR:N/UI:R/S:U/C:H/I:H/A:H/CR:H/IR:H/AR:H')),
         (metrics.ScopeV3.CHANGED, AssetImpact.NOT_DEFINED, AssetImpact.HIGH, AssetImpact.LOW,
-         (9.6, 'AV:N/AC:L/PR:N/UI:R/S:C/C:H/I:H/A:H/CR:N/IR:H/AR:L/MAV:N/MAC:L/MPR:N/MUI:R/MS:C/MC:H/MI:H/MA:H')),
+         (9.6, 'AV:N/AC:L/PR:N/UI:R/S:C/C:H/I:H/A:H/CR:N/IR:H/AR:L')),
     ])
     def test_environmental_score_v3(self, scope, cr, ir, ar, expected):
         self.prepare_asset(cr, ir, ar)

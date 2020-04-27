@@ -200,16 +200,7 @@ def cvss_vector_v3(vuln) -> str:
 
     vector += F'CR:{vuln.asset.confidentiality_requirement.value}/'
     vector += F'IR:{vuln.asset.integrity_requirement.value}/'
-    vector += F'AR:{vuln.asset.availability_requirement.value}/'
-
-    vector += F'MAV:{vuln.cve.attack_vector_v3.value}/'
-    vector += F'MAC:{vuln.cve.attack_complexity_v3.value}/'
-    vector += F'MPR:{vuln.cve.privileges_required_v3.value}/'
-    vector += F'MUI:{vuln.cve.user_interaction_v3.value}/'
-    vector += F'MS:{vuln.cve.scope_v3}/'
-    vector += F'MC:{vuln.cve.confidentiality_impact_v3.value}/'
-    vector += F'MI:{vuln.cve.integrity_impact_v3.value}/'
-    vector += F'MA:{vuln.cve.availability_impact_v3.value}'
+    vector += F'AR:{vuln.asset.availability_requirement.value}'
 
     return vector
 
@@ -270,6 +261,11 @@ def _start_processing_per_tenant(vulnerability_index: str, asset_index: str):
         vuln.environmental_score_v3 = score
 
         vuln_count = get_vulnerability_count(vuln.cve.id, vulnerability_index)
+        tg, fg_flag = target_distribution_v2(vuln_count, assets_count)
+
+        vuln.environmental_score_v3_td = round(score * tg, 1)
+        vuln.environmental_score_vector_v3_td = F'{vector}/TD:{fg_flag}'
+
         score, vector = calculate_environmental_score_v2(vuln, vuln_count, assets_count)
         vuln.environmental_score_vector_v2 = vector
         vuln.environmental_score_v2 = score
