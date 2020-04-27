@@ -20,13 +20,28 @@
 
 from django.db import models
 from vmc.common.models import BaseModel
+from vmc.elasticsearch.models import Tenant
 
 
 class Config(BaseModel):
+    SCHEMA = (
+        ('http', 'http'),
+        ('https', 'https')
+    )
     name = models.CharField(max_length=128)
-    url = models.CharField(max_length=128)
+    schema = models.CharField(choices=SCHEMA, default='http', max_length=5)
+    host = models.CharField(max_length=128)
+    port = models.PositiveSmallIntegerField()
     username = models.TextField()
     password = models.TextField()
+    insecure = models.BooleanField(default=False)
+    tenant = models.ForeignKey(Tenant, null=True, blank=True, related_name='tenant', on_delete=models.DO_NOTHING)
+
+    class Meta:
+        db_table = 'ralph_config'
 
     def __str__(self):
         return self.name
+
+    def get_url(self) -> str:
+        return F'{self.schema}://{self.host}:{self.port}'

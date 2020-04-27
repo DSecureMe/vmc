@@ -24,10 +24,11 @@ from unittest.mock import patch
 
 from django.contrib.auth.models import User
 from django.test import TestCase, LiveServerTestCase
-from elasticsearch_dsl import Search
 from parameterized import parameterized
 
-from vmc.common.elastic.tests import ESTestCase
+from vmc.common.tests import get_fixture_location
+from vmc.elasticsearch import Search
+from vmc.elasticsearch.tests import ESTestCase
 from vmc.config.test_settings import elastic_configured
 from vmc.knowledge_base.documents import CveDocument, CweDocument
 
@@ -36,7 +37,30 @@ from vmc.knowledge_base import metrics
 from vmc.knowledge_base.utils import calculate_base_score_v2, calculate_base_score_v3
 from vmc.knowledge_base.tasks import update_exploits, update_cwe, update_cve
 
-from vmc.common.tests import get_fixture_location
+
+def create_cve(cve_id='CVE-2017-0002', save=True) -> CveDocument:
+    cve = CveDocument(
+        id=cve_id,
+        base_score_v2=6.8,
+        access_vector_v2=metrics.AccessVectorV2.NETWORK,
+        access_complexity_v2=metrics.AccessComplexityV2.MEDIUM,
+        authentication_v2=metrics.AuthenticationV2.NONE,
+        confidentiality_impact_v2=metrics.ImpactV2.PARTIAL,
+        integrity_impact_v2=metrics.ImpactV2.PARTIAL,
+        availability_impact_v2=metrics.ImpactV2.PARTIAL,
+        base_score_v3=8.8,
+        attack_vector_v3=metrics.AttackVectorV3.NETWORK,
+        attack_complexity_v3=metrics.AttackComplexityV3.LOW,
+        privileges_required_v3=metrics.PrivilegesRequiredV3.NONE,
+        user_interaction_v3=metrics.UserInteractionV3.REQUIRED,
+        scope_v3=metrics.ScopeV3.UNCHANGED,
+        confidentiality_impact_v3=metrics.ImpactV3.HIGH,
+        integrity_impact_v3=metrics.ImpactV3.HIGH,
+        availability_impact_v3=metrics.ImpactV3.HIGH
+    )
+    if save:
+        cve.save(refresh=True)
+    return cve
 
 
 @skipIf(not elastic_configured(), 'Skip if elasticsearch is not configured')
@@ -148,7 +172,9 @@ class CveFactoryTest(ESTestCase, TestCase):
         with open(get_fixture_location(__file__, 'nvdcve-1.0-2017.json')) as handle:
             CveFactory.process(handle)
 
-        self.assertEqual(CveDocument.search().filter('term', id='CVE-2017-0002').count(), 2)
+        self.assertEqual(CveDocument.search().filter('term', id='CVE-2017-0002').count(), 1)
+        new_cve = CveDocument.search().filter('term', id='CVE-2017-0002').execute().hits[0]
+        self.assertTrue(cve.last_modified_date != new_cve.last_modified_date)
 
     def test_cwe_update(self):
         cwe = CweDocument.search().filter('term', id='CWE-200').execute().hits[0]
@@ -156,9 +182,8 @@ class CveFactoryTest(ESTestCase, TestCase):
         cwe.save(refresh=True)
 
         cve = CveDocument.search().filter('term', id='CVE-2017-0008').sort('-modified_date').execute().hits
-        self.assertEqual(len(cve), 2)
+        self.assertEqual(len(cve), 1)
         self.assertEqual(cve[0].cwe.name, 'Changed')
-        self.assertEqual(cve[0].change_reason, 'CWE Updated')
 
     def test_should_not_update(self):
         self.assertEqual(Search().index(CveDocument.Index.name).count(), 2)

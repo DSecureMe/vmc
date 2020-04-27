@@ -22,7 +22,6 @@ import time
 import socket
 import yaml
 from pathlib import Path
-from urllib.parse import urlparse
 
 CFG = None
 
@@ -38,57 +37,34 @@ def wait_for_port(port, host='localhost', timeout=120.0):
     start_time = time.perf_counter()
     while True:
         try:
-            print('Checking for {} {}'.format(host, port))
+            print(F'Checking for {host} {port}')
             with socket.create_connection((host, port), timeout=timeout):
                 break
         except OSError:
-            print('Unable to connect to {} {}, waiting...'.format(host, port))
+            print(F'Unable to connect to {host} {port}, waiting...')
             time.sleep(5.0)
             if time.perf_counter() - start_time >= timeout:
-                print('Waited too long for the port {} on host {} to start accepting connections.'.format(port, host))
+                print(F'Waited too long for the port {port} on host {host} to start accepting connections.')
                 return False
-    print('Host {} and port {} is ready'.format(host, port))
+    print(F'Host {host} and port {port} is ready')
     return True
 
 
 def wait_for_socket(unix_socket, timeout=60.0):
     start_time = time.perf_counter()
     while True:
-        print('Checking for {} '.format(unix_socket))
+        print(F'Checking for {unix_socket}')
         if Path(unix_socket).is_socket():
             break
         else:
-            print('Unable to connect to {}, waiting...'.format(unix_socket))
+            print(F'Unable to connect to {unix_socket}, waiting...')
             time.sleep(5.0)
             if time.perf_counter() - start_time >= timeout:
-                print('Waited too long for the unix socket {}.'.format(unix_socket))
+                print(F'Waited too long for the unix socket {unix_socket}.')
                 return False
-    print('Socket {} is ready'.format(unix_socket))
+    print(F'Socket {unix_socket} is ready')
     return True
 
 
 def get_config(key, default):
     return CFG[key] if CFG and key in CFG else default
-
-
-def wait_for_db_ready():
-    db_socket = get_config('database.unix_socket', '')
-    if db_socket:
-        return wait_for_socket(db_socket)
-    return wait_for_port(
-        get_config('database.port', 5432),
-        get_config('database.host', 'localhost')
-    )
-
-
-def wait_for_rabbit_ready():
-    return wait_for_port(
-        get_config('rabbitmq.port', 5672),
-        get_config('rabbitmq.host', 'localhost')
-    )
-
-
-def wait_for_es_ready():
-    es_config = get_config('elasticsearch.hosts', ["http://elasticsearch:9200"])
-    es_config = urlparse(es_config[0])
-    return wait_for_port(es_config.port, es_config.hostname)

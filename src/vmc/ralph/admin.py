@@ -18,16 +18,27 @@
  *
 """
 from django.contrib import admin
+from django.forms import PasswordInput, ModelForm
 from django.http import HttpResponseRedirect
 from django.urls import path
 
 from vmc.ralph.models import Config
-from vmc.ralph.tasks import load_all_assets
+from vmc.ralph.tasks import start_update_assets
+
+
+class ConfigForm(ModelForm):
+    class Meta:
+        model = Config
+        widgets = {
+            'password': PasswordInput(),
+        }
+        fields = ['name', 'schema', 'host', 'port', 'username', 'insecure', 'password', 'tenant']
 
 
 class ConfigAdmin(admin.ModelAdmin):
     change_list_template = "ralph/admin/change_list.html"
-    list_display = ('name', 'url')
+    list_display = ('name', 'host', 'tenant')
+    form = ConfigForm
 
     def get_urls(self):
         urls = super().get_urls()
@@ -41,7 +52,7 @@ class ConfigAdmin(admin.ModelAdmin):
         return custom_urls + urls
 
     def import_data(self, request):
-        load_all_assets.delay()
+        start_update_assets.delay()
         self.message_user(request, "Importing started.")
         return HttpResponseRedirect("../")
 

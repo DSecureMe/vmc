@@ -24,6 +24,10 @@ from datetime import datetime
 
 from defusedxml.lxml import RestrictedElement
 from django.utils.dateparse import parse_datetime
+
+from elasticsearch.helpers import bulk
+from elasticsearch_dsl.connections import get_connection
+
 from vmc.knowledge_base.documents import CweDocument, CveDocument, CpeInnerDoc, ExploitInnerDoc
 
 from vmc.common.xml import iter_elements_by_name
@@ -49,8 +53,7 @@ class CWEFactory:
                 setattr(cwe, field, parser(item))
 
         if old.hits and cwe.has_changed(old.hits[0]):
-            cwe.created_date = old.hits[0].created_date
-            cwe.save(refresh=True)
+            old.hits[0].update(cwe, refresh=True)
         elif not old.hits:
             cwe.save(refresh=True)
 
@@ -140,19 +143,17 @@ class CveFactory:
                         try:
                             setattr(cve, field, parser(item))
                         except Exception as err:
-                            logging.debug('cve id %s, field %s, err %s', cve.id, field, err)
+                            logging.debug(F'cve id {cve.id}, field {field}, err {err}')
 
                 for cpe in CveFactory.get_cpe(item):
                     cve.cpe.append(cpe)
-
                 if old.hits and cve.has_changed(old.hits[0]):
-                    cve.modified_date = old.hits[0].modified_date
-                    cve.save(refresh=True)
+                    old.hits[0].update(cve, refresh=True)
                 else:
                     cve.save(refresh=True)
             return None
 
-        logging.info('cve id %s is rejected', CveFactory.get_id(item))
+        logging.info(F'cve id {CveFactory.get_id(item)} is rejected')
         return None
 
     @staticmethod
@@ -294,12 +295,18 @@ class ExploitFactory:
 
     @staticmethod
     def process(handle):
+        docs = []
         data = json.loads(handle)
+
         for key, value in data['cves'].items():
-            ExploitFactory.create(key, value)
+            doc = ExploitFactory.create(key, value)
+            if doc:
+                docs.append(doc.to_dict(include_meta=True))
+
+        bulk(get_connection(), docs, refresh=True, index=CveDocument.Index.name)
 
     @staticmethod
-    def create(key: str, value: dict) -> None:
+    def create(key: str, value: dict) -> [CveDocument, None]:
         try:
             exploits = []
             for exp_id in value['refmap']['exploit-db']:
@@ -309,8 +316,9 @@ class ExploitFactory:
             pass
 
         else:
-            result = CveDocument.search().filter('term', id=key).sort('-last_modified_date')[0].execute()
+            result = CveDocument.search().filter('term', id=key)[0].execute()
             if result.hits and result.hits[0].exploits != exploits:
                 result.hits[0].exploits = exploits
-                result.hits[0].save(refresh=True)
+                return result.hits[0]
+        return None
 

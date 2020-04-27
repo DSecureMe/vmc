@@ -19,25 +19,51 @@
 """
 
 import logging
-from celery import shared_task
+from celery import shared_task, group
 
-from vmc.ralph.api import Ralph
+from vmc.common.tasks import memcache_lock
+from vmc.assets.documents import AssetDocument
+from vmc.processing.tasks import start_processing
+
+from vmc.ralph.clients import RalphClient
 from vmc.ralph.models import Config
 
-from vmc.ralph.factories import AssetFactory
+from vmc.ralph.parsers import AssetsParser, OwnerParser
 
 LOGGER = logging.getLogger(__name__)
 
 
-@shared_task
-def load_all_assets():
-    LOGGER.info('Start loading data from ralph')
+def _update(config: Config):
     try:
-        ralph_api = Ralph(config=Config.objects.first())
-        all_assets = ralph_api.get_all_assets()
-
-        for asset in all_assets:
-            AssetFactory.process(asset)
+        client = RalphClient(config)
+        parser = AssetsParser(config)
+        LOGGER.info(F'Start loading data from Ralph: {config.name}')
+        users = client.get_users()
+        users = OwnerParser.parse(users)
+        assets = client.get_assets()
+        assets = parser.parse(assets, users)
+        AssetDocument.create_or_update(assets, config)
+        LOGGER.info(F'Finish loading data from Ralph: {config.name}')
     except Exception as ex:
-        LOGGER.error(ex)
-    LOGGER.info('Finish loading data from ralph')
+        import traceback
+        traceback.print_exc()
+        LOGGER.error(F'Error with loading data from Ralph: {ex}')
+
+
+@shared_task
+def update_assets(config_id: int):
+    config = Config.objects.get(pk=config_id)
+    lock_id = F'update-assets-lock-{config.id}'
+    with memcache_lock(lock_id, config.id) as acquired:
+        if acquired:
+            return _update(config)
+    LOGGER.info(F'Update assets for {config.name} is already being imported by another worker')
+
+
+@shared_task
+def start_update_assets():
+    configs = Config.objects.all().values_list('id', flat=True)
+    (
+        group(update_assets.si(config_id=config) for config in configs) |
+        start_processing.si()
+    )()

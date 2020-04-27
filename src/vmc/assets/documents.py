@@ -19,11 +19,9 @@
 """
 from decimal import Decimal
 
-from elasticsearch_dsl import Date, Keyword, InnerDoc
 from vmc.common.enum import TupleValueEnum
-
-from vmc.common.elastic.documents import Document, TupleValueField
-from vmc.common.elastic.registers import registry
+from vmc.elasticsearch import Document, TupleValueField, Keyword, InnerDoc, Nested, Q, ListField
+from vmc.elasticsearch.registries import registry
 
 
 class Impact(TupleValueEnum):
@@ -33,23 +31,83 @@ class Impact(TupleValueEnum):
     NOT_DEFINED = ('N', Decimal('1.0'))
 
 
+class OwnerInnerDoc(InnerDoc):
+    name = Keyword()
+    email = Keyword()
+    department = Keyword()
+    team = Keyword()
+
+
+class AssetStatus:
+    DISCOVERED = 'DISCOVERED'
+    DELETED = 'DELETED'
+
+
 class AssetInnerDoc(InnerDoc):
+    id = Keyword()
     ip_address = Keyword()
+    mac_address = Keyword()
     os = Keyword()
-    cmdb_id = Keyword()
-    confidentiality_requirement = TupleValueField(choice_type=Impact)
-    integrity_requirement = TupleValueField(choice_type=Impact)
-    availability_requirement = TupleValueField(choice_type=Impact)
-    business_owner = Keyword()
-    technical_owner = Keyword()
+    confidentiality_requirement = TupleValueField(choice_type=Impact, default=Impact.NOT_DEFINED)
+    integrity_requirement = TupleValueField(choice_type=Impact, default=Impact.NOT_DEFINED)
+    availability_requirement = TupleValueField(choice_type=Impact, default=Impact.NOT_DEFINED)
+    business_owner = Nested(OwnerInnerDoc, include_in_parent=True)
+    technical_owner = Nested(OwnerInnerDoc, include_in_parent=True)
     hostname = Keyword()
-    created_date = Date()
-    modified_date = Date()
     change_reason = Keyword()
+    tags = ListField()
+    url = Keyword()
 
 
 @registry.register_document
-class AssetDocument(AssetInnerDoc, Document):
+class AssetDocument(Document, AssetInnerDoc):
     class Index:
         name = 'asset'
+        tenant_separation = True
 
+    @staticmethod
+    def create_or_update(assets: dict, config=None) -> None:
+        index = AssetDocument.get_index(config)
+        assets = AssetDocument._update_existing_assets(assets, index)
+        assets = AssetDocument._update_discovered_assets(assets, index)
+
+        for asset in assets.values():
+            asset.save(refresh=True, index=index)
+
+    @staticmethod
+    def _update_existing_assets(assets: dict, index):
+        if assets:
+            assets_search = AssetDocument.search(index=index).filter(~Q('match', tags=AssetStatus.DISCOVERED))
+            for current_asset in assets_search.scan():
+                asset_id = current_asset.id
+                if asset_id in assets:
+                    if current_asset.has_changed(assets[asset_id]):
+                        current_asset.update(assets[asset_id], refresh=True, index=index)
+                    del assets[asset_id]
+                elif asset_id not in assets and AssetStatus.DELETED not in current_asset.tags:
+                    current_asset.tags.append(AssetStatus.DELETED)
+                    current_asset.save(refresh=True, index=index)
+        return assets
+
+    @staticmethod
+    def _update_discovered_assets(assets: dict, index):
+        if assets:
+            assets = {a.ip_address: a for a in assets.values()}
+            assets_search = AssetDocument.search(index=index).filter(Q('match', tags=AssetStatus.DISCOVERED))
+            for discovered_asset in assets_search.scan():
+                if discovered_asset.ip_address in assets:
+                    discovered_asset.update(assets[discovered_asset.ip_address], refresh=True, index=index)
+                    del assets[discovered_asset.ip_address]
+
+        return assets
+
+    @staticmethod
+    def get_or_create(ip_address, config=None):
+        index = AssetDocument.get_index(config)
+        result = AssetDocument.search(index=index).filter(
+            Q('term', ip_address=ip_address) & ~Q('match', tags=AssetStatus.DELETED)).execute()
+        if result.hits:
+            return result.hits[0]
+        return AssetDocument(id=ip_address,
+                             ip_address=ip_address,
+                             tags=[AssetStatus.DISCOVERED]).save(index=index, refresh=True)

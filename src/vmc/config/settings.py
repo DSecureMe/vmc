@@ -23,6 +23,7 @@ import yaml
 
 CFG = None
 CFG_PATH = '/etc/vmc/config.yml'
+VMC_PATH = os.path.realpath(os.path.dirname(__file__))
 
 try:
     with open(CFG_PATH, 'r') as ymlfile:
@@ -53,11 +54,15 @@ ALLOWED_HOSTS = ['*']
 
 INTERNAL_APPS = [
     'vmc.common',
-    'vmc.assets',
-    'vmc.vulnerabilities',
-    'vmc.nessus',
+    'vmc.elasticsearch',
     'vmc.knowledge_base',
-    'vmc.ralph'
+    'vmc.assets',
+    'vmc.ralph',
+    'vmc.vulnerabilities',
+    'vmc.processing',
+    'vmc.scanners',
+    'vmc.scanners.openvas',
+    'vmc.scanners.nessus',
 ]
 
 THIRD_PARTY_APPS = [
@@ -72,8 +77,6 @@ THIRD_PARTY_APPS = [
     'simple_history'
 ]
 
-if get_config('elasticsearch.hosts', False):
-    THIRD_PARTY_APPS.append('django_elasticsearch_dsl')
 
 INSTALLED_APPS = THIRD_PARTY_APPS + INTERNAL_APPS
 
@@ -93,7 +96,7 @@ ROOT_URLCONF = 'vmc.config.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
+        'DIRS': [os.path.join(VMC_PATH, app.replace('.', '/'), 'templates') for app in INTERNAL_APPS],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [

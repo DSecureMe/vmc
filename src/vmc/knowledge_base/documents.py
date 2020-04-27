@@ -18,23 +18,19 @@
  *
 """
 
-from elasticsearch_dsl import InnerDoc, Date, Keyword, Float, Nested, Object
-
 from vmc.knowledge_base import metrics
-from vmc.common.elastic.registers import registry
-from vmc.common.elastic.documents import Document, TupleValueField, EnumField
+from vmc.elasticsearch import Document, TupleValueField, EnumField
+from vmc.elasticsearch import InnerDoc, Date, Keyword, Float, Nested, Object
+from vmc.elasticsearch.registries import registry
 
 
 class ExploitInnerDoc(InnerDoc):
     id = Keyword()
     url = Keyword()
 
-    class Index:
-        name = 'exploit'
-
     @staticmethod
     def create(exp_id: int):
-        url = 'https://www.exploit-db.com/exploits/{}'.format(exp_id)
+        url = F'https://www.exploit-db.com/exploits/{exp_id}'
         return ExploitInnerDoc(id=exp_id, url=url)
 
 
@@ -76,7 +72,7 @@ class CveInnerDoc(InnerDoc):
 
     exploits = Nested(ExploitInnerDoc, include_in_parent=True)
     cpe = Nested(CpeInnerDoc, include_in_parent=True)
-    cwe = Object(CweInnerDoc)
+    cwe = Object(CweInnerDoc, include_in_parent=True)
 
     def get_privileges_required_v3_value(self) -> float:
         scope = metrics.ScopeV3(self.scope_v3)
@@ -93,3 +89,12 @@ class CweDocument(CweInnerDoc, Document):
 class CveDocument(CveInnerDoc, Document):
     class Index:
         name = 'cve'
+        related_documents = [CweDocument]
+
+    @staticmethod
+    def get_or_create(cve_id: str):
+        result = CveDocument.search().filter('term', id=cve_id).execute()
+        if result.hits:
+            return result.hits[0]
+        cve = CveDocument(id=cve_id)
+        return cve.save(refresh=True)
