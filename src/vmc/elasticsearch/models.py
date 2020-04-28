@@ -35,6 +35,10 @@ class Config(BaseModel):
     def __str__(self):
         return self.name
 
+    def save(self, *args, **kwargs):
+        self.prefix = self.prefix.lower()
+        super().save(*args, **kwargs)
+
 
 class Tenant(BaseModel):
     name = models.CharField(max_length=128)

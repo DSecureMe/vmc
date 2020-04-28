@@ -27,7 +27,14 @@ from vmc.knowledge_base.tasks import update_cve_cwe
 
 
 class CveAdmin(admin.ModelAdmin):
+    actions = None
     change_list_template = "knowledge_base/admin/cve_change_list.html"
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
 
     def get_urls(self):
         urls = super().get_urls()

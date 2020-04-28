@@ -46,12 +46,9 @@ def snapshot(name: str) -> None:
 def _snapshot_documents(name: str, index: str) -> None:
     docs = []
     LOGGER.info(F'Creating snapshot for {index} {name}')
-    total = Search(index=index).count()
-    paging = [(START if i == START else i + 1, i + STEP) for i in range(START, total, STEP)]
-    for st, en in paging:
-        for current in Search(index=index)[st:en]:
-            current.snapshot_date = now()
-            docs.append(current.to_dict())
+    for current in Search(index=index).scan():
+        current.snapshot_date = now()
+        docs.append(current.to_dict())
 
         if docs:
             bulk(get_connection(), docs, refresh=True, index=F'{index}.{name}')
