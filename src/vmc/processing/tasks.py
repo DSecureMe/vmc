@@ -260,8 +260,9 @@ def _start_processing_per_tenant(vulnerability_index: str, asset_index: str):
         vuln.environmental_score_vector_v3 = vector
         vuln.environmental_score_v3 = score
 
+        vuln_count = get_vulnerability_count(vuln.cve.id, vulnerability_index)
+
         if score:
-            vuln_count = get_vulnerability_count(vuln.cve.id, vulnerability_index)
             tg, fg_flag = target_distribution_v2(vuln_count, assets_count)
 
             vuln.environmental_score_v3_td = round(score * tg, 1)
