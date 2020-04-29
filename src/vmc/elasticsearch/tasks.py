@@ -37,7 +37,7 @@ START = 0
 
 @shared_task
 def snapshot(name: str) -> None:
-    for index in registry.get_documents():
+    for index in registry.get__documents():
         if index.split('.')[-1] not in SnapShotMode.values():
             _snapshot_documents.delay(name=name, index=index)
 
@@ -50,6 +50,6 @@ def _snapshot_documents(name: str, index: str) -> None:
         current.snapshot_date = now()
         docs.append(current.to_dict())
 
-        if docs:
-            bulk(get_connection(), docs, refresh=True, index=F'{index}.{name}')
-    LOGGER.info('Snapshot for {index} {name} done')
+    if docs:
+        bulk(get_connection(), docs, refresh=True, index=F'{index}.{name}')
+    LOGGER.info(F'Snapshot for {index} {name} done')
