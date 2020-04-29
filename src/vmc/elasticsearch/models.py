@@ -36,7 +36,7 @@ class Config(BaseModel):
         return self.name
 
     def save(self, *args, **kwargs):
-        self.prefix = self.prefix.lower()
+        self.prefix = slugify(self.prefix, to_lower=True)
         super().save(*args, **kwargs)
 
 
