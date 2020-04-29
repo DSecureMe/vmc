@@ -37,7 +37,7 @@ START = 0
 
 @shared_task
 def snapshot(name: str) -> None:
-    for index in registry.get__documents():
+    for index in registry.get_documents():
         if index.split('.')[-1] not in SnapShotMode.values():
             _snapshot_documents.delay(name=name, index=index)
 
