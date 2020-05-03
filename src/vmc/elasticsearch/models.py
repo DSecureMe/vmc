@@ -17,17 +17,18 @@
  * under the License.
  */
 """
-
+import re
 import importlib
 
 from django.db import models
+from django.core.exceptions import ValidationError
 from slugify import slugify
 from vmc.common.models import BaseModel
 
 
 class Config(BaseModel):
-    name = models.CharField(max_length=128)
-    prefix = models.CharField(max_length=128)
+    name = models.CharField(max_length=128, unique=True)
+    prefix = models.CharField(max_length=128, unique=True)
 
     class Meta:
         db_table = 'elasticsearch_config'
@@ -35,14 +36,20 @@ class Config(BaseModel):
     def __str__(self):
         return self.name
 
+    def clean(self):
+        if not re.match(r'^[a-z0-9]+$', self.prefix):
+            raise ValidationError(
+                'Prefix: letters must be lowercase and cannot contain spaces, '
+                'commas, :_, - , " , * , + , / , \\ , | , ? , # , > , or < ..')
+
     def save(self, *args, **kwargs):
         self.prefix = slugify(self.prefix, to_lower=True)
         super().save(*args, **kwargs)
 
 
 class Tenant(BaseModel):
-    name = models.CharField(max_length=128)
-    slug_name = models.CharField(max_length=128)
+    name = models.CharField(max_length=128, unique=True)
+    slug_name = models.CharField(max_length=128, unique=True)
     elasticsearch_config = models.ForeignKey(Config, on_delete=models.DO_NOTHING)
 
     class Meta:
@@ -50,6 +57,12 @@ class Tenant(BaseModel):
 
     def __str__(self):
         return self.name
+
+    def clean(self):
+        if not re.match(r'^[a-z0-9]+$', self.slug_name):
+            raise ValidationError(
+                'slug_name: letters must be lowercase and cannot contain spaces, '
+                'commas, :_, - , " , * , + , / , \\ , | , ? , # , > , or < ..')
 
     def save(self, force_insert=False, force_update=False, using=None,
              update_fields=None):

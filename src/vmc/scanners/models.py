@@ -22,8 +22,6 @@ from django.db import models
 from vmc.common.models import BaseModel
 from vmc.elasticsearch.models import Tenant
 
-from vmc.scanners.registries import scanners_registry
-
 
 class Config(BaseModel):
     SCHEMA = (
@@ -39,7 +37,7 @@ class Config(BaseModel):
     insecure = models.BooleanField(default=False)
     last_scans_pull = models.DateTimeField(default=None, null=True, blank=True)
     tenant = models.ForeignKey(Tenant, null=True, blank=True, on_delete=models.DO_NOTHING)
-    scanner = models.CharField(choices=scanners_registry.get_scanners(), max_length=128)
+    scanner = models.CharField(max_length=128)
 
     class Meta:
         db_table = 'scanners'
