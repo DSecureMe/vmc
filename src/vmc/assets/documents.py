@@ -54,7 +54,6 @@ class AssetInnerDoc(InnerDoc):
     business_owner = Nested(OwnerInnerDoc, include_in_parent=True)
     technical_owner = Nested(OwnerInnerDoc, include_in_parent=True)
     hostname = Keyword()
-    change_reason = Keyword()
     tags = ListField()
     url = Keyword()
 
