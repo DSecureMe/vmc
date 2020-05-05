@@ -4,3 +4,4 @@ parameterized==0.7.0
 bandit
 codecov
 codacy-coverage
+pylint>=2.5.0 # not directly required, pinned by Snyk to avoid a vulnerability
