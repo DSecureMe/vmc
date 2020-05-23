@@ -75,6 +75,7 @@ if elastic_configured():
     ELASTICSEARCH_DSL = {
         'default': {
             'hosts': os.environ.get('ELASTICSEARCH_URL', None),
+            'timeout': 60,
         },
     }
 

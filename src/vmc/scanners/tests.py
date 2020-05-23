@@ -19,6 +19,9 @@
 """
 from unittest.mock import patch, MagicMock
 
+from parameterized import parameterized
+
+from django.core.exceptions import ValidationError
 from django.contrib.auth.models import User
 from django.test import TestCase, LiveServerTestCase
 
@@ -29,6 +32,36 @@ from vmc.scanners.registries import scanners_registry
 from vmc.scanners.tasks import update_scans, _update_scans
 from vmc.scanners.parsers import Parser
 from vmc.scanners.clients import Client
+from vmc.elasticsearch.models import Tenant, Config as Prefix
+
+
+class ConfigTest(TestCase):
+    fixtures = ['config.json']
+
+    def setUp(self) -> None:
+        self.uut = Config.objects.get(id=1)
+
+    @parameterized.expand([
+        ('http', 'http://test:80'),
+        ('https', 'https://test:80'),
+    ])
+    def test_call_url(self, schema, expected):
+        self.uut.schema = schema
+        self.assertEqual(self.uut.get_url(), expected)
+
+    def test_call__str__(self):
+        self.assertEqual(self.uut.__str__(), 'Test Config')
+
+    def test_add_config_nok(self):
+        with self.assertRaises(ValidationError, msg='Only one Ralph can be assigned to one Tenant'):
+            Config.objects.create(name='test1', host='test1', scanner='vmc.scanners.openvas',
+                                  username='test1', password='test1')
+
+    def test_add_config(self):
+        prefix = Prefix.objects.create(name='test1', prefix='test1')
+        tenant = Tenant.objects.create(name='test1', slug_name='test1', elasticsearch_config=prefix)
+        Config.objects.create(name='test1', host='test1', scanner='vmc.scanners.openvas',
+                              username='test1', password='test1', port=80, tenant=tenant)
 
 
 class AdminPanelTest(LiveServerTestCase):

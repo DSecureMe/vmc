@@ -25,6 +25,7 @@ from django.utils.timezone import now
 
 from celery import shared_task, group
 
+from vmc.common.utils import thread_pool_executor
 from vmc.common.tasks import memcache_lock
 from vmc.scanners.models import Config
 from vmc.scanners.registries import scanners_registry
@@ -61,6 +62,8 @@ def _update_scans(config: Config):
         import traceback
         traceback.print_exc()
         LOGGER.error(F'Error while loading vulnerability data {e}')
+    finally:
+        thread_pool_executor.wait_for_all()
 
     return False
 

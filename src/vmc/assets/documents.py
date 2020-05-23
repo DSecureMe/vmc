@@ -22,13 +22,14 @@ from decimal import Decimal
 from vmc.common.enum import TupleValueEnum
 from vmc.elasticsearch import Document, TupleValueField, Keyword, InnerDoc, Nested, Q, ListField
 from vmc.elasticsearch.registries import registry
+from vmc.elasticsearch.helpers import async_bulk
 
 
 class Impact(TupleValueEnum):
     LOW = ('L', Decimal('0.5'))
     MEDIUM = ('M', Decimal('1.0'))
     HIGH = ('H', Decimal('1.51'))
-    NOT_DEFINED = ('N', Decimal('1.0'))
+    NOT_DEFINED = ('ND', Decimal('1.0'))
 
 
 class OwnerInnerDoc(InnerDoc):
@@ -70,33 +71,42 @@ class AssetDocument(Document, AssetInnerDoc):
         assets = AssetDocument._update_existing_assets(assets, index)
         assets = AssetDocument._update_discovered_assets(assets, index)
 
-        for asset in assets.values():
-            asset.save(refresh=True, index=index)
+        async_bulk([a.to_dict() for a in assets.values()], index)
 
     @staticmethod
     def _update_existing_assets(assets: dict, index):
         if assets:
+            updated = []
             assets_search = AssetDocument.search(index=index).filter(~Q('match', tags=AssetStatus.DISCOVERED))
-            for current_asset in assets_search.scan():
+            current_assets = [a for a in assets_search.scan()]
+            for current_asset in current_assets:
                 asset_id = current_asset.id
                 if asset_id in assets:
                     if current_asset.has_changed(assets[asset_id]):
-                        current_asset.update(assets[asset_id], refresh=True, index=index)
+                        current_asset.update(assets[asset_id], index=index)
                     del assets[asset_id]
                 elif asset_id not in assets and AssetStatus.DELETED not in current_asset.tags:
                     current_asset.tags.append(AssetStatus.DELETED)
-                    current_asset.save(refresh=True, index=index)
+                    updated.append(current_asset.save(index=index, weak=True).to_dict(include_meta=True))
+
+            async_bulk(updated)
+
         return assets
 
     @staticmethod
     def _update_discovered_assets(assets: dict, index):
         if assets:
+            updated = []
             assets = {a.ip_address: a for a in assets.values()}
             assets_search = AssetDocument.search(index=index).filter(Q('match', tags=AssetStatus.DISCOVERED))
-            for discovered_asset in assets_search.scan():
+            discovered_assets = [a for a in assets_search.scan()]
+            for discovered_asset in discovered_assets:
                 if discovered_asset.ip_address in assets:
-                    discovered_asset.update(assets[discovered_asset.ip_address], refresh=True, index=index)
+                    discovered_asset.update(assets[discovered_asset.ip_address], index=index, weak=True)
+                    updated.append(discovered_asset.to_dict(include_meta=True))
                     del assets[discovered_asset.ip_address]
+
+            async_bulk(updated)
 
         return assets
 
@@ -109,4 +119,4 @@ class AssetDocument(Document, AssetInnerDoc):
             return result.hits[0]
         return AssetDocument(id=ip_address,
                              ip_address=ip_address,
-                             tags=[AssetStatus.DISCOVERED]).save(index=index, refresh=True)
+                             tags=[AssetStatus.DISCOVERED]).save(index=index)

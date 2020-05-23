@@ -18,9 +18,11 @@
  */
 """
 from enum import Enum
+
 from vmc.elasticsearch import Object
 from vmc.elasticsearch.models import DocumentRegistry as DBDocumentRegistry
 from vmc.elasticsearch.signals import post_save
+from vmc.elasticsearch.helpers import async_bulk
 
 
 class SnapShotMode(Enum):
@@ -79,16 +81,35 @@ class DocumentRegistry:
 
     def update_related(self, sender, new_version, old_version, **kwargs):
         if old_version:
+            updates = []
+
             for document in self._get_related_doc(sender):
                 for field_name in document.get_fields_name():
                     field_type = document._doc_type.mapping[field_name]
+
                     if isinstance(field_type, Object) and issubclass(sender, field_type._doc_class):
+
                         for index in self._get_indexes(new_version, field_type._doc_class):
-                            result = document.search(index=index).filter(
-                                'term', **{F'{field_name}__id': old_version.id}).execute()
-                            for hit in result.hits:
+                            search = document.search(index=index).filter(
+                                'term', **{F'{field_name}__id': old_version.id})
+                            count = search.count()
+
+                            if count > 10000:
+                                result = search.scan()
+                            elif count > 0:
+                                result = search[0:count].execute()
+                            else:
+                                result = []
+
+                            for hit in result:
                                 setattr(hit, field_name, new_version)
-                                hit.save(index=index, refresh=True)
+                                updates.append(hit.save(index=index, weak=True).to_dict(include_meta=True))
+
+                            if len(updates) > 500:
+                                async_bulk(updates)
+                                updates = []
+
+            async_bulk(updates)
 
     def _get_indexes(self, instance, receiver):
         if getattr(instance.Index, 'tenant_separation', False):

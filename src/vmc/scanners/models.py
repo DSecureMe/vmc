@@ -19,6 +19,7 @@
 """
 
 from django.db import models
+from django.core.exceptions import ValidationError
 from vmc.common.models import BaseModel
 from vmc.elasticsearch.models import Tenant
 
@@ -47,3 +48,11 @@ class Config(BaseModel):
 
     def get_url(self) -> str:
         return F'{self.schema}://{self.host}:{self.port}'
+
+    def clean(self):
+        if not self.pk and Config.objects.filter(tenant=self.tenant, scanner=self.scanner).exists():
+            raise ValidationError('Only one type of Scanner can be assigned to one Tenant')
+
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        return super().save(*args, **kwargs)

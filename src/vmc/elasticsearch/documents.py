@@ -22,6 +22,7 @@ from enum import Enum
 from typing import Type
 from fnmatch import fnmatch
 
+from django.conf import settings
 from elasticsearch_dsl import Date, Keyword, CustomField
 from elasticsearch_dsl import Document as ESDocument
 from django.utils.timezone import now
@@ -90,19 +91,22 @@ class Document(ESDocument):
     BASE_DOCUMENT_FIELDS = ['created_date', 'modified_date', 'change_reason', 'BASE_DOCUMENT_FIELDS']
     created_date = Date()
     modified_date = Date()
-    change_reason = Keyword()
     snapshot_date = Date()
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.__old_version = None
 
-    def save(self, **kwargs):
+    def save(self, weak=False, **kwargs):
         date = now()
         if not self.created_date:
             self.created_date = date
         self.modified_date = date
-        super().save(**kwargs)
+
+        if not weak:
+            kwargs['refresh'] = getattr(settings, 'TEST', False)
+            super().save(**kwargs)
+
         post_save.send(sender=type(self),
                        old_version=self.__old_version,
                        new_version=self,
@@ -110,12 +114,12 @@ class Document(ESDocument):
         self.__old_version = copy.copy(self)
         return self
 
-    def update(self, document, using=None, index=None, refresh=False):
+    def update(self, document, using=None, index=None, refresh=False, weak=False):
         for name in self.get_fields_name():
             if name not in Document.BASE_DOCUMENT_FIELDS:
                 if getattr(document, name, None) is not None:
                     setattr(self, name, getattr(document, name))
-        self.save(using=using, index=index, refresh=refresh)
+        self.save(using=using, index=index, refresh=refresh, weak=weak)
         return self
 
     def to_dict(self, include_meta=False, skip_empty=True):

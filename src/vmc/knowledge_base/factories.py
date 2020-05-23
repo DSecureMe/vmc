@@ -25,9 +25,7 @@ from datetime import datetime
 from defusedxml.lxml import RestrictedElement
 from django.utils.dateparse import parse_datetime
 
-from elasticsearch.helpers import bulk
-from elasticsearch_dsl.connections import get_connection
-
+from vmc.elasticsearch.helpers import async_bulk
 from vmc.knowledge_base.documents import CweDocument, CveDocument, CpeInnerDoc, ExploitInnerDoc
 
 from vmc.common.xml import iter_elements_by_name
@@ -38,13 +36,22 @@ class CWEFactory:
 
     @staticmethod
     def process(handle):
+        docs = []
         for obj in iter_elements_by_name(handle, 'Weakness'):
-            CWEFactory.create(obj)
+            cwe = CWEFactory.create(obj)
+
+            if cwe:
+                docs.append(cwe.to_dict(include_meta=True))
+
+            if len(docs) > 500:
+                async_bulk(docs, CweDocument.Index.name)
+                docs = []
+
+        async_bulk(docs, CweDocument.Index.name)
 
     @staticmethod
     def create(item: RestrictedElement):
         cwe_id = 'CWE-{}'.format(item.get('ID'))
-
         old = CweDocument.search().filter('term', id=cwe_id).sort('-modified_date')[0].execute()
         cwe = CweDocument(id=cwe_id)
         for field in CweDocument.get_fields_name():
@@ -53,9 +60,10 @@ class CWEFactory:
                 setattr(cwe, field, parser(item))
 
         if old.hits and cwe.has_changed(old.hits[0]):
-            old.hits[0].update(cwe, refresh=True)
+            return old.hits[0].update(cwe, weak=True)
         elif not old.hits:
-            cwe.save(refresh=True)
+            return cwe.save(weak=True)
+        return None
 
     @staticmethod
     def name(item: RestrictedElement) -> str:
@@ -122,8 +130,18 @@ class CveFactory:
     @staticmethod
     def process(handle):
         data = json.load(handle)
+        docs = []
         for obj in data['CVE_Items']:
-            CveFactory.create(obj)
+            cve = CveFactory.create(obj)
+
+            if cve:
+                docs.append(cve.to_dict(include_meta=True))
+
+            if len(docs) > 500:
+                async_bulk(docs, CveDocument.Index.name)
+                docs = []
+
+        async_bulk(docs, CveDocument.Index.name)
 
     @staticmethod
     def create(item: dict):
@@ -147,10 +165,12 @@ class CveFactory:
 
                 for cpe in CveFactory.get_cpe(item):
                     cve.cpe.append(cpe)
+
                 if old.hits and cve.has_changed(old.hits[0]):
-                    old.hits[0].update(cve, refresh=True)
+                    return old.hits[0].update(cve, weak=True)
                 else:
-                    cve.save(refresh=True)
+                    return cve.save(weak=True)
+
             return None
 
         logging.info(F'cve id {CveFactory.get_id(item)} is rejected')
@@ -303,7 +323,7 @@ class ExploitFactory:
             if doc:
                 docs.append(doc.to_dict(include_meta=True))
 
-        bulk(get_connection(), docs, refresh=True, index=CveDocument.Index.name)
+        async_bulk(docs, index=CveDocument.Index.name)
 
     @staticmethod
     def create(key: str, value: dict) -> [CveDocument, None]:

@@ -20,9 +20,10 @@
 
 from vmc.assets.documents import AssetInnerDoc, AssetDocument
 
-from vmc.elasticsearch import Document, Integer, Keyword, Object, Float, Q
-from vmc.knowledge_base.documents import CveInnerDoc, CveDocument
+from vmc.elasticsearch import Document, Keyword, Object, Float
 from vmc.elasticsearch.registries import registry
+from vmc.elasticsearch.helpers import async_bulk
+from vmc.knowledge_base.documents import CveInnerDoc, CveDocument
 
 
 class VulnerabilityStatus:
@@ -41,8 +42,6 @@ class VulnerabilityDocument(Document):
     environmental_score_vector_v2 = Keyword()
     environmental_score_v3 = Float()
     environmental_score_vector_v3 = Keyword()
-    environmental_score_v3_td = Float()
-    environmental_score_vector_v3_td = Keyword()
     cve = Object(CveInnerDoc, include_in_parent=True)
     asset = Object(AssetInnerDoc, include_in_parent=True)
     tags = Keyword()
@@ -55,15 +54,23 @@ class VulnerabilityDocument(Document):
     @staticmethod
     def create_or_update(vulnerabilities: dict, scanned_hosts: list, config=None) -> None:
         index = VulnerabilityDocument.get_index(config)
+        docs = []
         all_vulnerability_docs = VulnerabilityDocument.search(index=index)
         for current_vuln in all_vulnerability_docs.scan():
             vuln_id = current_vuln.id
             if vuln_id in vulnerabilities:
                 if current_vuln.has_changed(vulnerabilities[vuln_id]):
-                    current_vuln.update(vulnerabilities[vuln_id], refresh=True, index=index)
+                    c = current_vuln.update(vulnerabilities[vuln_id], index=index, weak=True)
+                    docs.append(c.to_dict(include_meta=True))
                 del vulnerabilities[vuln_id]
             elif vuln_id not in vulnerabilities and current_vuln.asset.ip_address in scanned_hosts:
                 current_vuln.tags.append(VulnerabilityStatus.FIXED)
-                current_vuln.save(refresh=True, index=index)
-        for vuln in vulnerabilities.values():
-            vuln.save(refresh=True, index=index)
+                c = current_vuln.save(index=index, weak=True)
+                docs.append(c.to_dict(include_meta=True))
+
+            if len(docs) > 500:
+                async_bulk(docs, index=index)
+                docs = []
+
+        docs.extend([v for v in vulnerabilities.values()])
+        async_bulk(docs, index=index)

@@ -24,6 +24,7 @@ from elasticsearch_dsl import Search
 from vmc.vulnerabilities.documents import VulnerabilityDocument
 
 from vmc.apps import VMCConfig
+from vmc.common.utils import thread_pool_executor
 from vmc.elasticsearch.tests import ESTestCase
 from vmc.config.test_settings import elastic_configured
 
@@ -82,9 +83,12 @@ class TenantTest(ESTestCase, TestCase):
         self.assertEqual(1, Search().index(AssetDocument.Index.name).count())
 
         AssetDocument.create_or_update({asset_tenant_1.id: asset_tenant_1})
+        thread_pool_executor.wait_for_all()
+    
         self.assertEqual(1, Search().index(AssetDocument.Index.name).count())
 
         self.assertEqual(1, Search().index(VulnerabilityDocument.Index.name).count())
+
         result = VulnerabilityDocument.search().filter('term', cve__id='CVE-2017-0002').execute()
         self.assertEqual(result.hits[0].asset.id, asset_tenant_1.id)
         self.assertEqual(result.hits[0].asset.ip_address, asset_tenant_1.ip_address)

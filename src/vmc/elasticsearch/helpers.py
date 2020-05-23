@@ -17,12 +17,16 @@
  * under the License.
  *
 """
-from django.contrib import admin
-from django.shortcuts import redirect
-from django.urls import path
+from django.conf import settings
+
+from elasticsearch.helpers import bulk
+from elasticsearch_dsl.connections import get_connection
+from vmc.common.utils import thread_pool_executor
 
 
-urlpatterns = [
-    path('', lambda request: redirect('admin/', permanent=False)),
-    path('admin/', admin.site.urls),
-]
+def async_bulk(docs, index=None):
+    refresh = getattr(settings, 'TEST', False)
+    if index and docs:
+        thread_pool_executor.submit(bulk, get_connection(), docs, index=index, refresh=refresh)
+    elif docs:
+        thread_pool_executor.submit(bulk, get_connection(), docs, refresh=refresh)

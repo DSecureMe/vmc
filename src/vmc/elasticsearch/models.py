@@ -59,6 +59,7 @@ class Tenant(BaseModel):
         return self.name
 
     def clean(self):
+        super().clean()
         if not re.match(r'^[a-z0-9]+$', self.slug_name):
             raise ValidationError(
                 'slug_name: letters must be lowercase and cannot contain spaces, '
@@ -66,6 +67,7 @@ class Tenant(BaseModel):
 
     def save(self, force_insert=False, force_update=False, using=None,
              update_fields=None):
+        self.full_clean()
         from vmc.elasticsearch.registries import registry
 
         if not self.modified_date:

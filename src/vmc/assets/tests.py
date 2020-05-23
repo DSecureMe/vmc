@@ -23,6 +23,7 @@ from django.test import TestCase
 from elasticsearch_dsl import Search
 from parameterized import parameterized
 
+from vmc.common.utils import thread_pool_executor
 from vmc.elasticsearch import Q
 from vmc.elasticsearch.tests import ESTestCase
 from vmc.assets.apps import AssetsConfig
@@ -47,7 +48,7 @@ def create_asset(ip_address='10.10.10.10', asset_id=None, hostname='HOSTNAME', s
         availability_requirement=Impact.LOW
     )
     if save:
-        asset.save(refresh=True)
+        asset.save()
     return asset
 
 
@@ -129,6 +130,7 @@ class AssetDocumentTest(ESTestCase, TestCase):
 
         self.assertEqual(2, Search().index(AssetDocument.Index.name).count())
         AssetDocument.create_or_update({asset_1.id: asset_1}, AssetConfigMock())
+        thread_pool_executor.wait_for_all()
 
         result = AssetDocument.search().filter(Q('match', tags=AssetStatus.DELETED)).execute()
         self.assertEqual(1, len(result.hits))
@@ -141,6 +143,7 @@ class AssetDocumentTest(ESTestCase, TestCase):
 
         self.assertEqual(2, Search().index(AssetDocument.Index.name).count())
         AssetDocument.create_or_update({asset_1.id: asset_1}, AssetConfigMock())
+        thread_pool_executor.wait_for_all()
 
         asset_3 = AssetDocument.get_or_create('10.0.0.2')
         self.assertEqual(3, Search().index(AssetDocument.Index.name).count())
@@ -177,6 +180,7 @@ class AssetDocumentTest(ESTestCase, TestCase):
                               hostname='hostname_1')
 
         AssetDocument.create_or_update({asset.id: asset}, AssetConfigMock())
+        thread_pool_executor.wait_for_all()
 
         self.assertEqual(1, Search().index(AssetDocument.Index.name).count())
 

@@ -24,6 +24,7 @@ from unittest import skipIf
 from unittest.mock import patch
 from parameterized import parameterized
 
+from django.core.exceptions import ValidationError
 from django.contrib.auth.models import User
 from django.test import TestCase, LiveServerTestCase
 
@@ -36,9 +37,10 @@ from vmc.ralph.apps import RalphConfig
 from vmc.ralph.clients import RalphClient
 from vmc.ralph.models import Config
 from vmc.elasticsearch import Search
+from vmc.elasticsearch.models import Tenant, Config as Prefix
 from vmc.elasticsearch.tests import ESTestCase
 
-from vmc.ralph.tasks import start_update_assets, update_assets
+from vmc.ralph.tasks import update_assets
 
 
 class ResponseMock:
@@ -73,6 +75,16 @@ class ModelConfigTest(TestCase):
 
     def test_call__str__(self):
         self.assertEqual(self.uut.__str__(), 'Test Ralph Config')
+
+    def test_add_config_not_ok(self):
+        with self.assertRaises(ValidationError, msg='Only one Ralph can be assigned to one Tenant'):
+            Config.objects.create(name='test1', host='test1', username='test1', password='test1', port=80)
+
+    def test_add_config(self):
+        prefix = Prefix.objects.create(name='test1', prefix='test1')
+        tenant = Tenant.objects.create(name='test1', slug_name='test1', elasticsearch_config=prefix)
+        Config.objects.create(name='test1', host='test1',
+                              username='test1', password='test1', port=80, tenant=tenant)
 
 
 class RalphClientTest(TestCase):

@@ -19,8 +19,10 @@
 """
 
 import logging
+
 from celery import shared_task, group
 
+from vmc.common.utils import thread_pool_executor
 from vmc.common.tasks import memcache_lock
 from vmc.assets.documents import AssetDocument
 from vmc.processing.tasks import start_processing
@@ -43,6 +45,7 @@ def _update(config: Config):
         assets = client.get_assets()
         assets = parser.parse(assets, users)
         AssetDocument.create_or_update(assets, config)
+        thread_pool_executor.wait_for_all()
         LOGGER.info(F'Finish loading data from Ralph: {config.name}')
     except Exception as ex:
         import traceback

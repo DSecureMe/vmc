@@ -178,6 +178,7 @@ if get_config('elasticsearch.hosts', False):
     ELASTICSEARCH_DSL = {
         'default': {
             'hosts': get_config('elasticsearch.hosts', 'localhost:9200'),
+            'timeout': 3000,
             'http_auth': [
                 get_config('elasticsearch.user', 'elastic'),
                 get_config('elasticsearch.password', 'elastic')
@@ -199,22 +200,28 @@ CACHE_TTL = 60 * 15
 
 LOGGING = {
     'version': 1,
-    'disable_existing_loggers': False,
+    'disable_existing_loggers': True,
+    'formatters': {
+        'console': {
+            'format': '%(asctime)s %(levelname)-8s %(name)-12s %(message)s',
+        },
+    },
     'handlers': {
         'console': {
             'class': 'logging.StreamHandler',
+            'formatter': 'console'
         }
     },
     'loggers': {
         'django': {
             'handlers': ['console'],
             'level': 'INFO',
+            'propagate': False,
         },
-    }
-}
-
-for app in INTERNAL_APPS:
-    LOGGING['loggers'][app] = {
+        'vmc': {
             'handlers': ['console'],
             'level': 'DEBUG' if DEBUG else 'INFO',
+            'propagate': False,
+        }
     }
+}
