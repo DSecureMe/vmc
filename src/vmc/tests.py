@@ -63,10 +63,12 @@ class TenantTest(ESTestCase, TestCase):
         asset_tenant_2 = self.create_asset(self.config_tenant_2.name)
         AssetDocument.create_or_update({asset_tenant_1.id: asset_tenant_1}, self.config_tenant_1)
         AssetDocument.create_or_update({asset_tenant_2.id: asset_tenant_2}, self.config_tenant_2)
+        thread_pool_executor.wait_for_all()
 
         asset_tenant_1 = self.create_asset(self.config_tenant_1.name)
         asset_tenant_1.hostname = 'tenant-test'
         AssetDocument.create_or_update({asset_tenant_1.id: asset_tenant_1}, self.config_tenant_1)
+        thread_pool_executor.wait_for_all()
 
         result = AssetDocument.search(index='test.tenant.asset').filter('term', ip_address='10.10.10.1').execute()
         self.assertEqual(1, len(result.hits))

@@ -54,6 +54,8 @@ class AssetInnerDoc(InnerDoc):
     availability_requirement = TupleValueField(choice_type=Impact, default=Impact.NOT_DEFINED)
     business_owner = Nested(OwnerInnerDoc, include_in_parent=True)
     technical_owner = Nested(OwnerInnerDoc, include_in_parent=True)
+    service = Keyword()
+    environment = Keyword()
     hostname = Keyword()
     tags = ListField()
     url = Keyword()
@@ -83,11 +85,16 @@ class AssetDocument(Document, AssetInnerDoc):
                 asset_id = current_asset.id
                 if asset_id in assets:
                     if current_asset.has_changed(assets[asset_id]):
-                        current_asset.update(assets[asset_id], index=index)
+                        current_asset.update(assets[asset_id], index=index, weak=True)
+                        updated.append(current_asset.to_dict(include_meta=True))
                     del assets[asset_id]
                 elif asset_id not in assets and AssetStatus.DELETED not in current_asset.tags:
                     current_asset.tags.append(AssetStatus.DELETED)
                     updated.append(current_asset.save(index=index, weak=True).to_dict(include_meta=True))
+
+                if len(updated) > 500:
+                    async_bulk(updated)
+                    updated = []
 
             async_bulk(updated)
 
@@ -105,6 +112,9 @@ class AssetDocument(Document, AssetInnerDoc):
                     discovered_asset.update(assets[discovered_asset.ip_address], index=index, weak=True)
                     updated.append(discovered_asset.to_dict(include_meta=True))
                     del assets[discovered_asset.ip_address]
+            if len(updated) > 500:
+                async_bulk(updated)
+                updated = []
 
             async_bulk(updated)
 

@@ -55,13 +55,13 @@ class ConfigTest(TestCase):
     def test_add_config_nok(self):
         with self.assertRaises(ValidationError, msg='Only one Ralph can be assigned to one Tenant'):
             Config.objects.create(name='test1', host='test1', scanner='vmc.scanners.openvas',
-                                  username='test1', password='test1')
+                                  username='test1', password='test1')  #nosec
 
     def test_add_config(self):
         prefix = Prefix.objects.create(name='test1', prefix='test1')
         tenant = Tenant.objects.create(name='test1', slug_name='test1', elasticsearch_config=prefix)
         Config.objects.create(name='test1', host='test1', scanner='vmc.scanners.openvas',
-                              username='test1', password='test1', port=80, tenant=tenant)
+                              username='test1', password='test1', port=80, tenant=tenant)  #nosec
 
 
 class AdminPanelTest(LiveServerTestCase):

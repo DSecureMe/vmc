@@ -78,13 +78,13 @@ class ModelConfigTest(TestCase):
 
     def test_add_config_not_ok(self):
         with self.assertRaises(ValidationError, msg='Only one Ralph can be assigned to one Tenant'):
-            Config.objects.create(name='test1', host='test1', username='test1', password='test1', port=80)
+            Config.objects.create(name='test1', host='test1', username='test1', password='test1', port=80)  #nosec
 
     def test_add_config(self):
         prefix = Prefix.objects.create(name='test1', prefix='test1')
         tenant = Tenant.objects.create(name='test1', slug_name='test1', elasticsearch_config=prefix)
         Config.objects.create(name='test1', host='test1',
-                              username='test1', password='test1', port=80, tenant=tenant)
+                              username='test1', password='test1', port=80, tenant=tenant)  #nosec
 
 
 class RalphClientTest(TestCase):
@@ -193,6 +193,8 @@ class AssetsParserTest(TestCase):
         self.assertEqual(result[self.asset_id].os, 'Windows Server 2003')
         self.assertEqual(result[self.asset_id].hostname, 'ralph1.allegro.pl')
         self.assertEqual(result[self.asset_id].url, 'http://test:80/data_center/datacenterasset/62')
+        self.assertEqual(result[self.asset_id].service, 'Backup systems')
+        self.assertEqual(result[self.asset_id].environment, 'prod')
 
     def test_parse_called(self):
         result = self.uut.parse(self.hosts)
