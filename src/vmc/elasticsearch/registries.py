@@ -22,6 +22,8 @@ from enum import Enum
 from django.conf import settings
 from elasticsearch_dsl import UpdateByQuery
 from elasticsearch_dsl.connections import get_connection
+
+from vmc.common.utils import thread_pool_executor
 from vmc.elasticsearch import Object
 from vmc.elasticsearch.models import DocumentRegistry as DBDocumentRegistry
 from vmc.elasticsearch.signals import post_save
@@ -100,7 +102,13 @@ class DocumentRegistry:
 
                                 has_related_documents = getattr(document, 'related_documents', False)
                                 if not has_related_documents:
-                                    self._update_by_query(index if index else document.Index.name, field_name, old_version, new_version)
+                                    thread_pool_executor.submit(
+                                        self._update_by_query,
+                                        index if index else document.Index.name,
+                                        field_name,
+                                        old_version,
+                                        new_version
+                                    )
                                 else:
 
                                     if count > 10000:
