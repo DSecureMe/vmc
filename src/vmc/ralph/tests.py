@@ -108,7 +108,8 @@ class RalphClientTest(TestCase):
             'http://test:80/api-token-auth/',
             headers={'Content-Type': 'application/json'},
             data=json.dumps({'username': self.config.username, 'password': self.config.password}),
-            verify=False
+            verify=False,
+            timeout=360
         )
 
     @patch('vmc.ralph.clients.requests')
@@ -130,7 +131,8 @@ class RalphClientTest(TestCase):
             'GET',
             'http://test:80/api/data-center-assets/?format=json&limit=500',
             headers={'Authorization': 'Token auth_token'},
-            verify=False
+            verify=False,
+            timeout=360
         )
 
     @patch('vmc.ralph.clients.requests')
@@ -146,7 +148,8 @@ class RalphClientTest(TestCase):
             'GET',
             'http://test:80/api/users/?format=json&limit=500',
             headers={'Authorization': 'Token auth_token'},
-            verify=False
+            verify=False,
+            timeout=360
         )
 
 
@@ -193,8 +196,8 @@ class AssetsParserTest(TestCase):
         self.assertEqual(result[self.asset_id].os, 'Windows Server 2003')
         self.assertEqual(result[self.asset_id].hostname, 'ralph1.allegro.pl')
         self.assertEqual(result[self.asset_id].url, 'http://test:80/data_center/datacenterasset/62')
-        self.assertEqual(result[self.asset_id].service, 'Backup systems')
-        self.assertEqual(result[self.asset_id].environment, 'prod')
+        self.assertEqual(result[self.asset_id].service, 'load_balancing')
+        self.assertEqual(result[self.asset_id].environment, 'dev')
 
     def test_parse_called(self):
         result = self.uut.parse(self.hosts)

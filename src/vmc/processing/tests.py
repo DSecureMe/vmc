@@ -18,9 +18,9 @@
  *
 """
 
-from unittest import skipIf, skip
+from unittest import skipIf
 
-from django.test import TestCase, override_settings
+from django.test import TestCase
 from parameterized import parameterized
 
 from elasticsearch.helpers import bulk
@@ -217,9 +217,9 @@ class CalculateEnvironmentalScore(ESTestCase, TestCase):
 
     def test_get_vulnerability_count(self):
         self.generate_vulns()
-        self.assertEqual(tasks.get_vulnerability_count(self.cve.id, VulnerabilityDocument.Index.name), 100)
+        tasks.prepare(VulnerabilityDocument.Index.name)
+        self.assertEqual(tasks.get_cve_count(VulnerabilityDocument.Index.name, self.cve.id), 100)
 
-    @skip('FIXME')
     def test_start_processing_per_tenant(self):
         self.generate_assets()
         self.generate_vulns()
@@ -232,7 +232,7 @@ class CalculateEnvironmentalScore(ESTestCase, TestCase):
         self.assertEqual(vuln_search.filter('exists', field='environmental_score_v3').count(), 0)
         self.assertEqual(vuln_search.filter('exists', field='environmental_score_vector_v3').count(), 0)
 
-        tasks._start_processing_per_tenant(VulnerabilityDocument.Index.name, AssetDocument.Index.name)
+        tasks._processing(0, 1, 1000, VulnerabilityDocument.Index.name)
 
         self.assertEqual(vuln_search.count(), 300)
         self.assertEqual(vuln_search.filter('exists', field='environmental_score_v2').count(), 100)

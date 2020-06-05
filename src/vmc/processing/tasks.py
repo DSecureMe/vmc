@@ -233,20 +233,26 @@ def calculate_environmental_score_v3(vuln) -> (float, str):
     return 0.0, '-'
 
 
-def get_vulnerability_count(cve_id, vulnerability_index):
-    key = F'{cve_id}-{vulnerability_index}'
+def prepare(vulnerability_index):
+    s = VulnerabilityDocument.search(index=vulnerability_index).filter(
+        ~Q('match', tags=VulnerabilityStatus.FIXED) &
+        ~Q('match', asset__tags=AssetStatus.DELETED)
+    )
+    s.aggs.metric('by_ip', 'cardinality', field='asset.ip_address')
+    s.aggs.metric('cves', 'terms', field='cve.id')
+    s = s.execute()
+
+    for result in s.aggregations.cves.buckets:
+        key = '{}-{}'.format(vulnerability_index, result['key'])
+        cache.set(key, result['doc_count'], LOCK_EXPIRE)
+
+
+def get_cve_count(vulnerability_index, cve_id):
+    key = F'{vulnerability_index}-{cve_id}'
     count = cache.get(key, None)
     if not count:
-        s = VulnerabilityDocument.search(index=vulnerability_index).filter(
-            Q('match', cve__id=cve_id) &
-            ~Q('match', tags=VulnerabilityStatus.FIXED) &
-            ~Q('match', asset__tags=AssetStatus.DELETED)
-        )
-        s.aggs.metric('by_ip', 'cardinality', field='asset.ip_address')
-        s = s.execute()
-        count = s.aggregations.by_ip.value
-        cache.set(key, count, LOCK_EXPIRE)
-    return count
+        prepare(vulnerability_index)
+    return cache.get(key, None)
 
 
 @shared_task
@@ -269,7 +275,7 @@ def _processing(idx, slices_count, assets_count, vulnerability_index):
         vuln.environmental_score_vector_v3 = vector
         vuln.environmental_score_v3 = score
 
-        vuln_count = get_vulnerability_count(vuln.cve.id, vulnerability_index)
+        vuln_count = get_cve_count(vulnerability_index, vuln.cve.id)
         score, vector = calculate_environmental_score_v2(vuln, vuln_count, assets_count)
         vuln.environmental_score_vector_v2 = vector
         vuln.environmental_score_v2 = score
@@ -299,7 +305,7 @@ def _start_processing_per_tenant(vulnerability_index: str, asset_index: str):
         ~Q('match', tags=VulnerabilityStatus.FIXED) &
         ~Q('match', asset__tags=AssetStatus.DELETED)
     )
-
+    prepare(vulnerability_index)
     workers_count = get_workers_count()
     vuln_count = vuln_search.count()
 

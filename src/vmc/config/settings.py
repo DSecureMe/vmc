@@ -200,7 +200,7 @@ CACHE_TTL = 60 * 15
 
 LOGGING = {
     'version': 1,
-    'disable_existing_loggers': True,
+    'disable_existing_loggers': False,
     'formatters': {
         'console': {
             'format': '%(asctime)s %(levelname)-8s %(name)-12s %(message)s',
