@@ -28,7 +28,7 @@ from django.core.cache import cache
 
 from vmc.knowledge_base.metrics import ScopeV3
 from vmc.knowledge_base.utils import exploitability_v2, impact_v2, f_impact_v2
-from vmc.common.tasks import memcache_lock, LOCK_EXPIRE
+from vmc.common.tasks import LOCK_EXPIRE
 from vmc.common.utils import get_workers_count, thread_pool_executor
 from vmc.elasticsearch.models import Tenant
 from vmc.elasticsearch.registries import DocumentRegistry
@@ -254,7 +254,7 @@ def get_cve_count(vulnerability_index, cve_id):
     return cache.get(key, None)
 
 
-@shared_task
+@shared_task(autoretry_for=(Exception, ))
 def _processing(idx, slices_count, assets_count, vulnerability_index):
     docs = []
 
@@ -294,7 +294,8 @@ def _end_processing(vulnerability_index: str, asset_index: str):
     LOGGER.info(F'Calculation for {vulnerability_index} and {asset_index} finished')
 
 
-def _start_processing_per_tenant(vulnerability_index: str, asset_index: str):
+@shared_task(ignore_result=True)
+def start_processing_per_tenant(vulnerability_index: str, asset_index: str):
     LOGGER.info(F'Calculation for {vulnerability_index} and {asset_index} started')
 
     assets_count = AssetDocument.search(
@@ -312,23 +313,10 @@ def _start_processing_per_tenant(vulnerability_index: str, asset_index: str):
         slices_count = vuln_count // workers_count
         slices_count = slices_count if slices_count <= workers_count else workers_count
 
-        with allow_join_result():
-            return (
-                group(_processing.si(idx, slices_count, assets_count, vulnerability_index) for idx in range(slices_count)) |
-                _end_processing.si(vulnerability_index, asset_index)
-
-            )() # FIXME: add .get
-
-
-@shared_task(ignore_result=True)
-def start_processing_per_tenant(vulnerability_index: str, asset_index: str):
-    lock_id = F'update-environmental-loc-{vulnerability_index}-{asset_index}'
-    with memcache_lock(lock_id, lock_id) as acquired:
-        if acquired:
-            return _start_processing_per_tenant(vulnerability_index, asset_index)
-    LOGGER.info(
-        F'Update environmental for {vulnerability_index} and {asset_index} are already being done by another worker')
-    return False
+        (
+            group(_processing.si(idx, slices_count, assets_count, vulnerability_index) for idx in range(slices_count)) |
+            _end_processing.si(vulnerability_index, asset_index)
+        )()
 
 
 @shared_task(ignore_result=True)

@@ -319,10 +319,10 @@ class AdminPanelTest(LiveServerTestCase):
     def test_button_exists(self):
         self.assertContains(self.client.get('/admin/knowledge_base/cve/'), 'nvd-cve-import')
 
-    @patch('vmc.knowledge_base.admin.update_cve_cwe')
-    def test_call_update_cve(self, update_cve_cwe):
+    @patch('vmc.knowledge_base.admin.start_update_knowledge_base')
+    def test_call_update_cve(self, mock):
         response = self.client.get('/admin/knowledge_base/cve/import', follow=True)
-        update_cve_cwe.delay.assert_called_once()
+        mock.delay.assert_called_once()
         self.assertContains(response, 'Importing started.')
 
     def tearDown(self):

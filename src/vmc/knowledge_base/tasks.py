@@ -27,7 +27,7 @@ from datetime import datetime
 
 from celery import shared_task, group
 
-from vmc.common.tasks import memcache_lock
+from vmc.common.tasks import start_workflow
 from vmc.common.utils import thread_pool_executor
 from vmc.common.utils import get_file
 from vmc.processing.tasks import start_processing
@@ -95,20 +95,14 @@ def update_exploits():
         thread_pool_executor.wait_for_all()
 
 
-def _update_cve_cwe():
-    return (
+@shared_task(name='Update knowledge base')
+def start_update_knowledge_base():
+    workflow = (
             group(
                 update_cwe.si() |
                 group(update_cve.si(year) for year in range(START_YEAR, datetime.now().year + 1)) |
                 update_exploits.si()
             ) |
             start_processing.si()
-    )()
-
-
-@shared_task
-def update_cve_cwe():
-    with memcache_lock('update_cve_cwe', True) as acquired:
-        if acquired:
-            return _update_cve_cwe()
-    LOGGER.info('Update cve and cwe are already being imported by another worker')
+    )
+    return start_workflow(workflow, global_lock=True)

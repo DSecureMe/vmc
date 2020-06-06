@@ -40,7 +40,7 @@ from vmc.elasticsearch import Search
 from vmc.elasticsearch.models import Tenant, Config as Prefix
 from vmc.elasticsearch.tests import ESTestCase
 
-from vmc.ralph.tasks import update_assets
+from vmc.ralph.tasks import start_update_assets, _update_assets
 
 
 class ResponseMock:
@@ -232,7 +232,7 @@ class UpdateAssetsTaskTest(TestCase):
         asset_parser().parse.return_value = self.RESPONSE
         owner_parser.parse.return_value = self.USERS
 
-        update_assets(self.config.id)
+        _update_assets(self.config.id)
 
         mock_api.assert_called_with(self.config)
         mock_api().get_users.assert_called_once()
@@ -246,7 +246,7 @@ class UpdateAssetsTaskTest(TestCase):
     @patch('vmc.ralph.tasks.AssetsParser')
     def test_update_assets_call_exception(self, factory_mock, mock_api):
         mock_api().get_assets.side_effect = Exception('Unknown')
-        update_assets(self.config.id)
+        _update_assets(self.config.id)
         factory_mock.parse.assert_not_called()
 
 
@@ -266,12 +266,12 @@ class UpdateAssetsIntegrationTest(ESTestCase, TestCase):
         mock_api().get_assets.return_value = self.hosts
         mock_api().get_users.return_value = self.users
 
-        update_assets(self.config_id)
+        _update_assets(self.config_id)
         self.assertEqual(2, Search().index(AssetDocument.Index.name).count())
         self.assertEqual(AssetDocument.search().filter('term', ip_address='10.0.0.23').count(), 1)
         self.assertEqual(AssetDocument.search().filter('term', ip_address='10.0.0.25').count(), 1)
 
-        update_assets(self.config_id)
+        _update_assets(self.config_id)
         self.assertEqual(2, Search().index(AssetDocument.Index.name).count())
 
     @patch('vmc.ralph.tasks.RalphClient')
@@ -291,9 +291,9 @@ class AdminPanelTest(LiveServerTestCase):
         self.assertContains(self.client.get('/admin/ralph/config/'), 'ralph-import')
 
     @patch('vmc.ralph.admin.start_update_assets')
-    def test_call_update_cve(self, load_all_assets):
+    def test_call_update_cve(self, mock):
         response = self.client.get('/admin/ralph/config/import', follow=True)
-        load_all_assets.delay.assert_called_once()
+        mock.delay.assert_called_once()
         self.assertContains(response, 'Importing started.')
 
     def tearDown(self):

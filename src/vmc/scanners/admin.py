@@ -24,7 +24,7 @@ from django.urls import path
 
 from vmc.scanners.registries import scanners_registry
 from vmc.scanners.models import Config
-from vmc.scanners.tasks import update
+from vmc.scanners.tasks import start_update_scans
 
 
 def get_scanners_choices():
@@ -57,7 +57,7 @@ class ConfigAdmin(admin.ModelAdmin):
         return custom_urls + urls
 
     def import_data(self, request):
-        update.delay()
+        start_update_scans.delay()
         self.message_user(request, "Importing started.")
         return HttpResponseRedirect("../")
 

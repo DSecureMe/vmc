@@ -23,7 +23,7 @@ from django.http import HttpResponseRedirect
 from django.urls import path
 
 from vmc.knowledge_base.models import Cve
-from vmc.knowledge_base.tasks import update_cve_cwe
+from vmc.knowledge_base.tasks import start_update_knowledge_base
 
 
 class CveAdmin(admin.ModelAdmin):
@@ -48,7 +48,7 @@ class CveAdmin(admin.ModelAdmin):
         return custom_urls + urls
 
     def import_data(self, request):
-        update_cve_cwe.delay()
+        start_update_knowledge_base.delay()
         self.message_user(request, "Importing started.")
         return HttpResponseRedirect("../")
 
