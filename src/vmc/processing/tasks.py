@@ -238,8 +238,7 @@ def prepare(vulnerability_index):
         ~Q('match', tags=VulnerabilityStatus.FIXED) &
         ~Q('match', asset__tags=AssetStatus.DELETED)
     )
-    s.aggs.metric('by_ip', 'cardinality', field='asset.ip_address')
-    s.aggs.metric('cves', 'terms', field='cve.id')
+    s.aggs.bucket('cves', 'terms', field='cve.id', size=10000000)
     s = s.execute()
 
     for result in s.aggregations.cves.buckets:
