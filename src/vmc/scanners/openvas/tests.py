@@ -34,7 +34,7 @@ from vmc.elasticsearch.tests import ESTestCase
 from vmc.scanners.openvas.apps import OpenVasConfig
 from vmc.scanners.openvas.parsers import GmpParser
 from vmc.scanners.openvas.clients import OpenVasClient
-from netaddr import IPSet, IPNetwork, IPRange
+from netaddr import IPSet, IPNetwork, IPRange, IPAddress
 
 
 class OpenVasConfigTest(TestCase):
@@ -98,6 +98,8 @@ class OpenVasClientTest(TestCase):
         xml = get_fixture_location(__file__, "report_with_target.xml")
         target_xml = get_fixture_location(__file__, "target.xml")
         target2_xml = get_fixture_location(__file__, "target2.xml")
+        target3_xml = get_fixture_location(__file__, "target3.xml")
+
         with patch.object(self.uut, "_get_target_definition", return_value=target_xml) as target_def:
             target = self.uut.get_targets(xml)
             self.assertEqual(target, IPSet(IPNetwork("192.168.1.0/24")))
@@ -105,6 +107,21 @@ class OpenVasClientTest(TestCase):
 
         with patch.object(self.uut, "_get_target_definition", return_value=target2_xml) as target_def:
             ip_set = IPSet(IPRange(start="192.168.1.1", end="192.168.1.200"))
+            target = self.uut.get_targets(xml)
+            self.assertEqual(target, ip_set)
+            target_def.assert_called_once_with("e39cf6fa-1932-42c5-89d4-b66f469c615b")
+
+        with patch.object(self.uut, "_get_target_definition", return_value=target3_xml) as target_def:
+            ip_set = IPSet()
+            ip_set.add(IPAddress("10.31.2.30"))
+            ip_set.add(IPAddress("10.31.2.23"))
+            ip_set.add(IPAddress("10.31.2.7"))
+            ip_set.add(IPAddress("10.31.2.31"))
+            ip_set.add(IPAddress("10.31.2.11"))
+            ip_set.add(IPAddress("10.31.2.21"))
+            ip_set.add(IPRange(start="10.31.2.34", end="10.31.2.35"))
+            ip_set.add(IPAddress("10.31.2.20"))
+            ip_set.add(IPAddress("10.31.2.32"))
             target = self.uut.get_targets(xml)
             self.assertEqual(target, ip_set)
             target_def.assert_called_once_with("e39cf6fa-1932-42c5-89d4-b66f469c615b")

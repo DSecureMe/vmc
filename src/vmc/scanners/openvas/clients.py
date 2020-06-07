@@ -67,17 +67,21 @@ class OpenVasClient(Client):
         hosts = get_root_element(target).find(".//target/hosts").text
         targets = netaddr.IPSet()
         for h in hosts.split(sep=","):
-            if "/" in hosts:
+            h = h.strip()
+            if "/" in h:
                 targets.add(netaddr.IPNetwork(h))
-            elif "-" in hosts:
-                r = hosts.split(sep="-")
+            elif "-" in h:
+                r = h.split(sep="-")
                 ip_range = handle_ranges(r)
-                targets.add(netaddr.IPRange(start=ip_range[0], end=ip_range[1]))
+                try:
+                    targets.add(netaddr.IPRange(start=ip_range[0], end=ip_range[1]))
+                except netaddr.core.AddrFormatError:
+                    LOGGER.error(F"Couldn't parse range: {h}. Skipping taht one!")
             else:
                 try:
                     targets.add(netaddr.IPAddress(h))
                 except netaddr.core.AddrFormatError:
-                    LOGGER.error(F"Couldn't parse target: {h}")
+                    LOGGER.error(F"Couldn't parse target: {h}. Skipping that one!")
 
         return targets
 

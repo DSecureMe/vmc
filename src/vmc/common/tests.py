@@ -145,3 +145,4 @@ class UtilsTest(TestCase):
         self.assertEqual(handle_ranges([s, e2]), ["192.168.1.1", "192.168.20.10"])
         self.assertEqual(handle_ranges([s, e3]), ["192.168.1.1", "192.169.1.1"])
         self.assertEqual(handle_ranges([s, e4]), ["192.168.1.1", "192.168.1.10"])
+        self.assertEqual(handle_ranges([s, e4]), ["192.168.1.1", "192.168.1.10"])
