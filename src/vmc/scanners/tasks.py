@@ -55,9 +55,10 @@ def _update_scans(config: Config):
             get_target_method = getattr(client, "get_targets", parser.get_targets)
             targets = get_target_method(file)
             LOGGER.info(F'Targets parsed: {scan_id}')
-            LOGGER.info(F'Attempting to update discovered assets in {config.name}')
-            AssetDocument.update_gone_discovered_assets(targets=targets, scanned_hosts=scanned_hosts,
-                                                        discovered_assets=discovered_assets, config=config)
+            if targets:
+                LOGGER.info(F'Attempting to update discovered assets in {config.name}')
+                AssetDocument.update_gone_discovered_assets(targets=targets, scanned_hosts=scanned_hosts,
+                                                            discovered_assets=discovered_assets, config=config)
             LOGGER.info(F'Attempting to update vulns data in {config.name}')
             VulnerabilityDocument.create_or_update(vulns, scanned_hosts, config)
         config.last_scans_pull = now_date

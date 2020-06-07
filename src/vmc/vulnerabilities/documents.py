@@ -20,7 +20,7 @@
 
 from vmc.assets.documents import AssetInnerDoc, AssetDocument
 
-from vmc.elasticsearch import Document, Integer, Keyword, Object, Float
+from vmc.elasticsearch import Document, Keyword, Object, Float
 from vmc.knowledge_base.documents import CveInnerDoc, CveDocument
 from vmc.elasticsearch.registries import registry
 

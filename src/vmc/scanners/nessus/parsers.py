@@ -129,6 +129,3 @@ class NessusReportParser(Parser):
                         ip_range = target.split(sep="-")
                         targets.add(netaddr.IPRange(ip_range[0], ip_range[1]))
                 return targets
-
-        targets.add("0.0.0.0")
-        return targets

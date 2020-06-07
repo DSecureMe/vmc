@@ -76,7 +76,7 @@ class OpenVasClient(Client):
                 try:
                     targets.add(netaddr.IPRange(start=ip_range[0], end=ip_range[1]))
                 except netaddr.core.AddrFormatError:
-                    LOGGER.error(F"Couldn't parse range: {h}. Skipping taht one!")
+                    LOGGER.error(F"Couldn't parse range: {h}. Skipping that one!")
             else:
                 try:
                     targets.add(netaddr.IPAddress(h))
