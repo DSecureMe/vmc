@@ -38,7 +38,7 @@ from vmc.ralph.models import Config
 from vmc.elasticsearch import Search
 from vmc.elasticsearch.tests import ESTestCase
 
-from vmc.ralph.tasks import start_update_assets, update_assets
+from vmc.ralph.tasks import update_assets
 
 
 class ResponseMock:

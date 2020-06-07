@@ -132,7 +132,6 @@ class NessusReportParserTest(ESTestCase, TestCase):
         ), [2])
 
     def test_parse_call(self):
-        # parsed, scanned_hosts, targets = self.uut.parse(self.internal_xml)
         parsed, scanned_hosts = self.uut.parse(self.internal_xml)
         vuln_id = str(uuid.uuid3(uuid.NAMESPACE_OID, '10.0.2.15-tcp-70658'))
         self.assertEquals(len(parsed), 1)
@@ -150,12 +149,9 @@ class NessusReportParserTest(ESTestCase, TestCase):
                                                  'the options of the SSH server and does not check for vulnerable'
                                                  ' software versions.')
         self.assertEquals(scanned_hosts, ['10.0.2.15', '10.0.2.4', '10.0.2.3', '10.0.2.2'])
-        # self.assertEqual(len(targets.iter_cidrs()), 1)
-        # self.assertEqual(netaddr.IPNetwork("10.0.0.0/8"), targets.iter_cidrs()[0])
 
     def test__get_targets_call(self):
 
-        # parsed, scanned_hosts, multiple_targets = self.uut.parse(self.internal_targets_xml)
         multiple_targets = self.uut.get_targets(self.internal_targets_xml)
 
         self.assertEqual(len(multiple_targets.iter_cidrs()), 9)

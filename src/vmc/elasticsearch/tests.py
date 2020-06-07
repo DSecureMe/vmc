@@ -43,14 +43,11 @@ class ESTestCase(object):
 
 
 class ConfigTest(TestCase):
+    NAME = 'test'
+    PREFIX = 'admin'
 
     def test_name(self):
         self.assertEqual(ElasticSearchConfig.name, 'vmc.elasticsearch')
-
-
-class ConfigTest(TestCase):
-    NAME = 'test'
-    PREFIX = 'admin'
 
     @staticmethod
     def create_config():
