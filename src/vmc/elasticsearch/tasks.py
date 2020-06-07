@@ -35,7 +35,7 @@ STEP = 1000
 START = 0
 
 
-@shared_task
+@shared_task(name='Snapshot')
 def snapshot(name: str) -> None:
     for index in registry.get_documents():
         if index.split('.')[-1] not in SnapShotMode.values():

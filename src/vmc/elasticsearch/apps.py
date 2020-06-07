@@ -36,12 +36,12 @@ class ElasticSearchConfig(AppConfig):
 
             app.conf.beat_schedule = {
                 'create snapshot every day at midnight': {
-                    'task': 'vmc.elasticsearch.tasks.snapshot',
+                    'task': 'Snapshot',
                     'schedule': crontab(hour=0, minute=0),
                     'args': ('dayli', )
                 },
                 'create snapshot every first day of month at midnight': {
-                    'task': 'vmc.elasticsearch.tasks.snapshot',
+                    'task': 'Snapshot',
                     'schedule': crontab(hour=0, minute=0, day_of_month=1),
                     'args': ('monthly', )
                 },
