@@ -54,3 +54,13 @@ def get_file(url: str, verify: bool = True) -> [BytesIO, None]:
                 content = response.content
 
     return content
+
+def handle_ranges(ips: list):
+
+    start_octets = ips[0].split(sep=".")
+    end_octets = ips[1].split(sep=".")
+    end_length = len(end_octets)
+    end = start_octets[:(4 - end_length)]
+    end.append(ips[1])
+    ip_range = [ips[0], '.'.join(end)]
+    return ip_range

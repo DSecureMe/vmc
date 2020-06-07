@@ -20,6 +20,7 @@
 
 import uuid
 import datetime
+import netaddr
 from unittest import skipIf
 from unittest.mock import patch
 
@@ -114,7 +115,12 @@ class NessusReportParserTest(ESTestCase, TestCase):
         super().setUp()
         self.config = Config.objects.first()
         self.internal_xml = open(get_fixture_location(__file__, 'internal.xml'))
+        self.internal_targets_xml = open(get_fixture_location(__file__, 'internal_targets.xml'))
         self.uut = NessusReportParser(self.config)
+        self.addr1 = "192.168.1.1/32"
+        self.addr2 = "192.168.1.1"
+        self.addr3 = "10.0.0.1/30"
+        self.addr4 = "192.168.2.1-192.168.2.5"
 
     def test_get_scans_ids(self):
         self.assertEqual(self.uut.get_scans_ids(
@@ -126,6 +132,7 @@ class NessusReportParserTest(ESTestCase, TestCase):
         ), [2])
 
     def test_parse_call(self):
+        # parsed, scanned_hosts, targets = self.uut.parse(self.internal_xml)
         parsed, scanned_hosts = self.uut.parse(self.internal_xml)
         vuln_id = str(uuid.uuid3(uuid.NAMESPACE_OID, '10.0.2.15-tcp-70658'))
         self.assertEquals(len(parsed), 1)
@@ -143,3 +150,35 @@ class NessusReportParserTest(ESTestCase, TestCase):
                                                  'the options of the SSH server and does not check for vulnerable'
                                                  ' software versions.')
         self.assertEquals(scanned_hosts, ['10.0.2.15', '10.0.2.4', '10.0.2.3', '10.0.2.2'])
+        # self.assertEqual(len(targets.iter_cidrs()), 1)
+        # self.assertEqual(netaddr.IPNetwork("10.0.0.0/8"), targets.iter_cidrs()[0])
+
+    def test__get_targets_call(self):
+
+        # parsed, scanned_hosts, multiple_targets = self.uut.parse(self.internal_targets_xml)
+        multiple_targets = self.uut.get_targets(self.internal_targets_xml)
+
+        self.assertEqual(len(multiple_targets.iter_cidrs()), 9)
+        self.assertEqual(netaddr.IPNetwork("10.10.10.0/8"), multiple_targets.iter_cidrs()[0])
+        self.assertEqual(netaddr.IPNetwork("192.168.1.1/32"), multiple_targets.iter_cidrs()[1])
+        self.assertEqual(netaddr.IPNetwork("192.168.2.10/31"), multiple_targets.iter_cidrs()[2])
+        self.assertEqual(netaddr.IPNetwork("192.168.2.12/30"), multiple_targets.iter_cidrs()[3])
+        self.assertEqual(netaddr.IPNetwork("192.168.2.16/28"), multiple_targets.iter_cidrs()[4])
+        self.assertEqual(netaddr.IPNetwork("192.168.2.32/27"), multiple_targets.iter_cidrs()[5])
+        self.assertEqual(netaddr.IPNetwork("192.168.2.64/28"), multiple_targets.iter_cidrs()[6])
+        self.assertEqual(netaddr.IPNetwork("192.168.2.80/29"), multiple_targets.iter_cidrs()[7])
+        self.assertEqual(netaddr.IPNetwork("192.168.2.88/32"), multiple_targets.iter_cidrs()[8])
+
+        ip_set = netaddr.IPSet()
+        for n in range(9,90,1):
+            ip_set.add(F"192.168.2.{n}")
+
+        check_set = netaddr.IPSet()
+        for cidr in multiple_targets.iter_cidrs()[-7:]:
+            check_set.add(cidr)
+
+        for ip in ip_set:
+            if str(ip) == "192.168.2.9" or str(ip) == "192.168.2.89":
+                self.assertFalse(ip in check_set)
+            else:
+                self.assertTrue(ip in check_set)

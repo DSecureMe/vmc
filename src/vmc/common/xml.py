@@ -28,3 +28,7 @@ def iter_elements_by_name(handle, name: str):
         if event == "end" and elem.tag == name:
             yield elem
             root.clear()
+
+def get_root_element(file):
+    return cElementTree.parse(file).getroot()
+

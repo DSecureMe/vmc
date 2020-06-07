@@ -23,7 +23,7 @@ from django.contrib.auth.models import User
 from django.test import TestCase, LiveServerTestCase
 
 from vmc.common.tasks import memcache_lock
-
+from vmc.assets.documents import AssetStatus
 from vmc.scanners.models import Config
 from vmc.scanners.registries import scanners_registry
 from vmc.scanners.tasks import update_scans, _update_scans
@@ -100,17 +100,24 @@ class TasksTest(TestCase):
             _update.assert_not_called()
 
     @patch('vmc.scanners.tasks.VulnerabilityDocument')
-    def test__update_call(self, document):
+    @patch('vmc.scanners.tasks.AssetDocument')
+    def test__update_call(self, asset_mock, vuln_mock):
         self.client().get_scans.return_value = 'get_scans'
         self.parser().get_scans_ids.return_value = [1]
         self.client().download_scan.return_value = 'download_scan'
         self.parser().parse.return_value = 'first', 'second'
+        self.parser().get_targets.return_value = 'targets'
+        self.client().get_targets.return_value = 'targets'
+        asset_mock.get_assets_with_tag.return_value = 'discovered_assets'
 
         self.assertTrue(_update_scans(self.config))
 
         self.client().download_scan.assert_called_once_with(1)
         self.parser().parse.assert_called_once_with('download_scan')
-        document.create_or_update.assert_called_once_with('first', 'second', self.config)
+        asset_mock.get_assets_with_tag.assert_called_once_with(tag=AssetStatus.DISCOVERED, config=self.config)
+        asset_mock.update_gone_discovered_assets.assert_called_once_with(targets='targets', scanned_hosts='second',
+                                                    discovered_assets='discovered_assets', config=self.config)
+        vuln_mock.create_or_update.assert_called_once_with('first', 'second', self.config)
 
     @patch('vmc.scanners.tasks.VulnerabilityDocument')
     def test___update_scan_exception(self, document):
