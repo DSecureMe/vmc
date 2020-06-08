@@ -73,7 +73,7 @@ class AssetsParser:
             try:
                 if parser:
                     setattr(asset, field, parser(item, iface))
-            except (KeyError, IndexError):
+            except (KeyError, IndexError, Exception):
                 setattr(asset, field, 'UNKNOWN')
         self.__parsed[asset.id] = asset
 
@@ -119,21 +119,21 @@ class AssetsParser:
     def confidentiality_requirement(item: dict, _) -> Impact:
         try:
             return Impact(item['custom_fields']['confidentiality'])
-        except KeyError:
+        except Exception:
             return Impact.NOT_DEFINED
 
     @staticmethod
     def integrity_requirement(item: dict, _) -> Impact:
         try:
             return Impact(item['custom_fields']['integrity'])
-        except KeyError:
+        except Exception:
             return Impact.NOT_DEFINED
 
     @staticmethod
     def availability_requirement(item: dict, _) -> Impact:
         try:
             return Impact(item['custom_fields']['availability'])
-        except KeyError:
+        except Exception:
             return Impact.NOT_DEFINED
 
     def url(self, item: dict, _) -> str:
