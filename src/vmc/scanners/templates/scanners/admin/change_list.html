@@ -24,6 +24,6 @@
 {% block object-tools-items %}
 {{ block.super }}
 <li>
-    <a id="scanners-import" href="{% url 'admin:scanners-import' %}" class="btn btn-high btn-success">Import</a>
+    <a id="scanners-import" href="{% url 'admin:scanners-import' %}" class="btn btn-primary btn-xs" data-toggle="tooltip" data-placement="bottom" title="Update all scans">Update</a>
 </li>
 {% endblock %}

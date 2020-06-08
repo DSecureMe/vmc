@@ -1,0 +1,8 @@
+{% extends 'admin/login.html' %}
+{% load i18n static %}
+{% block extrastyle %}{{ block.super }}<link rel="stylesheet" type="text/css" href="{% static "vmc-login.css" %}" />{% endblock %}
+{% block branding %}
+    <a href="{% url 'admin:index' %}" class="django-admin-logo">
+        <img height="100" src="{% static "vmp.png" %}" alt="{{ site_header }}">
+    </a>
+{% endblock branding %}

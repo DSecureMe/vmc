@@ -17,3 +17,4 @@
  * under the License.
  *
 """
+default_app_config = 'vmc.ralph.apps.RalphConfig'
