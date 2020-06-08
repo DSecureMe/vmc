@@ -44,23 +44,18 @@ class TaskChoiceField(forms.ChoiceField):
 
 
 class PeriodicTaskForm(CeleryPeriodicTaskForm):
-    regtask = TaskChoiceField(
+    task = TaskChoiceField(
         label='Task (registered)',
         required=False,
     )
-    task = None
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        if 'instance' in kwargs:
-            self.fields['regtask'].initial = (kwargs['instance'].task, kwargs['instance'].task)
+    regtask = None
 
 
 class PeriodicTaskAdmin(CeleryPeriodicTaskAdmin):
     form = PeriodicTaskForm
     fieldsets = (
         (None, {
-            'fields': ('name', 'regtask', 'enabled', 'description',),
+            'fields': ('name', 'task', 'enabled', 'description',),
             'classes': ('extrapretty', 'wide'),
         }),
         ('Schedule', {
