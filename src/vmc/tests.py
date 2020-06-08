@@ -48,7 +48,8 @@ class TenantTest(ESTestCase, TestCase):
         self.config_tenant_1 = RalphConfig.objects.get(id=1)
         self.config_tenant_2 = RalphConfig.objects.get(id=2)
 
-    def create_asset(self, tags):
+    @staticmethod
+    def create_asset(tags):
         return AssetDocument(
             ip_address='10.10.10.1',
             os='Windows',
@@ -86,7 +87,7 @@ class TenantTest(ESTestCase, TestCase):
 
         AssetDocument.create_or_update({asset_tenant_1.id: asset_tenant_1})
         thread_pool_executor.wait_for_all()
-    
+
         self.assertEqual(1, Search().index(AssetDocument.Index.name).count())
 
         self.assertEqual(1, Search().index(VulnerabilityDocument.Index.name).count())

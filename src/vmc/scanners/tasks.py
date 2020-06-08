@@ -24,7 +24,6 @@ import logging
 from django.utils.timezone import now
 
 from celery import shared_task
-from vmc.assets.documents import AssetDocument
 
 from vmc.elasticsearch.registries import DocumentRegistry
 from vmc.common.utils import thread_pool_executor
@@ -32,6 +31,7 @@ from vmc.common.tasks import start_workflow
 from vmc.scanners.models import Config
 from vmc.scanners.registries import scanners_registry
 from vmc.vulnerabilities.documents import VulnerabilityDocument
+from vmc.assets.documents import AssetDocument, AssetStatus
 from vmc.processing.tasks import start_processing_per_tenant
 
 LOGGER = logging.getLogger(__name__)
@@ -49,11 +49,19 @@ def _update_scans(config_pk: int):
         for scan_id in scan_list:
             LOGGER.info(F'Trying to download report form {config.name}')
             file = client.download_scan(scan_id)
-
+            LOGGER.info(F'Retrieving discovered assets for {config.name}')
+            discovered_assets = AssetDocument.get_assets_with_tag(tag=AssetStatus.DISCOVERED, config=config)
             LOGGER.info(F'Trying to parse scan file {scan_id}')
             vulns, scanned_hosts = parser.parse(file)
-
             LOGGER.info(F'File parsed: {scan_id}')
+            LOGGER.info(F'Trying to parse targets from file {scan_id}')
+            get_target_method = getattr(client, "get_targets", parser.get_targets)
+            targets = get_target_method(file)
+            LOGGER.info(F'Targets parsed: {scan_id}')
+            if targets:
+                LOGGER.info(F'Attempting to update discovered assets in {config.name}')
+                AssetDocument.update_gone_discovered_assets(targets=targets, scanned_hosts=scanned_hosts,
+                                                            discovered_assets=discovered_assets, config=config)
             LOGGER.info(F'Attempting to update vulns data in {config.name}')
             VulnerabilityDocument.create_or_update(vulns, scanned_hosts, config)
         config.last_scans_pull = now_date

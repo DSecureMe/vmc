@@ -40,7 +40,7 @@ from vmc.elasticsearch import Search
 from vmc.elasticsearch.models import Tenant, Config as Prefix
 from vmc.elasticsearch.tests import ESTestCase
 
-from vmc.ralph.tasks import start_update_assets, _update_assets
+from vmc.ralph.tasks import _update_assets
 
 
 class ResponseMock:
@@ -80,7 +80,8 @@ class ModelConfigTest(TestCase):
         with self.assertRaises(ValidationError, msg='Only one Ralph can be assigned to one Tenant'):
             Config.objects.create(name='test1', host='test1', username='test1', password='test1', port=80)  #nosec
 
-    def test_add_config(self):
+    @staticmethod
+    def test_add_config():
         prefix = Prefix.objects.create(name='test1', prefix='test1')
         tenant = Tenant.objects.create(name='test1', slug_name='test1', elasticsearch_config=prefix)
         Config.objects.create(name='test1', host='test1',

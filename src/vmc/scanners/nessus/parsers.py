@@ -20,7 +20,6 @@
 
 import logging
 import uuid
-
 from typing import Dict, List
 
 from defusedxml.lxml import RestrictedElement
@@ -29,8 +28,9 @@ from vmc.vulnerabilities.documents import VulnerabilityDocument
 from vmc.scanners.models import Config
 from vmc.scanners.parsers import Parser
 from vmc.assets.documents import AssetDocument
-from vmc.common.xml import iter_elements_by_name
+from vmc.common.xml import iter_elements_by_name, get_root_element
 from vmc.knowledge_base.documents import CveDocument
+import netaddr
 
 
 LOGGER = logging.getLogger(__name__)
@@ -73,9 +73,9 @@ class NessusReportParser(Parser):
                     return folder['id']
         return scan_list
 
-    def parse(self, report) -> [Dict, Dict]:
+    def parse(self, report) -> [Dict, Dict, netaddr.IPSet]:
         vuln = dict()
-        for host in iter_elements_by_name(report, 'ReportHost'):
+        for host in iter_elements_by_name(report, "ReportHost"):
             self.__scanned_hosts.append(host.get('name'))
             for item in host.iter('ReportItem'):
                 vuln['asset'] = AssetFactory.create(host, self.__config)
@@ -115,3 +115,17 @@ class NessusReportParser(Parser):
     def _vuln_id(ip, protocol, plugin_id) -> str:
         key = F"{ip}-{protocol}-{plugin_id}"
         return str(uuid.uuid3(uuid.NAMESPACE_OID, key))
+
+    @staticmethod
+    def get_targets(file):
+        root = get_root_element(file)
+        targets = netaddr.IPSet()
+        for preference in root.findall(".//Preferences/ServerPreferences/preference"):
+            if preference[0].tag == "name" and preference[0].text == "TARGET":
+                for target in map(str.strip, preference[1].text.split(sep=",")):
+                    if not "-" in target:
+                        targets.add(target)
+                    else:
+                        ip_range = target.split(sep="-")
+                        targets.add(netaddr.IPRange(ip_range[0], ip_range[1]))
+                return targets

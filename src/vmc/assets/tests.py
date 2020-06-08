@@ -22,6 +22,7 @@ from unittest import skipIf
 from django.test import TestCase
 from elasticsearch_dsl import Search
 from parameterized import parameterized
+import netaddr
 
 from vmc.common.utils import thread_pool_executor
 from vmc.elasticsearch import Q
@@ -191,3 +192,28 @@ class AssetDocumentTest(ESTestCase, TestCase):
         self.assertEqual(uut.ip_address, '10.0.0.1')
         self.assertEqual(uut.hostname, 'hostname_1')
         self.assertEqual(uut.tags, [])
+
+    def test_update_gone_discovered_assets(self):
+        AssetDocument.get_or_create('10.0.0.1')
+        AssetDocument.get_or_create('10.0.0.2')
+        self.assertEqual(2, Search().index(AssetDocument.Index.name).count())
+
+        discovered_assets = AssetDocument.get_assets_with_tag(tag=AssetStatus.DISCOVERED, config=AssetConfigMock())
+
+        targets = netaddr.IPSet()
+        targets.add("10.0.0.0/8")
+        scanned_hosts = ["10.0.0.1"]
+
+        AssetDocument.update_gone_discovered_assets(targets=targets, scanned_hosts=scanned_hosts,
+                                                    discovered_assets=discovered_assets, config=AssetConfigMock())
+
+        new_assets = Search().index(AssetDocument.Index.name).execute()
+        self.assertEqual(2, len(new_assets.hits))
+        for a in map(lambda new_asset: new_asset.to_dict(), new_assets.hits):
+            if a["id"] == "10.0.0.1":
+                self.assertEqual(a["tags"], ["DISCOVERED"])
+            elif a["id"] == "10.0.0.2":
+                self.assertCountEqual(a["tags"], ["DELETED", "DISCOVERED"])
+
+
+

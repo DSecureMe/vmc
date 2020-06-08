@@ -307,23 +307,3 @@ class UpdateExploitsTaskTest(ESTestCase, TestCase):
         self.assertEqual(cve.modified_date, prev_modified_date)
         self.assertEqual(len(cve.exploits), 1)
         self.assertEqual(cve.exploits, [{'id': '44904', 'url': 'https://www.exploit-db.com/exploits/44904'}])
-
-
-class AdminPanelTest(LiveServerTestCase):
-    fixtures = ['users.json']
-
-    def setUp(self):
-        super().setUp()
-        self.client.force_login(User.objects.get(username='admin'))
-
-    def test_button_exists(self):
-        self.assertContains(self.client.get('/admin/knowledge_base/cve/'), 'nvd-cve-import')
-
-    @patch('vmc.knowledge_base.admin.start_update_knowledge_base')
-    def test_call_update_cve(self, mock):
-        response = self.client.get('/admin/knowledge_base/cve/import', follow=True)
-        mock.delay.assert_called_once()
-        self.assertContains(response, 'Importing started.')
-
-    def tearDown(self):
-        self.client.logout()

@@ -25,9 +25,10 @@ from django.core.exceptions import ValidationError
 from django.contrib.auth.models import User
 from django.test import TestCase, LiveServerTestCase
 
+from vmc.assets.documents import AssetStatus
 from vmc.scanners.models import Config
 from vmc.scanners.registries import scanners_registry
-from vmc.scanners.tasks import start_update_scans, _update_scans
+from vmc.scanners.tasks import _update_scans
 from vmc.scanners.parsers import Parser
 from vmc.scanners.clients import Client
 from vmc.elasticsearch.models import Tenant, Config as Prefix
@@ -55,7 +56,8 @@ class ConfigTest(TestCase):
             Config.objects.create(name='test1', host='test1', scanner='vmc.scanners.openvas',
                                   username='test1', password='test1')  #nosec
 
-    def test_add_config(self):
+    @staticmethod
+    def test_add_config():
         prefix = Prefix.objects.create(name='test1', prefix='test1')
         tenant = Tenant.objects.create(name='test1', slug_name='test1', elasticsearch_config=prefix)
         Config.objects.create(name='test1', host='test1', scanner='vmc.scanners.openvas',
@@ -117,17 +119,24 @@ class TasksTest(TestCase):
         scanners_registry.register('test-scanner', self.client, self.parser)
 
     @patch('vmc.scanners.tasks.VulnerabilityDocument')
-    def test__update_call(self, document):
+    @patch('vmc.scanners.tasks.AssetDocument')
+    def test__update_call(self, asset_mock, vuln_mock):
         self.client().get_scans.return_value = 'get_scans'
         self.parser().get_scans_ids.return_value = [1]
         self.client().download_scan.return_value = 'download_scan'
         self.parser().parse.return_value = 'first', 'second'
+        self.parser().get_targets.return_value = 'targets'
+        self.client().get_targets.return_value = 'targets'
+        asset_mock.get_assets_with_tag.return_value = 'discovered_assets'
 
         _update_scans(self.config.pk)
 
         self.client().download_scan.assert_called_once_with(1)
         self.parser().parse.assert_called_once_with('download_scan')
-        document.create_or_update.assert_called_once_with('first', 'second', self.config)
+        asset_mock.get_assets_with_tag.assert_called_once_with(tag=AssetStatus.DISCOVERED, config=self.config)
+        asset_mock.update_gone_discovered_assets.assert_called_once_with(targets='targets', scanned_hosts='second',
+                                                    discovered_assets='discovered_assets', config=self.config)
+        vuln_mock.create_or_update.assert_called_once_with('first', 'second', self.config)
 
     @patch('vmc.scanners.tasks.VulnerabilityDocument')
     def test___update_scan_exception(self, document):

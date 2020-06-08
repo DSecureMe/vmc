@@ -63,7 +63,6 @@ THIRD_PARTY_APPS = [
     'django.contrib.staticfiles',
     'django_celery_beat',
     'django_celery_results',
-    'simple_history',
 ]
 
 
@@ -90,7 +89,6 @@ MIDDLEWARE = [
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
-    'simple_history.middleware.HistoryRequestMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 

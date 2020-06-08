@@ -130,3 +130,18 @@ class AssetDocument(Document, AssetInnerDoc):
         return AssetDocument(id=ip_address,
                              ip_address=ip_address,
                              tags=[AssetStatus.DISCOVERED]).save(index=index)
+
+    @staticmethod
+    def get_assets_with_tag(tag: str, config=None):
+        index = AssetDocument.get_index(config)
+        result = AssetDocument.search(index=index).filter(
+            Q("match", tags=tag))
+        return result
+
+    @staticmethod
+    def update_gone_discovered_assets(targets, scanned_hosts, discovered_assets, config=None):
+        index = AssetDocument.get_index(config)
+        for asset in discovered_assets.scan():
+            if asset.ip_address in targets and asset.ip_address not in scanned_hosts:
+                asset.tags.append(AssetStatus.DELETED)
+                asset.save(index=index)

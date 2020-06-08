@@ -19,12 +19,18 @@
 """
 from contextlib import contextmanager
 
+import logging
 from gvm.connections import TLSConnection
 from gvm.protocols.gmp import Gmp
 from gvm.transforms import EtreeTransform
 
 from vmc.scanners.clients import Client
 from vmc.scanners.models import Config
+from vmc.common.xml import get_root_element
+from vmc.common.utils import handle_ranges
+import netaddr
+
+LOGGER = logging.getLogger(__name__)
 
 
 class OpenVasClient(Client):
@@ -49,3 +55,33 @@ class OpenVasClient(Client):
     def download_scan(self, scan_id):
         with self._connect() as gmp:
             return gmp.get_report(scan_id)
+
+    def _get_target_definition(self, target_id):
+        with self._connect() as gmp:
+            return gmp.get_target(target_id)
+
+
+    def get_targets(self, file):
+        target_id = get_root_element(file).find(".//report/task/target").attrib["id"]
+        target = self._get_target_definition(target_id)
+        hosts = get_root_element(target).find(".//target/hosts").text
+        targets = netaddr.IPSet()
+        for h in hosts.split(sep=","):
+            h = h.strip()
+            if "/" in h:
+                targets.add(netaddr.IPNetwork(h))
+            elif "-" in h:
+                r = h.split(sep="-")
+                ip_range = handle_ranges(r)
+                try:
+                    targets.add(netaddr.IPRange(start=ip_range[0], end=ip_range[1]))
+                except netaddr.core.AddrFormatError:
+                    LOGGER.error(F"Couldn't parse range: {h}. Skipping that one!")
+            else:
+                try:
+                    targets.add(netaddr.IPAddress(h))
+                except netaddr.core.AddrFormatError:
+                    LOGGER.error(F"Couldn't parse target: {h}. Skipping that one!")
+
+        return targets
+

@@ -53,6 +53,8 @@ class Config(BaseModel):
         if not self.pk and Config.objects.filter(tenant=self.tenant, scanner=self.scanner).exists():
             raise ValidationError('Only one type of Scanner can be assigned to one Tenant')
 
-    def save(self, *args, **kwargs):
+    def save(self, force_insert=False, force_update=False, using=None,
+             update_fields=None):
         self.full_clean()
-        return super().save(*args, **kwargs)
+        return super().save(force_insert=force_insert, force_update=force_update,
+                            using=using, update_fields=update_fields)
