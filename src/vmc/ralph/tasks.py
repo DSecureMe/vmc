@@ -19,11 +19,15 @@
 """
 
 import logging
-from celery import shared_task, group
 
-from vmc.common.tasks import memcache_lock
+from celery import shared_task
+from vmc.vulnerabilities.documents import VulnerabilityDocument
+
+from vmc.elasticsearch.registries import DocumentRegistry
+from vmc.common.utils import thread_pool_executor
+from vmc.common.tasks import start_workflow
 from vmc.assets.documents import AssetDocument
-from vmc.processing.tasks import start_processing
+from vmc.processing.tasks import start_processing_per_tenant
 
 from vmc.ralph.clients import RalphClient
 from vmc.ralph.models import Config
@@ -33,8 +37,10 @@ from vmc.ralph.parsers import AssetsParser, OwnerParser
 LOGGER = logging.getLogger(__name__)
 
 
-def _update(config: Config):
+@shared_task
+def _update_assets(config_id: int):
     try:
+        config = Config.objects.get(pk=config_id)
         client = RalphClient(config)
         parser = AssetsParser(config)
         LOGGER.info(F'Start loading data from Ralph: {config.name}')
@@ -43,6 +49,7 @@ def _update(config: Config):
         assets = client.get_assets()
         assets = parser.parse(assets, users)
         AssetDocument.create_or_update(assets, config)
+        thread_pool_executor.wait_for_all()
         LOGGER.info(F'Finish loading data from Ralph: {config.name}')
     except Exception as ex:
         import traceback
@@ -50,20 +57,18 @@ def _update(config: Config):
         LOGGER.error(F'Error with loading data from Ralph: {ex}')
 
 
-@shared_task
-def update_assets(config_id: int):
-    config = Config.objects.get(pk=config_id)
-    lock_id = F'update-assets-lock-{config.id}'
-    with memcache_lock(lock_id, config.id) as acquired:
-        if acquired:
-            return _update(config)
-    LOGGER.info(F'Update assets for {config.name} is already being imported by another worker')
+def get_update_assets_workflow(config):
+    vulnerability_index = DocumentRegistry.get_index_for_tenant(config.tenant, VulnerabilityDocument)
+    asset_index = DocumentRegistry.get_index_for_tenant(config.tenant, AssetDocument)
+    return (
+        _update_assets.si(config_id=config.pk) |
+        start_processing_per_tenant.si(vulnerability_index, asset_index)
+    )
 
 
-@shared_task
+@shared_task(name='Update all assets')
 def start_update_assets():
-    configs = Config.objects.all().values_list('id', flat=True)
-    (
-        group(update_assets.si(config_id=config) for config in configs) |
-        start_processing.si()
-    )()
+    for config in Config.objects.all():
+        workflow = get_update_assets_workflow(config)
+        start_workflow(workflow, config.tenant)
+

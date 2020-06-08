@@ -24,6 +24,7 @@ from unittest import skipIf
 from unittest.mock import patch
 from parameterized import parameterized
 
+from django.core.exceptions import ValidationError
 from django.contrib.auth.models import User
 from django.test import TestCase, LiveServerTestCase
 
@@ -36,9 +37,10 @@ from vmc.ralph.apps import RalphConfig
 from vmc.ralph.clients import RalphClient
 from vmc.ralph.models import Config
 from vmc.elasticsearch import Search
+from vmc.elasticsearch.models import Tenant, Config as Prefix
 from vmc.elasticsearch.tests import ESTestCase
 
-from vmc.ralph.tasks import update_assets
+from vmc.ralph.tasks import _update_assets
 
 
 class ResponseMock:
@@ -74,6 +76,17 @@ class ModelConfigTest(TestCase):
     def test_call__str__(self):
         self.assertEqual(self.uut.__str__(), 'Test Ralph Config')
 
+    def test_add_config_not_ok(self):
+        with self.assertRaises(ValidationError, msg='Only one Ralph can be assigned to one Tenant'):
+            Config.objects.create(name='test1', host='test1', username='test1', password='test1', port=80)  #nosec
+
+    @staticmethod
+    def test_add_config():
+        prefix = Prefix.objects.create(name='test1', prefix='test1')
+        tenant = Tenant.objects.create(name='test1', slug_name='test1', elasticsearch_config=prefix)
+        Config.objects.create(name='test1', host='test1',
+                              username='test1', password='test1', port=80, tenant=tenant)  #nosec
+
 
 class RalphClientTest(TestCase):
     fixtures = ['config.json']
@@ -96,7 +109,8 @@ class RalphClientTest(TestCase):
             'http://test:80/api-token-auth/',
             headers={'Content-Type': 'application/json'},
             data=json.dumps({'username': self.config.username, 'password': self.config.password}),
-            verify=False
+            verify=False,
+            timeout=360
         )
 
     @patch('vmc.ralph.clients.requests')
@@ -118,7 +132,8 @@ class RalphClientTest(TestCase):
             'GET',
             'http://test:80/api/data-center-assets/?format=json&limit=500',
             headers={'Authorization': 'Token auth_token'},
-            verify=False
+            verify=False,
+            timeout=360
         )
 
     @patch('vmc.ralph.clients.requests')
@@ -134,7 +149,8 @@ class RalphClientTest(TestCase):
             'GET',
             'http://test:80/api/users/?format=json&limit=500',
             headers={'Authorization': 'Token auth_token'},
-            verify=False
+            verify=False,
+            timeout=360
         )
 
 
@@ -181,6 +197,8 @@ class AssetsParserTest(TestCase):
         self.assertEqual(result[self.asset_id].os, 'Windows Server 2003')
         self.assertEqual(result[self.asset_id].hostname, 'ralph1.allegro.pl')
         self.assertEqual(result[self.asset_id].url, 'http://test:80/data_center/datacenterasset/62')
+        self.assertEqual(result[self.asset_id].service, 'load_balancing')
+        self.assertEqual(result[self.asset_id].environment, 'dev')
 
     def test_parse_called(self):
         result = self.uut.parse(self.hosts)
@@ -215,7 +233,7 @@ class UpdateAssetsTaskTest(TestCase):
         asset_parser().parse.return_value = self.RESPONSE
         owner_parser.parse.return_value = self.USERS
 
-        update_assets(self.config.id)
+        _update_assets(self.config.id)
 
         mock_api.assert_called_with(self.config)
         mock_api().get_users.assert_called_once()
@@ -229,7 +247,7 @@ class UpdateAssetsTaskTest(TestCase):
     @patch('vmc.ralph.tasks.AssetsParser')
     def test_update_assets_call_exception(self, factory_mock, mock_api):
         mock_api().get_assets.side_effect = Exception('Unknown')
-        update_assets(self.config.id)
+        _update_assets(self.config.id)
         factory_mock.parse.assert_not_called()
 
 
@@ -249,12 +267,12 @@ class UpdateAssetsIntegrationTest(ESTestCase, TestCase):
         mock_api().get_assets.return_value = self.hosts
         mock_api().get_users.return_value = self.users
 
-        update_assets(self.config_id)
+        _update_assets(self.config_id)
         self.assertEqual(2, Search().index(AssetDocument.Index.name).count())
         self.assertEqual(AssetDocument.search().filter('term', ip_address='10.0.0.23').count(), 1)
         self.assertEqual(AssetDocument.search().filter('term', ip_address='10.0.0.25').count(), 1)
 
-        update_assets(self.config_id)
+        _update_assets(self.config_id)
         self.assertEqual(2, Search().index(AssetDocument.Index.name).count())
 
     @patch('vmc.ralph.tasks.RalphClient')
@@ -274,9 +292,9 @@ class AdminPanelTest(LiveServerTestCase):
         self.assertContains(self.client.get('/admin/ralph/config/'), 'ralph-import')
 
     @patch('vmc.ralph.admin.start_update_assets')
-    def test_call_update_cve(self, load_all_assets):
+    def test_call_update_cve(self, mock):
         response = self.client.get('/admin/ralph/config/import', follow=True)
-        load_all_assets.delay.assert_called_once()
+        mock.delay.assert_called_once()
         self.assertContains(response, 'Importing started.')
 
     def tearDown(self):

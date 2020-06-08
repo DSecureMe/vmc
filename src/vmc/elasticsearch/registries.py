@@ -18,9 +18,16 @@
  */
 """
 from enum import Enum
+
+from django.conf import settings
+from elasticsearch_dsl import UpdateByQuery
+from elasticsearch_dsl.connections import get_connection
+
+from vmc.common.utils import thread_pool_executor
 from vmc.elasticsearch import Object
 from vmc.elasticsearch.models import DocumentRegistry as DBDocumentRegistry
 from vmc.elasticsearch.signals import post_save
+from vmc.elasticsearch.helpers import async_bulk
 
 
 class SnapShotMode(Enum):
@@ -79,16 +86,57 @@ class DocumentRegistry:
 
     def update_related(self, sender, new_version, old_version, **kwargs):
         if old_version:
+            updates = []
             for document in self._get_related_doc(sender):
                 for field_name in document.get_fields_name():
                     field_type = document._doc_type.mapping[field_name]
+
                     if isinstance(field_type, Object) and issubclass(sender, field_type._doc_class):
+
                         for index in self._get_indexes(new_version, field_type._doc_class):
-                            result = document.search(index=index).filter(
-                                'term', **{F'{field_name}__id': old_version.id}).execute()
-                            for hit in result.hits:
-                                setattr(hit, field_name, new_version)
-                                hit.save(index=index, refresh=True)
+                            search = document.search(index=index).filter(
+                                'term', **{F'{field_name}__id': old_version.id})
+                            count = search.count()
+
+                            if count > 0:
+
+                                has_related_documents = getattr(document, 'related_documents', False)
+                                if not has_related_documents:
+                                    thread_pool_executor.submit(
+                                        self._update_by_query,
+                                        index if index else document.Index.name,
+                                        field_name,
+                                        old_version,
+                                        new_version
+                                    )
+                                else:
+
+                                    if count > 10000:
+                                        result = search.scan()
+                                    elif count > 0:
+                                        result = search[0:count].execute()
+                                    else:
+                                        result = []
+
+                                    for hit in result:
+                                        setattr(hit, field_name, new_version)
+                                        updates.append(hit.save(index=index, weak=True).to_dict(include_meta=True))
+
+                                    if len(updates) > 500:
+                                        async_bulk(updates)
+                                        updates = []
+
+            async_bulk(updates)
+
+    def _update_by_query(self, index, field_name, old_version, new_version):
+        ubq = UpdateByQuery(using=get_connection(), index=index).filter(
+            'term', **{F'{field_name}__id': old_version.id}
+        ).script(source=F'ctx._source.{field_name} = params.new_value',
+                 params={
+                     'new_value': new_version.to_dict()
+                 })
+        refresh = getattr(settings, 'TEST', False)
+        ubq.params(refresh=refresh, conflicts='proceed').execute()
 
     def _get_indexes(self, instance, receiver):
         if getattr(instance.Index, 'tenant_separation', False):

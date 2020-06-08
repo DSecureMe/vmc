@@ -24,6 +24,7 @@ from elasticsearch_dsl import Search
 from vmc.vulnerabilities.documents import VulnerabilityDocument
 
 from vmc.apps import VMCConfig
+from vmc.common.utils import thread_pool_executor
 from vmc.elasticsearch.tests import ESTestCase
 from vmc.config.test_settings import elastic_configured
 
@@ -47,7 +48,8 @@ class TenantTest(ESTestCase, TestCase):
         self.config_tenant_1 = RalphConfig.objects.get(id=1)
         self.config_tenant_2 = RalphConfig.objects.get(id=2)
 
-    def create_asset(self, tags):
+    @staticmethod
+    def create_asset(tags):
         return AssetDocument(
             ip_address='10.10.10.1',
             os='Windows',
@@ -62,10 +64,12 @@ class TenantTest(ESTestCase, TestCase):
         asset_tenant_2 = self.create_asset(self.config_tenant_2.name)
         AssetDocument.create_or_update({asset_tenant_1.id: asset_tenant_1}, self.config_tenant_1)
         AssetDocument.create_or_update({asset_tenant_2.id: asset_tenant_2}, self.config_tenant_2)
+        thread_pool_executor.wait_for_all()
 
         asset_tenant_1 = self.create_asset(self.config_tenant_1.name)
         asset_tenant_1.hostname = 'tenant-test'
         AssetDocument.create_or_update({asset_tenant_1.id: asset_tenant_1}, self.config_tenant_1)
+        thread_pool_executor.wait_for_all()
 
         result = AssetDocument.search(index='test.tenant.asset').filter('term', ip_address='10.10.10.1').execute()
         self.assertEqual(1, len(result.hits))
@@ -82,9 +86,12 @@ class TenantTest(ESTestCase, TestCase):
         self.assertEqual(1, Search().index(AssetDocument.Index.name).count())
 
         AssetDocument.create_or_update({asset_tenant_1.id: asset_tenant_1})
+        thread_pool_executor.wait_for_all()
+
         self.assertEqual(1, Search().index(AssetDocument.Index.name).count())
 
         self.assertEqual(1, Search().index(VulnerabilityDocument.Index.name).count())
+
         result = VulnerabilityDocument.search().filter('term', cve__id='CVE-2017-0002').execute()
         self.assertEqual(result.hits[0].asset.id, asset_tenant_1.id)
         self.assertEqual(result.hits[0].asset.ip_address, asset_tenant_1.ip_address)

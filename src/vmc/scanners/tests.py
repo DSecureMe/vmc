@@ -19,16 +19,49 @@
 """
 from unittest.mock import patch, MagicMock
 
+from parameterized import parameterized
+
+from django.core.exceptions import ValidationError
 from django.contrib.auth.models import User
 from django.test import TestCase, LiveServerTestCase
 
-from vmc.common.tasks import memcache_lock
 from vmc.assets.documents import AssetStatus
 from vmc.scanners.models import Config
 from vmc.scanners.registries import scanners_registry
-from vmc.scanners.tasks import update_scans, _update_scans
+from vmc.scanners.tasks import _update_scans
 from vmc.scanners.parsers import Parser
 from vmc.scanners.clients import Client
+from vmc.elasticsearch.models import Tenant, Config as Prefix
+
+
+class ConfigTest(TestCase):
+    fixtures = ['config.json']
+
+    def setUp(self) -> None:
+        self.uut = Config.objects.get(id=1)
+
+    @parameterized.expand([
+        ('http', 'http://test:80'),
+        ('https', 'https://test:80'),
+    ])
+    def test_call_url(self, schema, expected):
+        self.uut.schema = schema
+        self.assertEqual(self.uut.get_url(), expected)
+
+    def test_call__str__(self):
+        self.assertEqual(self.uut.__str__(), 'Test Config')
+
+    def test_add_config_nok(self):
+        with self.assertRaises(ValidationError, msg='Only one Ralph can be assigned to one Tenant'):
+            Config.objects.create(name='test1', host='test1', scanner='vmc.scanners.openvas',
+                                  username='test1', password='test1')  #nosec
+
+    @staticmethod
+    def test_add_config():
+        prefix = Prefix.objects.create(name='test1', prefix='test1')
+        tenant = Tenant.objects.create(name='test1', slug_name='test1', elasticsearch_config=prefix)
+        Config.objects.create(name='test1', host='test1', scanner='vmc.scanners.openvas',
+                              username='test1', password='test1', port=80, tenant=tenant)  #nosec
 
 
 class AdminPanelTest(LiveServerTestCase):
@@ -41,10 +74,10 @@ class AdminPanelTest(LiveServerTestCase):
     def test_button_exists(self):
         self.assertContains(self.client.get('/admin/scanners/config/'), 'scanners-import')
 
-    @patch('vmc.scanners.admin.update')
-    def test_call_update(self, update):
+    @patch('vmc.scanners.admin.start_update_scans')
+    def test_call_update(self, mock):
         response = self.client.get('/admin/scanners/config/import', follow=True)
-        update.delay.assert_called_once()
+        mock.delay.assert_called_once()
         self.assertContains(response, 'Importing started.')
 
     def tearDown(self):
@@ -85,20 +118,6 @@ class TasksTest(TestCase):
         self.config = Config.objects.first()
         scanners_registry.register('test-scanner', self.client, self.parser)
 
-    @patch('vmc.scanners.tasks._update_scans')
-    def test_update_scan_call(self, _update):
-        _update.return_value = True
-
-        self.assertTrue(update_scans(self.config.id))
-        _update.assert_called_with(self.config)
-
-    @patch('vmc.scanners.tasks._update_scans')
-    def test_update_scan_memcache_lock(self, _update):
-        lock_id = F'update-vulnerabilities-loc-{self.config.id}'
-        with memcache_lock(lock_id, self.config.id):
-            self.assertFalse(update_scans(self.config.id))
-            _update.assert_not_called()
-
     @patch('vmc.scanners.tasks.VulnerabilityDocument')
     @patch('vmc.scanners.tasks.AssetDocument')
     def test__update_call(self, asset_mock, vuln_mock):
@@ -110,7 +129,7 @@ class TasksTest(TestCase):
         self.client().get_targets.return_value = 'targets'
         asset_mock.get_assets_with_tag.return_value = 'discovered_assets'
 
-        self.assertTrue(_update_scans(self.config))
+        _update_scans(self.config.pk)
 
         self.client().download_scan.assert_called_once_with(1)
         self.parser().parse.assert_called_once_with('download_scan')
@@ -123,6 +142,6 @@ class TasksTest(TestCase):
     def test___update_scan_exception(self, document):
         self.client().get_scans.side_effect = Exception
 
-        self.assertFalse(_update_scans(self.config))
+        self.assertFalse(_update_scans(self.config.pk))
 
         document.create_or_update.assert_not_called()

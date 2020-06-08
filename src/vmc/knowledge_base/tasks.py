@@ -27,7 +27,8 @@ from datetime import datetime
 
 from celery import shared_task, group
 
-from vmc.common.tasks import memcache_lock
+from vmc.common.tasks import start_workflow
+from vmc.common.utils import thread_pool_executor
 from vmc.common.utils import get_file
 from vmc.processing.tasks import start_processing
 from vmc.knowledge_base.factories import CveFactory, CWEFactory, ExploitFactory
@@ -55,6 +56,8 @@ def update_cwe():
             LOGGER.info('Unable to download CWE file')
     except Exception as ex:
         LOGGER.error(ex)
+    finally:
+        thread_pool_executor.wait_for_all()
 
 
 @shared_task
@@ -71,6 +74,8 @@ def update_cve(year: int):
             LOGGER.info(F'Unable to download file for {year} year')
     except Exception as ex:
         LOGGER.error(ex)
+    finally:
+        thread_pool_executor.wait_for_all()
 
 
 @shared_task
@@ -86,20 +91,18 @@ def update_exploits():
             LOGGER.error(F'Unable do download file {VIA4_URL}')
     except Exception as ex:
         LOGGER.error(ex)
+    finally:
+        thread_pool_executor.wait_for_all()
 
 
-def _update_cve_cwe():
-    (
-            group(update_cve.si(year) for year in range(START_YEAR, datetime.now().year + 1)) |
-            update_cwe.si() |
-            update_exploits.si() |
+@shared_task(name='Update knowledge base')
+def start_update_knowledge_base():
+    workflow = (
+            group(
+                update_cwe.si() |
+                group(update_cve.si(year) for year in range(START_YEAR, datetime.now().year + 1)) |
+                update_exploits.si()
+            ) |
             start_processing.si()
-    )()
-
-
-@shared_task
-def update_cve_cwe():
-    with memcache_lock('update_cve_cwe', True) as acquired:
-        if acquired:
-            return _update_cve_cwe()
-    LOGGER.info('Update cve and cwe are already being imported by another worker')
+    )
+    return start_workflow(workflow, global_lock=True)

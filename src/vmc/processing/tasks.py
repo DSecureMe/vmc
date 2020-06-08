@@ -22,18 +22,18 @@ from __future__ import absolute_import, unicode_literals
 import logging
 import decimal
 
-from celery import shared_task
+from celery import shared_task, group
+from celery.result import allow_join_result
 from django.core.cache import cache
-from elasticsearch.helpers import bulk
-from elasticsearch_dsl.connections import get_connection
-
 
 from vmc.knowledge_base.metrics import ScopeV3
 from vmc.knowledge_base.utils import exploitability_v2, impact_v2, f_impact_v2
-from vmc.common.tasks import memcache_lock
+from vmc.common.tasks import LOCK_EXPIRE
+from vmc.common.utils import get_workers_count, thread_pool_executor
 from vmc.elasticsearch.models import Tenant
 from vmc.elasticsearch.registries import DocumentRegistry
 from vmc.elasticsearch import Q
+from vmc.elasticsearch.helpers import async_bulk
 from vmc.assets.documents import AssetDocument, Impact, AssetStatus
 from vmc.vulnerabilities.documents import VulnerabilityDocument, VulnerabilityStatus
 
@@ -78,22 +78,23 @@ def collateral_damage_potential_v2(asset) -> (float, str):
 
     if req.count(Impact.NOT_DEFINED) == 3:
         return COLLATERAL_DAMAGE_POTENTIAL_NOT_DEFINED_V2, 'ND'
+
     return COLLATERAL_DAMAGE_POTENTIAL_NONE_V2, 'N'
 
 
 def target_distribution_v2(vuln_count, assets_count) -> (float, str):
-    distribution = round(vuln_count / assets_count, 3)
+    distribution = round(vuln_count / assets_count, 2)
 
     if distribution < 0.01:
         return TARGET_DISTRIBUTION_NONE_V2, 'N'
 
-    if 0.01 <= distribution <= TARGET_DISTRIBUTION_LOW_V2:
+    if 0.01 <= distribution < TARGET_DISTRIBUTION_LOW_V2:
         return TARGET_DISTRIBUTION_LOW_V2, 'L'
 
-    if TARGET_DISTRIBUTION_LOW_V2 < distribution <= TARGET_DISTRIBUTION_MEDIUM_V2:
+    if TARGET_DISTRIBUTION_LOW_V2 <= distribution < TARGET_DISTRIBUTION_MEDIUM_V2:
         return TARGET_DISTRIBUTION_MEDIUM_V2, 'M'
 
-    if TARGET_DISTRIBUTION_MEDIUM_V2 < distribution <= TARGET_DISTRIBUTION_HIGH_V2:
+    if TARGET_DISTRIBUTION_MEDIUM_V2 <= distribution <= TARGET_DISTRIBUTION_HIGH_V2:
         return TARGET_DISTRIBUTION_HIGH_V2, 'H'
 
     return TARGET_DISTRIBUTION_NOT_DEFINED_V2, 'ND'
@@ -173,7 +174,7 @@ def impact_sub_score_v3(cve, asset) -> float:
     isc = impact_sub_score_base_v3(cve, asset)
     if ScopeV3(cve.scope_v3) == ScopeV3.UNCHANGED:
         return 6.42 * isc
-    return 7.52 * (isc - 0.029) - 3.25 * pow(isc - 0.02, 15)
+    return 7.52 * (isc - 0.029) - 3.25 * pow(isc * 0.9731 - 0.02, 13)
 
 
 def exploit_code_maturity_v3() -> float:
@@ -188,28 +189,25 @@ def report_confidence_v3() -> float:
     return REPORT_CONFIDENCE_NOT_DEFINED_V3
 
 
+def cvss_vector_requirement_impact_v3(impact):
+    if impact == Impact.NOT_DEFINED:
+        return 'X'
+    return impact.value
+
+
 def cvss_vector_v3(vuln) -> str:
     vector = F'AV:{vuln.cve.attack_vector_v3.value}/'
     vector += F'AC:{vuln.cve.attack_complexity_v3.value}/'
     vector += F'PR:{vuln.cve.privileges_required_v3.value}/'
     vector += F'UI:{vuln.cve.user_interaction_v3.value}/'
-    vector += F'S:{vuln.cve.scope_v3}/'
+    vector += F'S:{ScopeV3(vuln.cve.scope_v3).value}/'
     vector += F'C:{vuln.cve.confidentiality_impact_v3.value}/'
     vector += F'I:{vuln.cve.integrity_impact_v3.value}/'
     vector += F'A:{vuln.cve.availability_impact_v3.value}/'
 
-    vector += F'CR:{vuln.asset.confidentiality_requirement.value}/'
-    vector += F'IR:{vuln.asset.integrity_requirement.value}/'
-    vector += F'AR:{vuln.asset.availability_requirement.value}/'
-
-    vector += F'MAV:{vuln.cve.attack_vector_v3.value}/'
-    vector += F'MAC:{vuln.cve.attack_complexity_v3.value}/'
-    vector += F'MPR:{vuln.cve.privileges_required_v3.value}/'
-    vector += F'MUI:{vuln.cve.user_interaction_v3.value}/'
-    vector += F'MS:{vuln.cve.scope_v3}/'
-    vector += F'MC:{vuln.cve.confidentiality_impact_v3.value}/'
-    vector += F'MI:{vuln.cve.integrity_impact_v3.value}/'
-    vector += F'MA:{vuln.cve.availability_impact_v3.value}'
+    vector += F'CR:{cvss_vector_requirement_impact_v3(vuln.asset.confidentiality_requirement)}/'
+    vector += F'IR:{cvss_vector_requirement_impact_v3(vuln.asset.integrity_requirement)}/'
+    vector += F'AR:{cvss_vector_requirement_impact_v3(vuln.asset.availability_requirement)}'
 
     return vector
 
@@ -235,25 +233,69 @@ def calculate_environmental_score_v3(vuln) -> (float, str):
     return 0.0, '-'
 
 
-def get_vulnerability_count(cve_id, vulnerability_index):
-    key = F'{cve_id}-{vulnerability_index}'
-    count = cache.get(key, None, 60)
+def prepare(vulnerability_index):
+    s = VulnerabilityDocument.search(index=vulnerability_index).filter(
+        ~Q('match', tags=VulnerabilityStatus.FIXED) &
+        ~Q('match', asset__tags=AssetStatus.DELETED)
+    )
+    s.aggs.bucket('cves', 'terms', field='cve.id', size=10000000)
+    s = s.execute()
+
+    for result in s.aggregations.cves.buckets:
+        key = '{}-{}'.format(vulnerability_index, result['key'])
+        cache.set(key, result['doc_count'], LOCK_EXPIRE)
+
+
+def get_cve_count(vulnerability_index, cve_id):
+    key = F'{vulnerability_index}-{cve_id}'
+    count = cache.get(key, None)
     if not count:
-        s = VulnerabilityDocument.search(index=vulnerability_index).filter(
-            Q('match', cve__id=cve_id) &
-            ~Q('match', tags=VulnerabilityStatus.FIXED) &
-            ~Q('match', asset__tags=AssetStatus.DELETED)
-        )
-        s.aggs.metric('by_ip', 'cardinality', field='asset.ip_address')
-        s = s.execute()
-        count = s.aggregations.by_ip.value
-        cache.add(key, count, 60)
-    return count
+        prepare(vulnerability_index)
+    return cache.get(key, None)
 
 
-def _start_processing_per_tenant(vulnerability_index: str, asset_index: str):
+@shared_task(autoretry_for=(Exception, ))
+def _processing(idx, slices_count, assets_count, vulnerability_index):
     docs = []
 
+    vuln_search = VulnerabilityDocument.search(
+        index=vulnerability_index).filter(
+        ~Q('match', tags=VulnerabilityStatus.FIXED) &
+        ~Q('match', asset__tags=AssetStatus.DELETED)
+    )
+
+    LOGGER.debug(F'Calculation for {vulnerability_index} and {idx}, {slices_count} started')
+
+    if slices_count > 1:
+        vuln_search = vuln_search.extra(slice={"id": idx, "max": slices_count})
+
+    for vuln in vuln_search.scan():
+        score, vector = calculate_environmental_score_v3(vuln)
+        vuln.environmental_score_vector_v3 = vector
+        vuln.environmental_score_v3 = score
+
+        vuln_count = get_cve_count(vulnerability_index, vuln.cve.id)
+        score, vector = calculate_environmental_score_v2(vuln, vuln_count, assets_count)
+        vuln.environmental_score_vector_v2 = vector
+        vuln.environmental_score_v2 = score
+
+        docs.append(vuln.to_dict(include_meta=True))
+
+        if len(docs) > 500:
+            async_bulk(docs, vulnerability_index)
+
+    async_bulk(docs, vulnerability_index)
+    thread_pool_executor.wait_for_all()
+    LOGGER.debug(F'Calculation for {vulnerability_index} and {idx}, {slices_count} done')
+
+
+@shared_task(ignore_result=True)
+def _end_processing(vulnerability_index: str, asset_index: str):
+    LOGGER.info(F'Calculation for {vulnerability_index} and {asset_index} finished')
+
+
+@shared_task(ignore_result=True)
+def start_processing_per_tenant(vulnerability_index: str, asset_index: str):
     LOGGER.info(F'Calculation for {vulnerability_index} and {asset_index} started')
 
     assets_count = AssetDocument.search(
@@ -263,33 +305,18 @@ def _start_processing_per_tenant(vulnerability_index: str, asset_index: str):
         ~Q('match', tags=VulnerabilityStatus.FIXED) &
         ~Q('match', asset__tags=AssetStatus.DELETED)
     )
+    prepare(vulnerability_index)
+    workers_count = get_workers_count()
+    vuln_count = vuln_search.count()
 
-    for vuln in vuln_search.scan():
-        score, vector = calculate_environmental_score_v3(vuln)
-        vuln.environmental_score_vector_v3 = vector
-        vuln.environmental_score_v3 = score
+    if vuln_count > 500:
+        slices_count = vuln_count // workers_count
+        slices_count = slices_count if slices_count <= workers_count else workers_count
 
-        vuln_count = get_vulnerability_count(vuln.cve.id, vulnerability_index)
-        score, vector = calculate_environmental_score_v2(vuln, vuln_count, assets_count)
-        vuln.environmental_score_vector_v2 = vector
-        vuln.environmental_score_v2 = score
-
-        docs.append(vuln.to_dict(include_meta=True))
-
-    if docs:
-        bulk(get_connection(), docs, refresh=True, index=vulnerability_index)
-    LOGGER.info(F'Calculation for {vulnerability_index} and {asset_index} done')
-
-
-@shared_task(ignore_result=True)
-def start_processing_per_tenant(vulnerability_index: str, asset_index: str):
-    lock_id = F'update-environmental-loc-{vulnerability_index}-{asset_index}'
-    with memcache_lock(lock_id, lock_id) as acquired:
-        if acquired:
-            return _start_processing_per_tenant(vulnerability_index, asset_index)
-    LOGGER.info(
-        F'Update environmental for {vulnerability_index} and {asset_index} are already being done by another worker')
-    return False
+        (
+            group(_processing.si(idx, slices_count, assets_count, vulnerability_index) for idx in range(slices_count)) |
+            _end_processing.si(vulnerability_index, asset_index)
+        )()
 
 
 @shared_task(ignore_result=True)

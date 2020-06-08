@@ -96,10 +96,10 @@ class CalculateEnvironmentalScoreHelpersTests(TestCase):
         (0, 1, (tasks.TARGET_DISTRIBUTION_NONE_V2, 'N')),
         (1, 1000, (tasks.TARGET_DISTRIBUTION_NONE_V2, 'N')),
         (10, 1000, (tasks.TARGET_DISTRIBUTION_LOW_V2, 'L')),
-        (250, 1000, (tasks.TARGET_DISTRIBUTION_LOW_V2, 'L')),
-        (251, 1000, (tasks.TARGET_DISTRIBUTION_MEDIUM_V2, 'M')),
-        (750, 1000, (tasks.TARGET_DISTRIBUTION_MEDIUM_V2, 'M')),
-        (751, 1000, (tasks.TARGET_DISTRIBUTION_HIGH_V2, 'H')),
+        (240, 1000, (tasks.TARGET_DISTRIBUTION_LOW_V2, 'L')),
+        (250, 1000, (tasks.TARGET_DISTRIBUTION_MEDIUM_V2, 'M')),
+        (740, 1000, (tasks.TARGET_DISTRIBUTION_MEDIUM_V2, 'M')),
+        (750, 1000, (tasks.TARGET_DISTRIBUTION_HIGH_V2, 'H')),
         (1000, 1000, (tasks.TARGET_DISTRIBUTION_HIGH_V2, 'H')),
     ])
     def test_target_distribution_v2(self, vuln_count, assets_cunt, expected):
@@ -122,7 +122,7 @@ class CalculateEnvironmentalScoreHelpersTests(TestCase):
         (AssetImpact.MEDIUM, AssetImpact.MEDIUM, AssetImpact.LOW, (7.4, 'AV:N/AC:M/Au:N/C:P/I:P/A:P/CDP:LM/TD:H/CR:M/IR:M/AR:L')),
         (AssetImpact.MEDIUM, AssetImpact.MEDIUM, AssetImpact.MEDIUM, (7.8, 'AV:N/AC:M/Au:N/C:P/I:P/A:P/CDP:LM/TD:H/CR:M/IR:M/AR:M')),
         (AssetImpact.HIGH, AssetImpact.HIGH, AssetImpact.HIGH, (9.1, 'AV:N/AC:M/Au:N/C:P/I:P/A:P/CDP:H/TD:H/CR:H/IR:H/AR:H')),
-        (AssetImpact.NOT_DEFINED, AssetImpact.HIGH, AssetImpact.LOW, (8.1, 'AV:N/AC:M/Au:N/C:P/I:P/A:P/CDP:MH/TD:H/CR:N/IR:H/AR:L')),
+        (AssetImpact.NOT_DEFINED, AssetImpact.HIGH, AssetImpact.LOW, (8.1, 'AV:N/AC:M/Au:N/C:P/I:P/A:P/CDP:MH/TD:H/CR:ND/IR:H/AR:L')),
     ])
     def test_calculate_environmental_score_v2(self, cr, ir, ar, expected):
         self.prepare_asset(cr, ir, ar)
@@ -159,21 +159,21 @@ class CalculateEnvironmentalScoreHelpersTests(TestCase):
 
     @parameterized.expand([
         (metrics.ScopeV3.UNCHANGED, AssetImpact.LOW, AssetImpact.LOW, AssetImpact.LOW,
-         (6.9, 'AV:N/AC:L/PR:N/UI:R/S:U/C:H/I:H/A:H/CR:L/IR:L/AR:L/MAV:N/MAC:L/MPR:N/MUI:R/MS:U/MC:H/MI:H/MA:H')),
+         (6.9, 'AV:N/AC:L/PR:N/UI:R/S:U/C:H/I:H/A:H/CR:L/IR:L/AR:L')),
         (metrics.ScopeV3.CHANGED, AssetImpact.MEDIUM, AssetImpact.LOW, AssetImpact.LOW,
-         (9.1, 'AV:N/AC:L/PR:N/UI:R/S:C/C:H/I:H/A:H/CR:M/IR:L/AR:L/MAV:N/MAC:L/MPR:N/MUI:R/MS:C/MC:H/MI:H/MA:H')),
+         (9.1, 'AV:N/AC:L/PR:N/UI:R/S:C/C:H/I:H/A:H/CR:M/IR:L/AR:L')),
         (metrics.ScopeV3.UNCHANGED, AssetImpact.LOW, AssetImpact.MEDIUM, AssetImpact.LOW,
-         (7.8, 'AV:N/AC:L/PR:N/UI:R/S:U/C:H/I:H/A:H/CR:L/IR:M/AR:L/MAV:N/MAC:L/MPR:N/MUI:R/MS:U/MC:H/MI:H/MA:H')),
+         (7.8, 'AV:N/AC:L/PR:N/UI:R/S:U/C:H/I:H/A:H/CR:L/IR:M/AR:L')),
         (metrics.ScopeV3.CHANGED, AssetImpact.LOW, AssetImpact.LOW, AssetImpact.MEDIUM,
-         (9.1, 'AV:N/AC:L/PR:N/UI:R/S:C/C:H/I:H/A:H/CR:L/IR:L/AR:M/MAV:N/MAC:L/MPR:N/MUI:R/MS:C/MC:H/MI:H/MA:H')),
+         (9.1, 'AV:N/AC:L/PR:N/UI:R/S:C/C:H/I:H/A:H/CR:L/IR:L/AR:M')),
         (metrics.ScopeV3.UNCHANGED, AssetImpact.MEDIUM, AssetImpact.MEDIUM, AssetImpact.LOW,
-         (8.4, 'AV:N/AC:L/PR:N/UI:R/S:U/C:H/I:H/A:H/CR:M/IR:M/AR:L/MAV:N/MAC:L/MPR:N/MUI:R/MS:U/MC:H/MI:H/MA:H')),
+         (8.4, 'AV:N/AC:L/PR:N/UI:R/S:U/C:H/I:H/A:H/CR:M/IR:M/AR:L')),
         (metrics.ScopeV3.CHANGED, AssetImpact.MEDIUM, AssetImpact.MEDIUM, AssetImpact.MEDIUM,
-         (9.6, 'AV:N/AC:L/PR:N/UI:R/S:C/C:H/I:H/A:H/CR:M/IR:M/AR:M/MAV:N/MAC:L/MPR:N/MUI:R/MS:C/MC:H/MI:H/MA:H')),
+         (9.7, 'AV:N/AC:L/PR:N/UI:R/S:C/C:H/I:H/A:H/CR:M/IR:M/AR:M')),
         (metrics.ScopeV3.UNCHANGED, AssetImpact.HIGH, AssetImpact.HIGH, AssetImpact.HIGH,
-         (8.8, 'AV:N/AC:L/PR:N/UI:R/S:U/C:H/I:H/A:H/CR:H/IR:H/AR:H/MAV:N/MAC:L/MPR:N/MUI:R/MS:U/MC:H/MI:H/MA:H')),
+         (8.8, 'AV:N/AC:L/PR:N/UI:R/S:U/C:H/I:H/A:H/CR:H/IR:H/AR:H')),
         (metrics.ScopeV3.CHANGED, AssetImpact.NOT_DEFINED, AssetImpact.HIGH, AssetImpact.LOW,
-         (9.6, 'AV:N/AC:L/PR:N/UI:R/S:C/C:H/I:H/A:H/CR:N/IR:H/AR:L/MAV:N/MAC:L/MPR:N/MUI:R/MS:C/MC:H/MI:H/MA:H')),
+         (9.7, 'AV:N/AC:L/PR:N/UI:R/S:C/C:H/I:H/A:H/CR:X/IR:H/AR:L')),
     ])
     def test_environmental_score_v3(self, scope, cr, ir, ar, expected):
         self.prepare_asset(cr, ir, ar)
@@ -217,7 +217,8 @@ class CalculateEnvironmentalScore(ESTestCase, TestCase):
 
     def test_get_vulnerability_count(self):
         self.generate_vulns()
-        self.assertEqual(tasks.get_vulnerability_count(self.cve.id, VulnerabilityDocument.Index.name), 100)
+        tasks.prepare(VulnerabilityDocument.Index.name)
+        self.assertEqual(tasks.get_cve_count(VulnerabilityDocument.Index.name, self.cve.id), 100)
 
     def test_start_processing_per_tenant(self):
         self.generate_assets()
@@ -231,7 +232,7 @@ class CalculateEnvironmentalScore(ESTestCase, TestCase):
         self.assertEqual(vuln_search.filter('exists', field='environmental_score_v3').count(), 0)
         self.assertEqual(vuln_search.filter('exists', field='environmental_score_vector_v3').count(), 0)
 
-        tasks._start_processing_per_tenant(VulnerabilityDocument.Index.name, AssetDocument.Index.name)
+        tasks._processing(0, 1, 1000, VulnerabilityDocument.Index.name)
 
         self.assertEqual(vuln_search.count(), 300)
         self.assertEqual(vuln_search.filter('exists', field='environmental_score_v2').count(), 100)

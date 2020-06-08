@@ -24,6 +24,6 @@
 {% block object-tools-items %}
 {{ block.super }}
 <li>
-    <a id="ralph-import" href="{% url 'admin:ralph-import' %}" class="btn btn-high btn-success">Import</a>
+    <a id="ralph-import" href="{% url 'admin:ralph-import' %}" class="btn btn-primary btn-xs" data-toggle="tooltip" data-placement="bottom" title="Import all assets">Import</a>
 </li>
 {% endblock %}

@@ -23,21 +23,24 @@ from __future__ import absolute_import, unicode_literals
 import logging
 from django.utils.timezone import now
 
-from celery import shared_task, group
+from celery import shared_task
 
-from vmc.common.tasks import memcache_lock
+from vmc.elasticsearch.registries import DocumentRegistry
+from vmc.common.utils import thread_pool_executor
+from vmc.common.tasks import start_workflow
 from vmc.scanners.models import Config
 from vmc.scanners.registries import scanners_registry
 from vmc.vulnerabilities.documents import VulnerabilityDocument
-from vmc.processing.tasks import start_processing
 from vmc.assets.documents import AssetDocument, AssetStatus
-
+from vmc.processing.tasks import start_processing_per_tenant
 
 LOGGER = logging.getLogger(__name__)
 
 
-def _update_scans(config: Config):
+@shared_task(trail=True)
+def _update_scans(config_pk: int):
     try:
+        config = Config.objects.get(pk=config_pk)
         client, parser = scanners_registry.get(config)
 
         now_date = now()
@@ -46,7 +49,7 @@ def _update_scans(config: Config):
         for scan_id in scan_list:
             LOGGER.info(F'Trying to download report form {config.name}')
             file = client.download_scan(scan_id)
-            LOGGER.info(F'Retreiving discovered assets for {config.name}')
+            LOGGER.info(F'Retrieving discovered assets for {config.name}')
             discovered_assets = AssetDocument.get_assets_with_tag(tag=AssetStatus.DISCOVERED, config=config)
             LOGGER.info(F'Trying to parse scan file {scan_id}')
             vulns, scanned_hosts = parser.parse(file)
@@ -70,25 +73,23 @@ def _update_scans(config: Config):
         import traceback
         traceback.print_exc()
         LOGGER.error(F'Error while loading vulnerability data {e}')
+    finally:
+        thread_pool_executor.wait_for_all()
 
     return False
 
 
-@shared_task(trail=True)
-def update_scans(config_pk: int):
-    config = Config.objects.get(pk=config_pk)
-    lock_id = F'update-vulnerabilities-loc-{config_pk}'
-    with memcache_lock(lock_id, config.id) as acquired:
-        if acquired:
-            return _update_scans(config)
-    LOGGER.info(F'Vulnerability update for {config.name} is already being done by another worker')
-    return False
+def get_update_scans_workflow(config):
+    vulnerability_index = DocumentRegistry.get_index_for_tenant(config.tenant, VulnerabilityDocument)
+    asset_index = DocumentRegistry.get_index_for_tenant(config.tenant, AssetDocument)
+    return (
+        _update_scans.si(config_id=config.id) |
+        start_processing_per_tenant.si(vulnerability_index, asset_index)
+    )
 
 
-@shared_task
-def update():
-    configs = Config.objects.all().values_list('id', flat=True)
-    (
-        group(update_scans.si(config_pk=config) for config in configs) |
-        start_processing.si()
-    )()
+@shared_task(name='Update all scans')
+def start_update_scans():
+    for config in Config.objects.all():
+        workflow = get_update_scans_workflow(config)
+        start_workflow(workflow, config.tenant)

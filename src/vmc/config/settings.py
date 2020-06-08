@@ -66,6 +66,8 @@ INTERNAL_APPS = [
 ]
 
 THIRD_PARTY_APPS = [
+    'vmc.branding',
+    'bootstrap_admin',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -74,7 +76,6 @@ THIRD_PARTY_APPS = [
     'django.contrib.staticfiles',
     'django_celery_beat',
     'django_celery_results',
-    'simple_history'
 ]
 
 
@@ -158,7 +159,11 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/2.1/howto/static-files/
 
 STATIC_URL = '/static/'
-STATIC_ROOT = os.path.join(BASE_DIR, 'static')
+STATIC_ROOT = '/opt/vmc/lib/python3.6/site-packages/vmc/static'
+
+STATICFILES_DIRS = [
+    os.path.join(BASE_DIR, "static"),
+]
 
 CELERY_BROKER_URL = 'amqp://{}:{}@{}:{}'.format(
     get_config('rabbitmq.username', 'guest'),
@@ -178,6 +183,7 @@ if get_config('elasticsearch.hosts', False):
     ELASTICSEARCH_DSL = {
         'default': {
             'hosts': get_config('elasticsearch.hosts', 'localhost:9200'),
+            'timeout': 3000,
             'http_auth': [
                 get_config('elasticsearch.user', 'elastic'),
                 get_config('elasticsearch.password', 'elastic')
@@ -200,21 +206,27 @@ CACHE_TTL = 60 * 15
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
+    'formatters': {
+        'console': {
+            'format': '%(asctime)s %(levelname)-8s %(name)-12s %(message)s',
+        },
+    },
     'handlers': {
         'console': {
             'class': 'logging.StreamHandler',
+            'formatter': 'console'
         }
     },
     'loggers': {
         'django': {
             'handlers': ['console'],
             'level': 'INFO',
+            'propagate': False,
         },
-    }
-}
-
-for app in INTERNAL_APPS:
-    LOGGING['loggers'][app] = {
+        'vmc': {
             'handlers': ['console'],
             'level': 'DEBUG' if DEBUG else 'INFO',
+            'propagate': False,
+        }
     }
+}

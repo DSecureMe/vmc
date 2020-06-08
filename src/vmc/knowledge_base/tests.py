@@ -26,6 +26,7 @@ from django.contrib.auth.models import User
 from django.test import TestCase, LiveServerTestCase
 from parameterized import parameterized
 
+from vmc.common.utils import thread_pool_executor
 from vmc.common.tests import get_fixture_location
 from vmc.elasticsearch import Search
 from vmc.elasticsearch.tests import ESTestCase
@@ -59,7 +60,7 @@ def create_cve(cve_id='CVE-2017-0002', save=True) -> CveDocument:
         availability_impact_v3=metrics.ImpactV3.HIGH
     )
     if save:
-        cve.save(refresh=True)
+        cve.save()
     return cve
 
 
@@ -70,6 +71,7 @@ class CWEFactoryTest(ESTestCase, TestCase):
         super().setUp()
         with open(get_fixture_location(__file__, 'cwec_v2.12.xml')) as handle:
             CWEFactory.process(handle)
+        thread_pool_executor.wait_for_all()
 
     def test_should_create_cwe_entries(self):
         result = CweDocument.search().filter('term', id='CWE-1004').execute()
@@ -95,6 +97,7 @@ class CWEFactoryTest(ESTestCase, TestCase):
         self.assertEqual(Search().index(CweDocument.Index.name).count(), 2)
         with open(get_fixture_location(__file__, 'cwec_v2.12.xml')) as handle:
             CWEFactory.process(handle)
+        thread_pool_executor.wait_for_all()
         self.assertEqual(Search().index(CweDocument.Index.name).count(), 2)
 
 
@@ -106,6 +109,8 @@ class CveFactoryTest(ESTestCase, TestCase):
         with open(get_fixture_location(__file__, 'nvdcve-1.0-2017.json')) as handle:
             CveFactory.process(handle)
 
+        thread_pool_executor.wait_for_all()
+
     def test_cve_count(self):
         self.assertEqual(Search().index(CveDocument.Index.name).count(), 2)
 
@@ -113,6 +118,11 @@ class CveFactoryTest(ESTestCase, TestCase):
         self.assertFalse(CveDocument.search().filter('term', id='CVE-2017-0605').execute())
 
     def test_call_call_not_update(self):
+        with open(get_fixture_location(__file__, 'nvdcve-1.0-2017-2.json')) as handle:
+            CveFactory.process(handle)
+
+        thread_pool_executor.wait_for_all()
+
         result = CveDocument.search().filter('term', id='CVE-2017-0002').execute()
 
         self.assertEqual(len(result.hits), 1)
@@ -171,6 +181,7 @@ class CveFactoryTest(ESTestCase, TestCase):
 
         with open(get_fixture_location(__file__, 'nvdcve-1.0-2017.json')) as handle:
             CveFactory.process(handle)
+        thread_pool_executor.wait_for_all()
 
         self.assertEqual(CveDocument.search().filter('term', id='CVE-2017-0002').count(), 1)
         new_cve = CveDocument.search().filter('term', id='CVE-2017-0002').execute().hits[0]
@@ -179,16 +190,20 @@ class CveFactoryTest(ESTestCase, TestCase):
     def test_cwe_update(self):
         cwe = CweDocument.search().filter('term', id='CWE-200').execute().hits[0]
         cwe.name = 'Changed'
-        cwe.save(refresh=True)
+        cwe.save()
+        thread_pool_executor.wait_for_all()
 
-        cve = CveDocument.search().filter('term', id='CVE-2017-0008').sort('-modified_date').execute().hits
+        self.assertEqual(CveDocument.search().filter('term', id='CVE-2017-0008').count(), 1)
+        cve = CveDocument.search().filter('term', id='CVE-2017-0008').execute().hits
         self.assertEqual(len(cve), 1)
         self.assertEqual(cve[0].cwe.name, 'Changed')
 
     def test_should_not_update(self):
         self.assertEqual(Search().index(CveDocument.Index.name).count(), 2)
+
         with open(get_fixture_location(__file__, 'nvdcve-1.0-2017.json')) as handle:
             CveFactory.process(handle)
+        thread_pool_executor.wait_for_all()
 
         self.assertEqual(Search().index(CveDocument.Index.name).count(), 2)
 
@@ -261,6 +276,7 @@ class UpdateExploitsTaskTest(ESTestCase, TestCase):
     def setUp(self):
         super().setUp()
         self.load_data()
+        thread_pool_executor.wait_for_all()
 
     def load_data(self):
         with open(get_fixture_location(__file__, 'nvdcve-1.0-2017.json')) as handle:
@@ -275,6 +291,7 @@ class UpdateExploitsTaskTest(ESTestCase, TestCase):
         update_exploits()
         get_file.assert_called_once_with('https://www.cve-search.org/feeds/via4.json')
 
+        thread_pool_executor.wait_for_all()
         self.assertEqual(Search().index(CveDocument.Index.name).count(), 2)
 
         cve = CveDocument.search().filter('term', id='CVE-2017-0008').sort('-modified_date').execute().hits[0]
@@ -283,28 +300,10 @@ class UpdateExploitsTaskTest(ESTestCase, TestCase):
         self.assertEqual(cve.exploits, [{'id': '44904', 'url': 'https://www.exploit-db.com/exploits/44904'}])
 
         update_exploits()
+        thread_pool_executor.wait_for_all()
+
         self.assertEqual(Search().index(CveDocument.Index.name).count(), 2)
         cve = CveDocument.search().filter('term', id='CVE-2017-0008').sort('-modified_date').execute().hits[0]
         self.assertEqual(cve.modified_date, prev_modified_date)
         self.assertEqual(len(cve.exploits), 1)
         self.assertEqual(cve.exploits, [{'id': '44904', 'url': 'https://www.exploit-db.com/exploits/44904'}])
-
-
-class AdminPanelTest(LiveServerTestCase):
-    fixtures = ['users.json']
-
-    def setUp(self):
-        super().setUp()
-        self.client.force_login(User.objects.get(username='admin'))
-
-    def test_button_exists(self):
-        self.assertContains(self.client.get('/admin/knowledge_base/cve/'), 'nvd-cve-import')
-
-    @patch('vmc.knowledge_base.admin.update_cve_cwe')
-    def test_call_update_cve(self, update_cve_cwe):
-        response = self.client.get('/admin/knowledge_base/cve/import', follow=True)
-        update_cve_cwe.delay.assert_called_once()
-        self.assertContains(response, 'Importing started.')
-
-    def tearDown(self):
-        self.client.logout()

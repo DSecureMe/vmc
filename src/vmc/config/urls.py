@@ -18,9 +18,16 @@
  *
 """
 from django.contrib import admin
+from django.shortcuts import redirect
 from django.urls import path
+from vmc.knowledge_base.views import update_knowledge_base
 
+admin.site.site_header = "VMC Admin Panel"
+admin.site.site_title = "VMC Admin Panel"
+admin.site.index_title = "Dashboard"
 
 urlpatterns = [
+    path('', lambda request: redirect('admin/', permanent=False)),
     path('admin/', admin.site.urls),
+    path('admin/knowlege-base/update', update_knowledge_base, name='update_knowledge_base')
 ]

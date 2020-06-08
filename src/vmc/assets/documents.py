@@ -22,13 +22,14 @@ from decimal import Decimal
 from vmc.common.enum import TupleValueEnum
 from vmc.elasticsearch import Document, TupleValueField, Keyword, InnerDoc, Nested, Q, ListField
 from vmc.elasticsearch.registries import registry
+from vmc.elasticsearch.helpers import async_bulk
 
 
 class Impact(TupleValueEnum):
     LOW = ('L', Decimal('0.5'))
     MEDIUM = ('M', Decimal('1.0'))
     HIGH = ('H', Decimal('1.51'))
-    NOT_DEFINED = ('N', Decimal('1.0'))
+    NOT_DEFINED = ('ND', Decimal('1.0'))
 
 
 class OwnerInnerDoc(InnerDoc):
@@ -53,8 +54,9 @@ class AssetInnerDoc(InnerDoc):
     availability_requirement = TupleValueField(choice_type=Impact, default=Impact.NOT_DEFINED)
     business_owner = Nested(OwnerInnerDoc, include_in_parent=True)
     technical_owner = Nested(OwnerInnerDoc, include_in_parent=True)
+    service = Keyword()
+    environment = Keyword()
     hostname = Keyword()
-    change_reason = Keyword()
     tags = ListField()
     url = Keyword()
 
@@ -71,33 +73,50 @@ class AssetDocument(Document, AssetInnerDoc):
         assets = AssetDocument._update_existing_assets(assets, index)
         assets = AssetDocument._update_discovered_assets(assets, index)
 
-        for asset in assets.values():
-            asset.save(refresh=True, index=index)
+        async_bulk([a.to_dict() for a in assets.values()], index)
 
     @staticmethod
     def _update_existing_assets(assets: dict, index):
         if assets:
+            updated = []
             assets_search = AssetDocument.search(index=index).filter(~Q('match', tags=AssetStatus.DISCOVERED))
-            for current_asset in assets_search.scan():
+            current_assets = [a for a in assets_search.scan()]
+            for current_asset in current_assets:
                 asset_id = current_asset.id
                 if asset_id in assets:
                     if current_asset.has_changed(assets[asset_id]):
-                        current_asset.update(assets[asset_id], refresh=True, index=index)
+                        current_asset.update(assets[asset_id], index=index, weak=True)
+                        updated.append(current_asset.to_dict(include_meta=True))
                     del assets[asset_id]
                 elif asset_id not in assets and AssetStatus.DELETED not in current_asset.tags:
                     current_asset.tags.append(AssetStatus.DELETED)
-                    current_asset.save(refresh=True, index=index)
+                    updated.append(current_asset.save(index=index, weak=True).to_dict(include_meta=True))
+
+                if len(updated) > 500:
+                    async_bulk(updated)
+                    updated = []
+
+            async_bulk(updated)
+
         return assets
 
     @staticmethod
     def _update_discovered_assets(assets: dict, index):
         if assets:
+            updated = []
             assets = {a.ip_address: a for a in assets.values()}
             assets_search = AssetDocument.search(index=index).filter(Q('match', tags=AssetStatus.DISCOVERED))
-            for discovered_asset in assets_search.scan():
+            discovered_assets = [a for a in assets_search.scan()]
+            for discovered_asset in discovered_assets:
                 if discovered_asset.ip_address in assets:
-                    discovered_asset.update(assets[discovered_asset.ip_address], refresh=True, index=index)
+                    discovered_asset.update(assets[discovered_asset.ip_address], index=index, weak=True)
+                    updated.append(discovered_asset.to_dict(include_meta=True))
                     del assets[discovered_asset.ip_address]
+            if len(updated) > 500:
+                async_bulk(updated)
+                updated = []
+
+            async_bulk(updated)
 
         return assets
 
@@ -110,7 +129,7 @@ class AssetDocument(Document, AssetInnerDoc):
             return result.hits[0]
         return AssetDocument(id=ip_address,
                              ip_address=ip_address,
-                             tags=[AssetStatus.DISCOVERED]).save(index=index, refresh=True)
+                             tags=[AssetStatus.DISCOVERED]).save(index=index)
 
     @staticmethod
     def get_assets_with_tag(tag: str, config=None):
@@ -125,4 +144,4 @@ class AssetDocument(Document, AssetInnerDoc):
         for asset in discovered_assets.scan():
             if asset.ip_address in targets and asset.ip_address not in scanned_hosts:
                 asset.tags.append(AssetStatus.DELETED)
-                asset.save(index=index, refresh=True)
+                asset.save(index=index)

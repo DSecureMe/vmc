@@ -83,7 +83,7 @@ class RalphClient:
             if 'http' not in url:
                 url = F'{self._config.get_url()}{url}'
 
-            resp = requests.request(method, url, verify=not self._config.insecure, **kwargs)
+            resp = requests.request(method, url, verify=not self._config.insecure, timeout=360, **kwargs)
 
             if resp.status_code != 200:
                 self._print_debug(kwargs['headers'], url, resp.status_code,

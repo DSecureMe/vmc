@@ -23,7 +23,7 @@ from unittest import skipIf
 from django.test import TestCase
 
 from vmc.knowledge_base.tests import create_cve
-
+from vmc.common.utils import thread_pool_executor
 from vmc.config.test_settings import elastic_configured
 from vmc.elasticsearch import Search
 from vmc.elasticsearch.tests import ESTestCase
@@ -47,7 +47,7 @@ def create_vulnerability(asset, cve, save=True):
         tags=['test']
     )
     if save:
-        vulnerability.save(refresh=True)
+        vulnerability.save()
     return vulnerability
 
 
@@ -111,70 +111,69 @@ class VulnerabilityDocumentTest(ESTestCase, TestCase):
         self.assertEqual(uut.protocol, 'tcp')
 
     def test_asset_updated(self):
+        self.asset_2 = create_asset('10.10.10.11')
         create_vulnerability(self.asset, self.cve)
-        create_vulnerability(self.asset, self.cve)
-        create_vulnerability(self.asset, self.cve)
+        create_vulnerability(self.asset_2, self.cve)
 
         self.cve_2 = create_cve('CVE-2017-0003')
         create_vulnerability(self.asset, self.cve_2)
-        create_vulnerability(self.asset, self.cve_2)
-        create_vulnerability(self.asset, self.cve_2)
-        self.assertEqual(Search().index(VulnerabilityDocument.Index.name).count(), 6)
+        create_vulnerability(self.asset_2, self.cve_2)
+
+        self.assertEqual(Search().index(VulnerabilityDocument.Index.name).count(), 4)
 
         self.asset.confidentiality_requirement = AssetImpact.HIGH
         self.asset.integrity_requirement = AssetImpact.HIGH
-        self.asset.save(refresh=True)
+        self.asset.save()
+        thread_pool_executor.wait_for_all()
 
-        self.assertEqual(Search().index(VulnerabilityDocument.Index.name).count(), 6)
+        self.assertEqual(Search().index(VulnerabilityDocument.Index.name).count(), 4)
 
         result_1 = VulnerabilityDocument.search().filter(
-            'term', asset__ip_address=self.asset.ip_address).sort('-modified_date').filter(
-            'term', cve__id=self.cve.id).execute()
+            'term', asset__ip_address=self.asset.ip_address).execute()
 
-        self.assertEqual(len(result_1.hits), 3)
+        self.assertEqual(len(result_1.hits), 2)
         self.assertEqual(result_1.hits[0].asset.confidentiality_requirement, self.asset.confidentiality_requirement)
         self.assertEqual(result_1.hits[0].asset.integrity_requirement, self.asset.integrity_requirement)
-        self.assertTrue(result_1.hits[0].modified_date > result_1.hits[1].modified_date)
+        self.assertEqual(result_1.hits[1].asset.confidentiality_requirement, self.asset.confidentiality_requirement)
+        self.assertEqual(result_1.hits[1].asset.integrity_requirement, self.asset.integrity_requirement)
 
         result_2 = VulnerabilityDocument.search().filter(
-            'term', asset__ip_address=self.asset.ip_address).sort('-modified_date').filter(
-            'term', cve__id=self.cve_2.id).execute()
+            'term', asset__ip_address=self.asset_2.ip_address).execute()
 
-        self.assertEqual(len(result_2.hits), 3)
-        self.assertEqual(result_2.hits[0].asset.confidentiality_requirement, self.asset.confidentiality_requirement)
-        self.assertTrue(result_2.hits[0].modified_date > result_2.hits[1].modified_date)
+        self.assertEqual(len(result_2.hits), 2)
+        self.assertEqual(result_2.hits[0].asset.confidentiality_requirement, self.asset_2.confidentiality_requirement)
+        self.assertEqual(result_2.hits[0].asset.integrity_requirement, self.asset_2.integrity_requirement)
+        self.assertEqual(result_2.hits[1].asset.confidentiality_requirement, self.asset_2.confidentiality_requirement)
+        self.assertEqual(result_2.hits[1].asset.integrity_requirement, self.asset_2.integrity_requirement)
 
     def test_cve_updated(self):
-        create_vulnerability(self.asset, self.cve)
-        create_vulnerability(self.asset, self.cve)
-        create_vulnerability(self.asset, self.cve)
-
         self.asset_2 = create_asset('10.10.10.11')
+        self.cve_2 = create_cve('CVE-2017-0003')
+        create_vulnerability(self.asset, self.cve)
+        create_vulnerability(self.asset, self.cve_2)
+
         create_vulnerability(self.asset_2, self.cve)
-        create_vulnerability(self.asset_2, self.cve)
-        create_vulnerability(self.asset_2, self.cve)
-        self.assertEqual(Search().index(VulnerabilityDocument.Index.name).count(), 6)
+        create_vulnerability(self.asset_2, self.cve_2)
+
+        self.assertEqual(Search().index(VulnerabilityDocument.Index.name).count(), 4)
 
         self.cve.access_vector_v2 = metrics.AccessVectorV2.LOCAL
-        self.cve.save(refresh=True)
+        self.cve.save()
+        thread_pool_executor.wait_for_all()
 
-        self.assertEqual(Search().index(VulnerabilityDocument.Index.name).count(), 6)
+        self.assertEqual(Search().index(VulnerabilityDocument.Index.name).count(), 4)
 
-        result_1 = VulnerabilityDocument.search().filter(
-            'term', asset__ip_address=self.asset.ip_address).sort('-modified_date').filter(
-            'term', cve__id=self.cve.id).execute()
+        result_1 = VulnerabilityDocument.search().filter('term', cve__id=self.cve.id).execute()
 
-        self.assertEqual(len(result_1.hits), 3)
+        self.assertEqual(len(result_1.hits), 2)
         self.assertEqual(result_1.hits[0].cve.access_vector_v2, self.cve.access_vector_v2)
-        self.assertTrue(result_1.hits[0].modified_date > result_1.hits[1].modified_date)
+        self.assertEqual(result_1.hits[1].cve.access_vector_v2, self.cve.access_vector_v2)
 
-        result_2 = VulnerabilityDocument.search().filter(
-            'term', asset__ip_address=self.asset_2.ip_address).sort('-modified_date').filter(
-            'term', cve__id=self.cve.id).execute()
+        result_2 = VulnerabilityDocument.search().filter('term', cve__id=self.cve_2.id).execute()
 
-        self.assertEqual(len(result_2.hits), 3)
-        self.assertEqual(result_2.hits[0].cve.access_vector_v2, self.cve.access_vector_v2)
-        self.assertTrue(result_2.hits[0].modified_date > result_2.hits[1].modified_date)
+        self.assertEqual(len(result_2.hits), 2)
+        self.assertEqual(result_2.hits[0].cve.access_vector_v2, self.cve_2.access_vector_v2)
+        self.assertEqual(result_2.hits[1].cve.access_vector_v2, self.cve_2.access_vector_v2)
 
     def test_update_existing_vulnerability(self):
         vuln = create_vulnerability(self.asset, self.cve)
@@ -184,6 +183,7 @@ class VulnerabilityDocumentTest(ESTestCase, TestCase):
         updated_vuln.description = 'Updated Desc'
 
         VulnerabilityDocument.create_or_update({updated_vuln.id: updated_vuln}, [], ConfigMock())
+        thread_pool_executor.wait_for_all()
         self.assertEqual(VulnerabilityDocument.search().count(), 1)
 
         result_2 = VulnerabilityDocument.search().filter(
@@ -198,6 +198,7 @@ class VulnerabilityDocumentTest(ESTestCase, TestCase):
         updated_vuln = vuln.clone()
 
         VulnerabilityDocument.create_or_update({updated_vuln.id: updated_vuln}, [], ConfigMock())
+        thread_pool_executor.wait_for_all()
         self.assertEqual(VulnerabilityDocument.search().count(), 1)
 
         result_2 = VulnerabilityDocument.search().filter(
@@ -210,6 +211,7 @@ class VulnerabilityDocumentTest(ESTestCase, TestCase):
         self.assertEqual(VulnerabilityDocument.search().count(), 1)
 
         VulnerabilityDocument.create_or_update({}, [self.asset.ip_address], ConfigMock())
+        thread_pool_executor.wait_for_all()
         self.assertEqual(VulnerabilityDocument.search().count(), 1)
 
         result_2 = VulnerabilityDocument.search().filter(

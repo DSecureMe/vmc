@@ -23,3 +23,4 @@ from django.apps import AppConfig
 
 class RalphConfig(AppConfig):
     name = 'vmc.ralph'
+    verbose_name = 'Asset Management'

@@ -1,4 +1,3 @@
-<!--
 """
  * Licensed to DSecure.me under one or more contributor
  * license agreements. See the NOTICE file distributed with
@@ -16,14 +15,16 @@
  * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
--->
+ *
+"""
+from django.contrib import messages
+from django.http import HttpResponseRedirect
+from django.contrib.auth.decorators import user_passes_test
+from vmc.knowledge_base.tasks import start_update_knowledge_base
 
-{% extends "admin/change_list.html" %}
-{% load i18n admin_static %}
 
-{% block object-tools-items %}
-{{ block.super }}
-<li>
-    <a id="nvd-cpe-import" href="{% url 'admin:knowledge-base-cpe-import' %}" class="btn btn-high btn-success">Import CPE</a>
-</li>
-{% endblock %}
+@user_passes_test(lambda u: u.is_superuser)
+def update_knowledge_base(request):
+    start_update_knowledge_base.delay()
+    messages.add_message(request, messages.INFO, "Update knowledge base started.")
+    return HttpResponseRedirect("/")

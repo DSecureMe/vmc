@@ -17,9 +17,3 @@
  * under the License.
  *
 """
-
-from django.db import models
-
-
-class Cve(models.Model):  # FIXME: remove
-    pass

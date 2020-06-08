@@ -1,4 +1,4 @@
-<!--
+"""
  * Licensed to DSecure.me under one or more contributor
  * license agreements. See the NOTICE file distributed with
  * this work for additional information regarding copyright
@@ -15,14 +15,18 @@
  * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
--->
+ *
+"""
+from django.conf import settings
 
-{% extends "admin/change_list.html" %}
-{% load i18n admin_static %}
+from elasticsearch.helpers import bulk
+from elasticsearch_dsl.connections import get_connection
+from vmc.common.utils import thread_pool_executor
 
-{% block object-tools-items %}
-{{ block.super }}
-<li>
-    <a id="nvd-cve-import" href="{% url 'admin:knowledge-base-cve-import' %}" class="btn btn-high btn-success">Import CVE</a>
-</li>
-{% endblock %}
+
+def async_bulk(docs, index=None):
+    refresh = getattr(settings, 'TEST', False)
+    if index and docs:
+        thread_pool_executor.submit(bulk, get_connection(), docs, index=index, refresh=refresh)
+    elif docs:
+        thread_pool_executor.submit(bulk, get_connection(), docs, refresh=refresh)

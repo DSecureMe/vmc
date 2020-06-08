@@ -17,23 +17,47 @@
  * under the License.
  */
 """
-from celery.five import monotonic
-from celery.utils.log import get_task_logger
-from contextlib import contextmanager
+import logging
+from celery.app import shared_task
 from django.core.cache import cache
+from vmc.config.celery import app
+
+LOCK_EXPIRE = None
+DEFAULT_RETRY_DELAY = 60 * 10
+LOGGER = logging.getLogger(__name__)
+ALL_TENANTS_KEY = 'workflow-all-tenants'
 
 
-logger = get_task_logger(__name__)
+@app.task(bind=True, ignore_result=True, default_retry_delay=DEFAULT_RETRY_DELAY)
+def __workflow(self, key: str, global_lock: bool):
+    if not global_lock:
+        all_tenants_lock = cache.get(ALL_TENANTS_KEY, None)
 
-LOCK_EXPIRE = 60 * 10  # Lock expires in 10 minutes
+        if all_tenants_lock:
+            LOGGER.info(F'Update for {ALL_TENANTS_KEY} already started, {key} postponed')
+            raise self.retry()
+
+    elif cache.keys('workflow-*'):
+        LOGGER.info(F'Update for {ALL_TENANTS_KEY} postponed, other workflow in progress')
+        raise self.retry()
+
+    have_lock = cache.add(key, True, timeout=LOCK_EXPIRE)
+    if not have_lock:
+        LOGGER.info(F'Update for {key} already started, workflow postponed')
+        raise self.retry()
+
+    LOGGER.info(F'Update for {key} started')
 
 
-@contextmanager
-def memcache_lock(lock_id, oid):
-    timeout_at = monotonic() + LOCK_EXPIRE - 3
-    status = cache.add(lock_id, oid, LOCK_EXPIRE)
-    try:
-        yield status
-    finally:
-        if monotonic() < timeout_at and status:
-            cache.delete(lock_id)
+@shared_task
+def __release_lock(key: str):
+    if cache.get(key, None):
+        cache.delete(key)
+
+
+def start_workflow(workflow, tenant=None, global_lock=False):
+    key = 'workflow-{}'.format(tenant.name if tenant else 'default')
+    return __workflow.apply_async((key, global_lock),
+                                  link=(workflow | __release_lock.si(key)),
+                                  error_link=__release_lock.si(key))
+

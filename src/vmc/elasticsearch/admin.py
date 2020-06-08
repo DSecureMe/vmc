@@ -18,9 +18,18 @@
  */
 """
 from django.contrib import admin
-from vmc.elasticsearch.models import Config, DocumentRegistry, Tenant
+from vmc.elasticsearch.models import Config, Tenant
 
 
-admin.site.register(Config)
-admin.site.register(DocumentRegistry)
-admin.site.register(Tenant)
+class DisableActionsAdmin(admin.ModelAdmin):
+    actions = None
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+
+admin.site.register(Config, DisableActionsAdmin)
+admin.site.register(Tenant, DisableActionsAdmin)

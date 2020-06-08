@@ -19,10 +19,9 @@
 """
 
 from django.db import models
+from django.core.exceptions import ValidationError
 from vmc.common.models import BaseModel
 from vmc.elasticsearch.models import Tenant
-
-from vmc.scanners.registries import scanners_registry
 
 
 class Config(BaseModel):
@@ -39,7 +38,7 @@ class Config(BaseModel):
     insecure = models.BooleanField(default=False)
     last_scans_pull = models.DateTimeField(default=None, null=True, blank=True)
     tenant = models.ForeignKey(Tenant, null=True, blank=True, on_delete=models.DO_NOTHING)
-    scanner = models.CharField(choices=scanners_registry.get_scanners(), max_length=128)
+    scanner = models.CharField(max_length=128)
 
     class Meta:
         db_table = 'scanners'
@@ -49,3 +48,13 @@ class Config(BaseModel):
 
     def get_url(self) -> str:
         return F'{self.schema}://{self.host}:{self.port}'
+
+    def clean(self):
+        if not self.pk and Config.objects.filter(tenant=self.tenant, scanner=self.scanner).exists():
+            raise ValidationError('Only one type of Scanner can be assigned to one Tenant')
+
+    def save(self, force_insert=False, force_update=False, using=None,
+             update_fields=None):
+        self.full_clean()
+        return super().save(force_insert=force_insert, force_update=force_update,
+                            using=using, update_fields=update_fields)

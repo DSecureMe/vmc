@@ -86,6 +86,14 @@ class AssetsParser:
         return iface['ipaddress']['address']
 
     @staticmethod
+    def environment(item: dict, _) -> str:
+        return item['service_env']['environment']
+
+    @staticmethod
+    def service(item: dict, _) -> str:
+        return item['service_env']['service']
+
+    @staticmethod
     def mac_address(_, iface: dict) -> str:
         return iface['mac']
 

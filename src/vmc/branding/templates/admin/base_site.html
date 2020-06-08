@@ -1,0 +1,11 @@
+{% extends 'admin/base_site.html' %}
+{% load static %}
+{% block extrastyle %}{{ block.super }}<link rel="stylesheet" type="text/css" href="{% static "vmc.css" %}" />{% endblock %}
+{% block title %}{{ title }} | {{ site_title }}{% endblock %}
+
+{% block branding %}
+    <a href="{% url 'admin:index' %}" class="django-admin-logo">
+        <!-- Django Administration -->
+        <img height="60" src="{% static "vmp_small.png" %}" alt="{{ site_header }}">
+    </a>
+{% endblock branding %}
