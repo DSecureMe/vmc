@@ -74,6 +74,7 @@ def get_file(url: str, verify: bool = True) -> [BytesIO, None]:
 
     return content
 
+
 def handle_ranges(ips: list):
 
     start_octets = ips[0].split(sep=".")
@@ -83,6 +84,7 @@ def handle_ranges(ips: list):
     end.append(ips[1])
     ip_range = [ips[0], '.'.join(end)]
     return ip_range
+
 
 def get_workers_count():
     workes = celery_app.control.inspect().stats()

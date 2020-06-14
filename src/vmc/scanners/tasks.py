@@ -39,8 +39,11 @@ LOGGER = logging.getLogger(__name__)
 
 @shared_task(trail=True)
 def _update_scans(config_pk: int):
+    config = Config.objects.filter(pk=config_pk)
+    if config.exists():
+        config = config.first()
     try:
-        config = Config.objects.get(pk=config_pk)
+        config.set_status(Config.Status.IN_PROGRESS)
         client, parser = scanners_registry.get(config)
 
         now_date = now()
@@ -65,14 +68,14 @@ def _update_scans(config_pk: int):
             LOGGER.info(F'Attempting to update vulns data in {config.name}')
             VulnerabilityDocument.create_or_update(vulns, scanned_hosts, config)
         config.last_scans_pull = now_date
-        config.save()
+        config.set_status(Config.Status.SUCCESS)
+        config.save(update_fields=['last_scans_pull'])
 
         return True
 
     except Exception as e:
-        import traceback
-        traceback.print_exc()
         LOGGER.error(F'Error while loading vulnerability data {e}')
+        config.set_status(status=Config.Status.ERROR, error_description=e)
     finally:
         thread_pool_executor.wait_for_all()
 
@@ -90,6 +93,7 @@ def get_update_scans_workflow(config):
 
 @shared_task(name='Update all scans')
 def start_update_scans():
-    for config in Config.objects.all():
+    for config in Config.objects.filter(enabled=True):
+        config.set_status(status=Config.Status.PENDING)
         workflow = get_update_scans_workflow(config)
         start_workflow(workflow, config.tenant)

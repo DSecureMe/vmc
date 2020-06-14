@@ -21,6 +21,7 @@
 import logging
 
 from celery import shared_task
+
 from vmc.vulnerabilities.documents import VulnerabilityDocument
 
 from vmc.elasticsearch.registries import DocumentRegistry
@@ -39,22 +40,27 @@ LOGGER = logging.getLogger(__name__)
 
 @shared_task
 def _update_assets(config_id: int):
-    try:
-        config = Config.objects.get(pk=config_id)
-        client = RalphClient(config)
-        parser = AssetsParser(config)
-        LOGGER.info(F'Start loading data from Ralph: {config.name}')
-        users = client.get_users()
-        users = OwnerParser.parse(users)
-        assets = client.get_assets()
-        assets = parser.parse(assets, users)
-        AssetDocument.create_or_update(assets, config)
-        thread_pool_executor.wait_for_all()
-        LOGGER.info(F'Finish loading data from Ralph: {config.name}')
-    except Exception as ex:
-        import traceback
-        traceback.print_exc()
-        LOGGER.error(F'Error with loading data from Ralph: {ex}')
+    config = Config.objects.filter(pk=config_id)
+
+    if config.exists():
+        config = config.first()
+
+        try:
+            config.set_status(Config.Status.IN_PROGRESS)
+            client = RalphClient(config)
+            parser = AssetsParser(config)
+            LOGGER.info(F'Start loading data from Ralph: {config.name}')
+            users = client.get_users()
+            users = OwnerParser.parse(users)
+            assets = client.get_assets()
+            assets = parser.parse(assets, users)
+            AssetDocument.create_or_update(assets, config)
+            thread_pool_executor.wait_for_all()
+            LOGGER.info(F'Finish loading data from Ralph: {config.name}')
+            config.set_status(Config.Status.SUCCESS)
+        except Exception as ex:
+            LOGGER.error(F'Error with loading data from Ralph: {ex}')
+            config.set_status(status=Config.Status.ERROR, error_description=ex)
 
 
 def get_update_assets_workflow(config):
@@ -68,7 +74,8 @@ def get_update_assets_workflow(config):
 
 @shared_task(name='Update all assets')
 def start_update_assets():
-    for config in Config.objects.all():
+    for config in Config.objects.filter(enabled=True):
+        config.set_status(status=Config.Status.PENDING)
         workflow = get_update_assets_workflow(config)
         start_workflow(workflow, config.tenant)
 

@@ -29,7 +29,7 @@ from vmc.ralph.models import Config
 LOGGER = logging.getLogger(__name__)
 
 
-class SSLException(Exception):
+class RalphClientException(Exception):
     pass
 
 
@@ -78,30 +78,38 @@ class RalphClient:
         return results
 
     def _action(self, method: str, url: str, **kwargs) -> Dict:
+        if 'http' not in url:
+            url = F'{self._config.get_url()}{url}'
+
         try:
-
-            if 'http' not in url:
-                url = F'{self._config.get_url()}{url}'
-
             resp = requests.request(method, url, verify=not self._config.insecure, timeout=360, **kwargs)
+        except Exception as ex:
+            LOGGER.error(F'Unknown connection exception {ex}')
+            raise RalphClientException(ex)
 
-            if resp.status_code != 200:
-                self._print_debug(kwargs['headers'], url, resp.status_code,
-                                  kwargs['data'] if 'data' in kwargs else 'None')
-                return dict()
-
-        except requests.exceptions.SSLError as ssl_error:
-            raise SSLException(F'{ssl_error} for {url}.')
-        except requests.exceptions.ConnectionError:
-            raise Exception(F"Could not connect to {url}. Exiting!")
+        if resp.status_code != 200:
+            self._raise_exception(
+                kwargs['headers'], url, resp.status_code,
+                kwargs['data'] if 'data' in kwargs else 'None', resp.content
+            )
 
         return resp.json()
 
     @staticmethod
-    def _print_debug(headers, endpoint, status_code, data=None):
-        LOGGER.debug("*****************START ERROR*****************")
-        LOGGER.debug(F"JSON    : {data}")
-        LOGGER.debug(F"HEADERS : {headers}")
-        LOGGER.debug(F"URL     : {endpoint}")
-        LOGGER.debug("******************END ERROR******************")
-        LOGGER.debug(F"RESPONSE CODE: {status_code}")
+    def _raise_exception(headers, endpoint, status_code, data=None, content=None):
+        data = json.loads(data)
+        if 'password' in data:
+            data['password'] = '*********'
+
+        LOGGER.error("*****************START ERROR*****************")
+        LOGGER.error(F"JSON    : {data}")
+        LOGGER.error(F"HEADERS : {headers}")
+        LOGGER.error(F"URL     : {endpoint}")
+        LOGGER.error("******************END ERROR******************")
+        LOGGER.error(F"RESPONSE CODE: {status_code}")
+        raise RalphClientException(
+            F'request data: {data}\n'
+            F'request headers: {headers}\n'
+            F'url: {endpoint}\n'
+            F'response code: {status_code}\n'
+            F'response body: {content}\n')

@@ -41,8 +41,8 @@ class OwnerParser:
                     email=user['email'],
                     department=user['department'] if user['department'] else '',
                     team=user['team']['name'] if user['team'] else '')
-            except KeyError as ex:
-                LOGGER.warning(ex)
+            except Exception as ex:
+                LOGGER.debug(F'Unable to parse user {ex}')
         return result
 
 
@@ -73,7 +73,8 @@ class AssetsParser:
             try:
                 if parser:
                     setattr(asset, field, parser(item, iface))
-            except (KeyError, IndexError, Exception):
+            except Exception as ex:
+                LOGGER.debug(F'Unable to parse field {field} ex: {ex}')
                 setattr(asset, field, 'UNKNOWN')
         self.__parsed[asset.id] = asset
 

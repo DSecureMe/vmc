@@ -21,10 +21,12 @@ from django import forms
 from django.contrib import admin
 from django.http import HttpResponseRedirect
 from django.urls import path
+from django.forms import PasswordInput
 
 from vmc.scanners.registries import scanners_registry
+from vmc.common.admin import ConfigBaseAdmin
 from vmc.scanners.models import Config
-from vmc.scanners.tasks import start_update_scans
+from vmc.scanners.tasks import start_update_scans, get_update_scans_workflow
 
 
 def get_scanners_choices():
@@ -37,13 +39,17 @@ class ConfigForm(forms.ModelForm):
 
     class Meta:
         model = Config
-        fields = [field.name for field in Config._meta.get_fields() if field.editable]
+        widgets = {
+            'password': PasswordInput(render_value=True),
+        }
+        fields = ['name', 'enabled', 'schema', 'host', 'port', 'username', 'insecure', 'password', 'scanner', 'tenant']
 
 
-class ConfigAdmin(admin.ModelAdmin):
+class ConfigAdmin(ConfigBaseAdmin):
     change_list_template = "scanners/admin/change_list.html"
-    list_display = ('name', 'host', 'tenant')
+    model = Config
     form = ConfigForm
+    update_workflow = get_update_scans_workflow
 
     def get_urls(self):
         urls = super().get_urls()
@@ -57,7 +63,7 @@ class ConfigAdmin(admin.ModelAdmin):
         return custom_urls + urls
 
     def import_data(self, request):
-        start_update_scans.delay()
+        start_update_scans()
         self.message_user(request, "Importing started.")
         return HttpResponseRedirect("../")
 

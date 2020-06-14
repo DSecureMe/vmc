@@ -19,6 +19,7 @@
 """
 from unittest.mock import patch, MagicMock
 
+from datetime import datetime
 from parameterized import parameterized
 
 from django.core.exceptions import ValidationError
@@ -63,6 +64,25 @@ class ConfigTest(TestCase):
         Config.objects.create(name='test1', host='test1', scanner='vmc.scanners.openvas',
                               username='test1', password='test1', port=80, tenant=tenant)  #nosec
 
+    @patch('vmc.common.models.now')
+    def test_set_status_call_SUCCESS(self, now):
+        now.return_value = datetime.now()
+        self.uut.set_status(Config.Status.SUCCESS)
+        self.assertEqual(self.uut.last_update_status, Config.Status.SUCCESS.value)
+        self.assertEqual(self.uut.error_description, '')
+        self.assertEqual(self.uut.last_success_date, now.return_value)
+
+    @parameterized.expand([
+        (Config.Status.PENDING, ),
+        (Config.Status.IN_PROGRESS, ),
+        (Config.Status.ERROR, ),
+    ])
+    def test_set_status_call(self, status):
+        self.uut.set_status(status, 'desc')
+        self.assertEqual(self.uut.last_update_status, status.value)
+        self.assertEqual(self.uut.error_description, 'desc')
+        self.assertIsNone(self.uut.last_success_date)
+
 
 class AdminPanelTest(LiveServerTestCase):
     fixtures = ['users.json', 'config.json']
@@ -77,7 +97,7 @@ class AdminPanelTest(LiveServerTestCase):
     @patch('vmc.scanners.admin.start_update_scans')
     def test_call_update(self, mock):
         response = self.client.get('/admin/scanners/config/import', follow=True)
-        mock.delay.assert_called_once()
+        mock.assert_called_once()
         self.assertContains(response, 'Importing started.')
 
     def tearDown(self):

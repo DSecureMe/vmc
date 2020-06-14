@@ -33,7 +33,7 @@ from vmc.scanners.clients import Client
 LOGGER = logging.getLogger(__name__)
 
 
-class SSLException(Exception):
+class NessusClientException(Exception):
     pass
 
 
@@ -63,20 +63,12 @@ class NessusClient(Client):
         try:
 
             resp = requests.request(method, url, data=payload, verify=not self.insecure, headers=self.headers)
+        except Exception as ex:
+            LOGGER.error(F'Could not connect to {url}. Exiting!')
+            raise NessusClientException(ex)
 
-            if resp.status_code != 200:
-                LOGGER.error("*****************START ERROR*****************")
-                LOGGER.error(F"JSON    : {payload}")
-                LOGGER.error(F"HEADERS : {self.headers}")
-                LOGGER.error(F"URL     : {url}")
-                LOGGER.error(F"METHOD  : {method}")
-                LOGGER.error("******************END ERROR******************")
-                LOGGER.debug(F"RESPONSE CODE: {resp.status_code}")
-
-        except requests.exceptions.SSLError as ssl_error:
-            raise SSLException(F'{ssl_error} for {url}.')
-        except requests.exceptions.ConnectionError:
-            raise Exception(F'Could not connect to {url}. Exiting!')
+        if resp.status_code != 200:
+            self._raise_exception(self.headers, url, resp.status_code, payload, resp.content)
 
         if download:
             result = resp.content
@@ -109,6 +101,25 @@ class NessusClient(Client):
             content = self._action(F'scans/{scan_id}/export/{file_id}/download', method="GET", download=True)
             return BytesIO(content)
         return None
+
+    @staticmethod
+    def _raise_exception(headers, endpoint, status_code, data=None, content=None):
+        data = json.loads(data)
+        if 'password' in data:
+            data['password'] = '*********'
+
+        LOGGER.error("*****************START ERROR*****************")
+        LOGGER.error(F"JSON    : {data}")
+        LOGGER.error(F"HEADERS : {headers}")
+        LOGGER.error(F"URL     : {endpoint}")
+        LOGGER.error("******************END ERROR******************")
+        LOGGER.error(F"RESPONSE CODE: {status_code}")
+        raise NessusClientException(
+            F'request data: {data}\n'
+            F'request headers: {headers}\n'
+            F'url: {endpoint}\n'
+            F'response code: {status_code}\n'
+            F'response body: {content}\n')
 
     def _export_in_progress(self, scan_id, file_id):
         res = self._action(F'scans/{scan_id}/export/{file_id}/status', method="GET")

@@ -22,38 +22,40 @@ from django.forms import PasswordInput, ModelForm
 from django.http import HttpResponseRedirect
 from django.urls import path
 
+from vmc.common.admin import ConfigBaseAdmin
 from vmc.ralph.models import Config
-from vmc.ralph.tasks import start_update_assets
+from vmc.ralph.tasks import start_update_assets, get_update_assets_workflow
 
 
 class ConfigForm(ModelForm):
     class Meta:
         model = Config
         widgets = {
-            'password': PasswordInput(),
+            'password': PasswordInput(render_value=True),
         }
-        fields = ['name', 'schema', 'host', 'port', 'username', 'insecure', 'password', 'tenant']
+        fields = ['name', 'enabled', 'schema', 'host', 'port', 'username', 'insecure', 'password', 'tenant']
 
 
-class ConfigAdmin(admin.ModelAdmin):
+class ConfigAdmin(ConfigBaseAdmin):
     change_list_template = "ralph/admin/change_list.html"
-    list_display = ('name', 'host', 'tenant')
     form = ConfigForm
+    model = Config
+    update_workflow = get_update_assets_workflow
 
     def get_urls(self):
         urls = super().get_urls()
         custom_urls = [
             path(
                 r'import/',
-                self.admin_site.admin_view(self.import_data),
-                name='ralph-import',
+                self.admin_site.admin_view(self.import_all_data),
+                name='ralph-import-all',
             )
         ]
         return custom_urls + urls
 
-    def import_data(self, request):
-        start_update_assets.delay()
-        self.message_user(request, "Importing started.")
+    def import_all_data(self, request):
+        start_update_assets()
+        self.message_user(request, "Importing all configs started.")
         return HttpResponseRedirect("../")
 
 

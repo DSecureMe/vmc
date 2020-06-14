@@ -19,11 +19,15 @@
 """
 from django import forms
 from django.contrib import admin
+from django.template.defaultfilters import pluralize
+from django.db.models import When, Value, Case
 
 from django_celery_beat.admin import PeriodicTaskAdmin as CeleryPeriodicTaskAdmin
 from django_celery_beat.admin import PeriodicTaskForm as CeleryPeriodicTaskForm
 from django_celery_beat.admin import TaskSelectWidget as CeleryTaskSelectWidget
 from django_celery_beat.models import PeriodicTask
+
+from vmc.common.tasks import start_workflow
 
 
 class TaskSelectWidget(CeleryTaskSelectWidget):
@@ -76,6 +80,66 @@ class PeriodicTaskAdmin(CeleryPeriodicTaskAdmin):
     def get_queryset(self, request):
         qs = super(PeriodicTaskAdmin, self).get_queryset(request)
         return qs.exclude(name__contains='celery.')
+
+
+class ConfigBaseAdmin(admin.ModelAdmin):
+    list_display = ('name', 'host', 'tenant', 'enabled', 'last_success_date', 'last_update_status')
+    actions = ('enable_configs', 'disable_configs', 'toggle_configs', 'run_configs')
+    readonly_fields = [
+        'created_date', 'modified_date', 'last_update_status',
+        'last_success_date', 'error_description'
+    ]
+    model = None
+    update_workflow = None
+
+    def _message_user_about_update(self, request, rows_updated, verb):
+        self.message_user(
+            request,
+            '{0} config{1} {2} successfully {3}'.format(
+                rows_updated,
+                pluralize(rows_updated),
+                pluralize(rows_updated, 'was,were'),
+                verb,
+            ),
+        )
+
+    def enable_configs(self, request, queryset):
+        rows_updated = queryset.update(enabled=True)
+        self._message_user_about_update(request, rows_updated, 'enabled')
+    enable_configs.short_description = 'Enable selected configs'
+
+    def disable_configs(self, request, queryset):
+        rows_updated = queryset.update(enabled=False)
+        self._message_user_about_update(request, rows_updated, 'disabled')
+    disable_configs.short_description = 'Disable selected configs'
+
+    def _toggle_configs_activity(self, queryset):
+        return queryset.update(enabled=Case(
+            When(enabled=True, then=Value(False)),
+            default=Value(True),
+        ))
+
+    def toggle_configs(self, request, queryset):
+        rows_updated = self._toggle_configs_activity(queryset)
+        self._message_user_about_update(request, rows_updated, 'toggled')
+    toggle_configs.short_description = 'Toggle activity of selected configs'
+
+    def run_configs(self, request, queryset):
+        for config in queryset:
+            config.set_status(status=self.model.Status.PENDING)
+            workflow = self.update_workflow(config)
+            start_workflow(workflow, config.tenant)
+
+        self.message_user(
+            request,
+            '{0} config{1} {2} successfully run'.format(
+                queryset.count(),
+                pluralize(queryset.count()),
+                pluralize(queryset.count(), 'was,were'),
+            )
+        )
+
+    run_configs.short_description = 'Run selected configs'
 
 
 admin.site.unregister(PeriodicTask)

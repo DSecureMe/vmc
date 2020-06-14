@@ -60,7 +60,6 @@ class OpenVasClient(Client):
         with self._connect() as gmp:
             return gmp.get_target(target_id)
 
-
     def get_targets(self, file):
         target_id = get_root_element(file).find(".//report/task/target").attrib["id"]
         target = self._get_target_definition(target_id)

@@ -20,6 +20,7 @@
 
 import json
 import uuid
+from datetime import datetime
 from unittest import skipIf
 from unittest.mock import patch
 from parameterized import parameterized
@@ -34,7 +35,7 @@ from vmc.assets.documents import Impact as AssetImpact, AssetDocument, OwnerInne
 
 from vmc.common.tests import get_fixture_location
 from vmc.ralph.apps import RalphConfig
-from vmc.ralph.clients import RalphClient
+from vmc.ralph.clients import RalphClient, RalphClientException
 from vmc.ralph.models import Config
 from vmc.elasticsearch import Search
 from vmc.elasticsearch.models import Tenant, Config as Prefix
@@ -50,6 +51,9 @@ class ResponseMock:
         self.status_code = status_code
 
     def json(self):
+        return self.text
+
+    def content(self):
         return self.text
 
 
@@ -86,6 +90,25 @@ class ModelConfigTest(TestCase):
         tenant = Tenant.objects.create(name='test1', slug_name='test1', elasticsearch_config=prefix)
         Config.objects.create(name='test1', host='test1',
                               username='test1', password='test1', port=80, tenant=tenant)  #nosec
+
+    @patch('vmc.common.models.now')
+    def test_set_status_call_SUCCESS(self, now):
+        now.return_value = datetime.now()
+        self.uut.set_status(Config.Status.SUCCESS)
+        self.assertEqual(self.uut.last_update_status, Config.Status.SUCCESS.value)
+        self.assertEqual(self.uut.error_description, '')
+        self.assertEqual(self.uut.last_success_date, now.return_value)
+
+    @parameterized.expand([
+        (Config.Status.PENDING, ),
+        (Config.Status.IN_PROGRESS, ),
+        (Config.Status.ERROR, ),
+    ])
+    def test_set_status_call(self, status):
+        self.uut.set_status(status, 'desc')
+        self.assertEqual(self.uut.last_update_status, status.value)
+        self.assertEqual(self.uut.error_description, 'desc')
+        self.assertIsNone(self.uut.last_success_date)
 
 
 class RalphClientTest(TestCase):
@@ -153,6 +176,18 @@ class RalphClientTest(TestCase):
             timeout=360
         )
 
+    @patch('vmc.ralph.clients.requests')
+    def test_auth_exception(self, requests):
+        requests.request.return_value = ResponseMock('auth error', 400)
+        with self.assertRaises(RalphClientException):
+            self.uut.get_auth_header()
+
+    @patch('vmc.ralph.clients.requests')
+    def test_ssl_exception(self, requests):
+        requests.request.side_effect = Exception()
+        with self.assertRaises(RalphClientException):
+            self.uut.get_auth_header()
+
 
 class OwnerParserTest(TestCase):
 
@@ -170,6 +205,10 @@ class OwnerParserTest(TestCase):
         self.assertEqual(result[1].email, 'contact@dsecure.me')
         self.assertEqual(result[1].department, 'DEPARTMENT')
         self.assertEqual(result[1].team, 'TEAM')
+
+    def test_call_parse_invalid_users_list(self):
+        result = self.uut.parse(['foo', 'boo'])
+        self.assertEqual(result, {})
 
 
 class AssetsParserTest(TestCase):
@@ -246,7 +285,7 @@ class UpdateAssetsTaskTest(TestCase):
     @patch('vmc.ralph.tasks.RalphClient')
     @patch('vmc.ralph.tasks.AssetsParser')
     def test_update_assets_call_exception(self, factory_mock, mock_api):
-        mock_api().get_assets.side_effect = Exception('Unknown')
+        mock_api().get_assets.side_effect = Exception
         _update_assets(self.config.id)
         factory_mock.parse.assert_not_called()
 
@@ -294,8 +333,8 @@ class AdminPanelTest(LiveServerTestCase):
     @patch('vmc.ralph.admin.start_update_assets')
     def test_call_update_cve(self, mock):
         response = self.client.get('/admin/ralph/config/import', follow=True)
-        mock.delay.assert_called_once()
-        self.assertContains(response, 'Importing started.')
+        mock.assert_called_once()
+        self.assertContains(response, 'Importing all configs started.')
 
     def tearDown(self):
         self.client.logout()

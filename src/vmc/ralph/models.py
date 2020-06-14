@@ -20,40 +20,18 @@
 
 from django.db import models
 from django.core.exceptions import ValidationError
-from vmc.common.models import BaseModel
+from vmc.common.models import ConfigBaseModel
 from vmc.elasticsearch.models import Tenant
 
 
-class Config(BaseModel):
-    SCHEMA = (
-        ('http', 'http'),
-        ('https', 'https')
-    )
-    name = models.CharField(max_length=128)
-    schema = models.CharField(choices=SCHEMA, default='http', max_length=5)
-    host = models.CharField(max_length=128)
-    port = models.PositiveSmallIntegerField()
-    username = models.TextField()
-    password = models.TextField()
-    insecure = models.BooleanField(default=False)
+class Config(ConfigBaseModel):
     tenant = models.OneToOneField(Tenant, null=True, blank=True, related_name='tenant', on_delete=models.DO_NOTHING)
 
     class Meta:
         db_table = 'ralph_config'
-
-    def __str__(self):
-        return self.name
 
     def clean(self):
         super().clean()
         if not self.pk and Config.objects.filter(tenant=self.tenant).exists():
             raise ValidationError('Only one Ralph can be assigned to one Tenant')
 
-    def get_url(self) -> str:
-        return F'{self.schema}://{self.host}:{self.port}'
-
-    def save(self, force_insert=False, force_update=False, using=None,
-             update_fields=None):
-        self.full_clean()
-        return super().save(force_insert=force_insert, force_update=force_update,
-                            using=using, update_fields=update_fields)
