@@ -86,7 +86,7 @@ def get_update_scans_workflow(config):
     vulnerability_index = DocumentRegistry.get_index_for_tenant(config.tenant, VulnerabilityDocument)
     asset_index = DocumentRegistry.get_index_for_tenant(config.tenant, AssetDocument)
     return (
-        _update_scans.si(config_id=config.id) |
+        _update_scans.si(config_pk=config.id) |
         start_processing_per_tenant.si(vulnerability_index, asset_index)
     )
 
