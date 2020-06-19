@@ -23,7 +23,6 @@ import logging
 import decimal
 
 from celery import shared_task, group
-from celery.result import allow_join_result
 from django.core.cache import cache
 
 from vmc.knowledge_base.metrics import ScopeV3

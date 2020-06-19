@@ -22,8 +22,7 @@ from decimal import Decimal
 from unittest import skipIf
 from unittest.mock import patch
 
-from django.contrib.auth.models import User
-from django.test import TestCase, LiveServerTestCase
+from django.test import TestCase
 from parameterized import parameterized
 
 from vmc.common.utils import thread_pool_executor

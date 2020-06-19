@@ -19,7 +19,9 @@
 """
 import logging
 import uuid
+from typing import List
 
+from vmc.elasticsearch import ListField
 from vmc.ralph.models import Config
 from vmc.assets.documents import AssetDocument, OwnerInnerDoc, Impact
 
@@ -67,7 +69,6 @@ class AssetsParser:
 
     def create(self, item: dict, iface: dict):
         asset = AssetDocument()
-        asset.tags = [self.__config.name]
         for field in AssetDocument.get_fields_name():
             parser = getattr(self, field, None)
             try:
@@ -76,6 +77,9 @@ class AssetsParser:
             except Exception as ex:
                 LOGGER.debug(F'Unable to parse field {field} ex: {ex}')
                 setattr(asset, field, 'UNKNOWN')
+
+        asset.tags.append(self.__config.name)
+        asset.tags = list(set(asset.tags))
         self.__parsed[asset.id] = asset
 
     def id(self, _, iface: dict) -> str:
@@ -97,6 +101,10 @@ class AssetsParser:
     @staticmethod
     def mac_address(_, iface: dict) -> str:
         return iface['mac']
+
+    @staticmethod
+    def tags(item: dict, _) -> List:
+        return item.get('tags', [])
 
     @staticmethod
     def os(item: dict, _) -> str:
