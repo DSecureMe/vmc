@@ -21,7 +21,6 @@ import logging
 import uuid
 from typing import List
 
-from vmc.elasticsearch import ListField
 from vmc.ralph.models import Config
 from vmc.assets.documents import AssetDocument, OwnerInnerDoc, Impact
 

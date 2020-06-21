@@ -139,7 +139,7 @@ class ConfigBaseAdmin(admin.ModelAdmin):
             )
         )
 
-    run_configs.short_description = 'Run selected configs'
+    run_configs.short_description = 'Import selected configs'
 
 
 admin.site.unregister(PeriodicTask)
