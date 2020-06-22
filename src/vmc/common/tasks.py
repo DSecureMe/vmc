@@ -17,6 +17,7 @@
  * under the License.
  */
 """
+import importlib
 import logging
 from celery.app import shared_task
 from django.core.cache import cache
@@ -55,8 +56,22 @@ def __release_lock(key: str):
         cache.delete(key)
 
 
+@app.task(bind=True)
+def __release_lock_error(key: str, module: str, model_name: str, config_pk: int):
+    if cache.get(key, None):
+        cache.delete(key)
+
+    try:
+        module = importlib.import_module(module)
+        Config = getattr(module, model_name)
+        config = Config.objects.get(pk=config_pk)
+        config.set_status(status=Config.Status.ERROR, error_description=self.result.traceback)
+    except Exception:
+        LOGGER.error(F'Unable to set status for {key}')
+
+
 def _get_key(config):
-    return 'workflow-{}'.format(config.tenant.name if config.tenant else 'default')
+    return 'workflow-{}'.format(config.tenant.name if config and config.tenant else 'default')
 
 
 def workflow_in_progress(config, global_lock=False):
@@ -69,9 +84,13 @@ def workflow_in_progress(config, global_lock=False):
     return cache.get(_get_key(config), False)
 
 
-def start_workflow(workflow, tenant=None, global_lock=False):
-    key = 'workflow-{}'.format(tenant.name if tenant else 'default')
+def get_task_error_handler(config=None):
+    return __release_lock_error.si(_get_key(config), config.__module__, config.__class__.__name__, config.pk)
+
+
+def start_workflow(workflow, config=None, global_lock=False):
+    key = _get_key(config)
     return __workflow.apply_async((key, global_lock),
                                   link=(workflow | __release_lock.si(key)),
-                                  error_link=__release_lock.si(key))
+                                  error_link=get_task_error_handler(config))
 

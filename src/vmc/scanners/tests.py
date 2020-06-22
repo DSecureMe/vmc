@@ -104,7 +104,7 @@ class AdminPanelTest(LiveServerTestCase):
         response = self.client.get('/admin/scanners/config/import', follow=True)
 
         get_workflow.assert_called_once_with(Config.objects.first())
-        start.assert_called_once_with('get_workflow', None)
+        start.assert_called_once_with('get_workflow', Config.objects.first())
 
         self.assertEqual(response.status_code, 200)
         messages = list(response.context['messages'])
@@ -127,7 +127,7 @@ class AdminPanelTest(LiveServerTestCase):
         self.assertEqual(str(messages[0]), '1 config was successfully run')
 
         get_workflow.assert_called_once_with(Config.objects.first())
-        start.assert_called_once_with('get_workflow', None)
+        start.assert_called_once_with('get_workflow', Config.objects.first())
 
     def tearDown(self):
         self.client.logout()

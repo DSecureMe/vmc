@@ -77,5 +77,5 @@ def start_update_assets():
     for config in Config.objects.filter(enabled=True):
         config.set_status(status=Config.Status.PENDING)
         workflow = get_update_assets_workflow(config)
-        start_workflow(workflow, config.tenant)
+        start_workflow(workflow, config)
 

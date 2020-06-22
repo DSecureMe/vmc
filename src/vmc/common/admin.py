@@ -146,7 +146,7 @@ class ConfigBaseAdmin(admin.ModelAdmin):
                 started += 1
                 config.set_status(status=self.model.Status.PENDING)
                 workflow = self.update_workflow(config)
-                start_workflow(workflow, config.tenant)
+                start_workflow(workflow, config)
             else:
                 dropped += 1
 

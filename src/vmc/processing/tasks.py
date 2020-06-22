@@ -253,38 +253,42 @@ def get_cve_count(vulnerability_index, cve_id):
     return cache.get(key, None)
 
 
-@shared_task(autoretry_for=(Exception, ))
+@shared_task
 def _processing(idx, slices_count, assets_count, vulnerability_index):
     docs = []
+    try:
+        vuln_search = VulnerabilityDocument.search(
+            index=vulnerability_index).filter(
+            ~Q('match', tags=VulnerabilityStatus.FIXED) &
+            ~Q('match', asset__tags=AssetStatus.DELETED)
+        )
 
-    vuln_search = VulnerabilityDocument.search(
-        index=vulnerability_index).filter(
-        ~Q('match', tags=VulnerabilityStatus.FIXED) &
-        ~Q('match', asset__tags=AssetStatus.DELETED)
-    )
+        LOGGER.debug(F'Calculation for {vulnerability_index} and {idx}, {slices_count} started')
 
-    LOGGER.debug(F'Calculation for {vulnerability_index} and {idx}, {slices_count} started')
+        if slices_count > 1:
+            vuln_search = vuln_search.extra(slice={"id": idx, "max": slices_count})
 
-    if slices_count > 1:
-        vuln_search = vuln_search.extra(slice={"id": idx, "max": slices_count})
+        for vuln in vuln_search.scan():
+            score, vector = calculate_environmental_score_v3(vuln)
+            vuln.environmental_score_vector_v3 = vector
+            vuln.environmental_score_v3 = score
 
-    for vuln in vuln_search.scan():
-        score, vector = calculate_environmental_score_v3(vuln)
-        vuln.environmental_score_vector_v3 = vector
-        vuln.environmental_score_v3 = score
+            vuln_count = get_cve_count(vulnerability_index, vuln.cve.id)
+            score, vector = calculate_environmental_score_v2(vuln, vuln_count, assets_count)
+            vuln.environmental_score_vector_v2 = vector
+            vuln.environmental_score_v2 = score
 
-        vuln_count = get_cve_count(vulnerability_index, vuln.cve.id)
-        score, vector = calculate_environmental_score_v2(vuln, vuln_count, assets_count)
-        vuln.environmental_score_vector_v2 = vector
-        vuln.environmental_score_v2 = score
+            docs.append(vuln.to_dict(include_meta=True))
 
-        docs.append(vuln.to_dict(include_meta=True))
+            if len(docs) > 500:
+                async_bulk(docs, vulnerability_index)
 
-        if len(docs) > 500:
-            async_bulk(docs, vulnerability_index)
+        async_bulk(docs, vulnerability_index)
+    except Exception as ex:
+        LOGGER.error(F'Unknown processing exception {ex}')
+    finally:
+        thread_pool_executor.wait_for_all()
 
-    async_bulk(docs, vulnerability_index)
-    thread_pool_executor.wait_for_all()
     LOGGER.debug(F'Calculation for {vulnerability_index} and {idx}, {slices_count} done')
 
 
@@ -297,25 +301,28 @@ def _end_processing(vulnerability_index: str, asset_index: str):
 def start_processing_per_tenant(vulnerability_index: str, asset_index: str):
     LOGGER.info(F'Calculation for {vulnerability_index} and {asset_index} started')
 
-    assets_count = AssetDocument.search(
-        index=asset_index).filter(~Q('match', tags=AssetStatus.DELETED)).count()
-    vuln_search = VulnerabilityDocument.search(
-        index=vulnerability_index).filter(
-        ~Q('match', tags=VulnerabilityStatus.FIXED) &
-        ~Q('match', asset__tags=AssetStatus.DELETED)
-    )
-    prepare(vulnerability_index)
-    workers_count = get_workers_count()
-    vuln_count = vuln_search.count()
+    try:
+        assets_count = AssetDocument.search(
+            index=asset_index).filter(~Q('match', tags=AssetStatus.DELETED)).count()
+        vuln_search = VulnerabilityDocument.search(
+            index=vulnerability_index).filter(
+            ~Q('match', tags=VulnerabilityStatus.FIXED) &
+            ~Q('match', asset__tags=AssetStatus.DELETED)
+        )
+        prepare(vulnerability_index)
+        workers_count = get_workers_count()
+        vuln_count = vuln_search.count()
 
-    if vuln_count > 500:
-        slices_count = vuln_count // workers_count
-        slices_count = slices_count if slices_count <= workers_count else workers_count
+        if vuln_count > 500:
+            slices_count = vuln_count // workers_count
+            slices_count = slices_count if slices_count <= workers_count else workers_count
 
-        (
-            group(_processing.si(idx, slices_count, assets_count, vulnerability_index) for idx in range(slices_count)) |
-            _end_processing.si(vulnerability_index, asset_index)
-        )()
+            (
+                group(_processing.si(idx, slices_count, assets_count, vulnerability_index) for idx in range(slices_count)) |
+                _end_processing.si(vulnerability_index, asset_index)
+            )()
+    except Exception as ex:
+        LOGGER.error(F'Unknown processing exception {ex}')
 
 
 @shared_task(ignore_result=True)
@@ -325,7 +332,7 @@ def start_processing():
     for tenant in tenants:
         vulnerability_index = DocumentRegistry.get_index_for_tenant(tenant, VulnerabilityDocument)
         asset_index = DocumentRegistry.get_index_for_tenant(tenant, AssetDocument)
-        start_processing_per_tenant.delay(
+        start_processing_per_tenant.si(
             vulnerability_index=vulnerability_index,
             asset_index=asset_index
         )

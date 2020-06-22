@@ -21,6 +21,7 @@
 from __future__ import absolute_import, unicode_literals
 
 import logging
+
 from django.utils.timezone import now
 
 from celery import shared_task
@@ -71,15 +72,10 @@ def _update_scans(config_pk: int):
         config.set_status(Config.Status.SUCCESS)
         config.save(update_fields=['last_scans_pull'])
 
-        return True
-
     except Exception as e:
         LOGGER.error(F'Error while loading vulnerability data {e}')
-        config.set_status(status=Config.Status.ERROR, error_description=e)
     finally:
         thread_pool_executor.wait_for_all()
-
-    return False
 
 
 def get_update_scans_workflow(config):
@@ -96,4 +92,4 @@ def start_update_scans():
     for config in Config.objects.filter(enabled=True):
         config.set_status(status=Config.Status.PENDING)
         workflow = get_update_scans_workflow(config)
-        start_workflow(workflow, config.tenant)
+        start_workflow(workflow, config)
