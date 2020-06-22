@@ -90,7 +90,6 @@ class ConfigBaseAdmin(admin.ModelAdmin):
         'last_success_date', 'error_description'
     ]
     model = None
-    update_workflow = None
 
     def _message_user_about_update(self, request, rows_updated, verb):
         self.message_user(
@@ -140,6 +139,9 @@ class ConfigBaseAdmin(admin.ModelAdmin):
         )
 
     run_configs.short_description = 'Import selected configs'
+
+    def update_workflow(self, config):
+        raise NotImplementedError()
 
 
 admin.site.unregister(PeriodicTask)

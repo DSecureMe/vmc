@@ -49,7 +49,6 @@ class ConfigAdmin(ConfigBaseAdmin):
     change_list_template = "scanners/admin/change_list.html"
     model = Config
     form = ConfigForm
-    update_workflow = get_update_scans_workflow
 
     def get_urls(self):
         urls = super().get_urls()
@@ -66,6 +65,9 @@ class ConfigAdmin(ConfigBaseAdmin):
         start_update_scans()
         self.message_user(request, "Importing started.")
         return HttpResponseRedirect("../")
+
+    def update_workflow(self, config):
+        return get_update_scans_workflow(config)
 
 
 admin.site.register(Config, ConfigAdmin)

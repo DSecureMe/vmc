@@ -20,6 +20,8 @@
 from unittest.mock import patch, MagicMock
 
 from datetime import datetime
+
+from django.urls import reverse
 from parameterized import parameterized
 
 from django.core.exceptions import ValidationError
@@ -99,6 +101,24 @@ class AdminPanelTest(LiveServerTestCase):
         response = self.client.get('/admin/scanners/config/import', follow=True)
         mock.assert_called_once()
         self.assertContains(response, 'Importing started.')
+
+    @patch('vmc.common.admin.start_workflow')
+    @patch('vmc.scanners.admin.get_update_scans_workflow')
+    def test_call_import_selected_configs(self, get_workflow, start):
+        get_workflow.return_value = 'get_workflow'
+
+        import_selected_url = reverse('admin:scanners_config_changelist')
+        response = self.client.post(import_selected_url, {
+            'action': 'run_configs',
+            '_selected_action': [x.pk for x in Config.objects.all()]}, follow=True)
+
+        self.assertEqual(response.status_code, 200)
+        messages = list(response.context['messages'])
+        self.assertEqual(len(messages), 1)
+        self.assertEqual(str(messages[0]), '1 config was successfully run')
+
+        get_workflow.assert_called_once_with(Config.objects.first())
+        start.assert_called_once_with('get_workflow', None)
 
     def tearDown(self):
         self.client.logout()

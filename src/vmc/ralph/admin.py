@@ -40,7 +40,6 @@ class ConfigAdmin(ConfigBaseAdmin):
     change_list_template = "ralph/admin/change_list.html"
     form = ConfigForm
     model = Config
-    update_workflow = get_update_assets_workflow
 
     def get_urls(self):
         urls = super().get_urls()
@@ -57,6 +56,9 @@ class ConfigAdmin(ConfigBaseAdmin):
         start_update_assets()
         self.message_user(request, "Importing all configs started.")
         return HttpResponseRedirect("../")
+
+    def update_workflow(self, config):
+        return get_update_assets_workflow(config)
 
 
 admin.site.register(Config, ConfigAdmin)
