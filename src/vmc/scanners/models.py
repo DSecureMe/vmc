@@ -26,7 +26,7 @@ from vmc.elasticsearch.models import Tenant
 
 class Config(ConfigBaseModel):
     last_scans_pull = models.DateTimeField(default=None, null=True, blank=True)
-    tenant = models.ForeignKey(Tenant, null=True, blank=True, on_delete=models.DO_NOTHING)
+    tenant = models.ForeignKey(Tenant, null=True, blank=True, on_delete=models.CASCADE)
     scanner = models.CharField(max_length=128)
 
     class Meta:

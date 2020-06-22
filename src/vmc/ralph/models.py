@@ -25,7 +25,7 @@ from vmc.elasticsearch.models import Tenant
 
 
 class Config(ConfigBaseModel):
-    tenant = models.OneToOneField(Tenant, null=True, blank=True, related_name='tenant', on_delete=models.DO_NOTHING)
+    tenant = models.OneToOneField(Tenant, null=True, blank=True, related_name='tenant', on_delete=models.CASCADE)
 
     class Meta:
         db_table = 'ralph_config'

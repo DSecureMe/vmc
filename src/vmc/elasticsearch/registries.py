@@ -20,6 +20,7 @@
 from enum import Enum
 
 from django.conf import settings
+from django.db.models.signals import post_delete
 from elasticsearch_dsl import UpdateByQuery
 from elasticsearch_dsl.connections import get_connection
 
@@ -45,6 +46,13 @@ class DocumentRegistry:
         self.documents = dict()
         self.documents_tenant = set()
         self.related_documents = set()
+        post_delete.connect(self.remove_index, DBDocumentRegistry)
+
+    @staticmethod
+    def remove_index(**kwargs):
+        instance = kwargs['instance']
+        client = get_connection()
+        client.indices.delete(index=instance.index_name, ignore=404)
 
     def register_document(self, document):
         index_meta = getattr(document, 'Index')

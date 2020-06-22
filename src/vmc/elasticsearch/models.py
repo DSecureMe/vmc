@@ -50,7 +50,7 @@ class Config(BaseModel):
 class Tenant(BaseModel):
     name = models.CharField(max_length=128, unique=True)
     slug_name = models.CharField(max_length=128, unique=True)
-    elasticsearch_config = models.ForeignKey(Config, on_delete=models.DO_NOTHING)
+    elasticsearch_config = models.ForeignKey(Config, on_delete=models.CASCADE)
 
     class Meta:
         db_table = 'elasticsearch_tenant'
@@ -81,12 +81,15 @@ class Tenant(BaseModel):
 
 class DocumentRegistry(BaseModel):
     index_name = models.CharField(max_length=256)
-    tenant = models.ForeignKey(Tenant, on_delete=models.DO_NOTHING)
+    tenant = models.ForeignKey(Tenant, on_delete=models.CASCADE)
     module = models.CharField(max_length=256)
     document = models.CharField(max_length=256)
 
     class Meta:
         db_table = 'elasticsearch_document_registry'
+
+    def __str__(self):
+        return self.index_name
 
     def tenant_elasticsearch_config_name(self):
         return self.tenant.elasticsearch_config.name
