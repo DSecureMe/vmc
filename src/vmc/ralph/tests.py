@@ -22,8 +22,9 @@ import json
 import uuid
 from datetime import datetime
 from unittest import skipIf
-from unittest.mock import patch
+from unittest.mock import patch, MagicMock
 
+from django.core.cache import cache
 from django.urls import reverse
 from parameterized import parameterized
 
@@ -36,6 +37,7 @@ from vmc.config.test_settings import elastic_configured
 from vmc.assets.documents import Impact as AssetImpact, AssetDocument, OwnerInnerDoc
 
 from vmc.common.tests import get_fixture_location
+from vmc.common.tasks import workflow_in_progress, ALL_TENANTS_KEY
 from vmc.ralph.apps import RalphConfig
 from vmc.ralph.clients import RalphClient, RalphClientException
 from vmc.ralph.models import Config
@@ -330,13 +332,21 @@ class AdminPanelTest(LiveServerTestCase):
         self.client.force_login(User.objects.get(username='admin'))
 
     def test_button_exists(self):
-        self.assertContains(self.client.get('/admin/ralph/config/'), 'ralph-import')
+        self.assertContains(self.client.get('/admin/ralph/config/'), 'import-all')
 
-    @patch('vmc.ralph.admin.start_update_assets')
-    def test_call_update_cve(self, mock):
+    @patch('vmc.common.admin.start_workflow')
+    @patch('vmc.ralph.admin.get_update_assets_workflow')
+    def test_call_update_cve(self, get_workflow, start):
+        get_workflow.return_value = 'get_workflow'
         response = self.client.get('/admin/ralph/config/import', follow=True)
-        mock.assert_called_once()
-        self.assertContains(response, 'Importing all configs started.')
+
+        get_workflow.assert_called_once_with(Config.objects.first())
+        start.assert_called_once_with('get_workflow', None)
+
+        self.assertEqual(response.status_code, 200)
+        messages = list(response.context['messages'])
+        self.assertEqual(len(messages), 1)
+        self.assertEqual(str(messages[0]), '1 config was successfully run')
 
     @patch('vmc.common.admin.start_workflow')
     @patch('vmc.ralph.admin.get_update_assets_workflow')
@@ -358,3 +368,34 @@ class AdminPanelTest(LiveServerTestCase):
 
     def tearDown(self):
         self.client.logout()
+
+
+class WorkflowTests(TestCase):
+    fixtures = ['config.json']
+
+    def setUp(self) -> None:
+        self.config = Config.objects.get(id=1)
+
+    def test_no_workflow_in_progress(self):
+        self.assertFalse(workflow_in_progress(self.config))
+
+    def test_no_global_workflow(self):
+        cache.keys = MagicMock()
+        cache.keys.return_value = False
+
+        self.assertFalse(workflow_in_progress(self.config, True))
+        cache.keys.assert_called_once_with('workflow-*')
+
+    def test_tenant_workflow_running_global_check(self):
+        cache.keys = MagicMock()
+        cache.keys.return_value = True
+
+        self.assertTrue(workflow_in_progress(self.config, True))
+        cache.keys.assert_called_once_with('workflow-*')
+
+    def test_global_workflow_running(self):
+        cache.add(ALL_TENANTS_KEY, True)
+        self.assertTrue(workflow_in_progress(self.config))
+
+    def tearDown(self) -> None:
+        cache.clear()

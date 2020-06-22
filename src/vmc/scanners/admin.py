@@ -19,14 +19,12 @@
 """
 from django import forms
 from django.contrib import admin
-from django.http import HttpResponseRedirect
-from django.urls import path
 from django.forms import PasswordInput
 
 from vmc.scanners.registries import scanners_registry
 from vmc.common.admin import ConfigBaseAdmin
 from vmc.scanners.models import Config
-from vmc.scanners.tasks import start_update_scans, get_update_scans_workflow
+from vmc.scanners.tasks import get_update_scans_workflow
 
 
 def get_scanners_choices():
@@ -46,25 +44,8 @@ class ConfigForm(forms.ModelForm):
 
 
 class ConfigAdmin(ConfigBaseAdmin):
-    change_list_template = "scanners/admin/change_list.html"
     model = Config
     form = ConfigForm
-
-    def get_urls(self):
-        urls = super().get_urls()
-        custom_urls = [
-            path(
-                r'import/',
-                self.admin_site.admin_view(self.import_data),
-                name='scanners-import',
-            )
-        ]
-        return custom_urls + urls
-
-    def import_data(self, request):
-        start_update_scans()
-        self.message_user(request, "Importing started.")
-        return HttpResponseRedirect("../")
 
     def update_workflow(self, config):
         return get_update_scans_workflow(config)

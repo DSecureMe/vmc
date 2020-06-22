@@ -18,16 +18,18 @@
  *
 """
 from django import forms
-from django.contrib import admin
+from django.contrib import admin, messages
+from django.http.response import HttpResponseRedirect
 from django.template.defaultfilters import pluralize
 from django.db.models import When, Value, Case
+from django.urls import path
 
 from django_celery_beat.admin import PeriodicTaskAdmin as CeleryPeriodicTaskAdmin
 from django_celery_beat.admin import PeriodicTaskForm as CeleryPeriodicTaskForm
 from django_celery_beat.admin import TaskSelectWidget as CeleryTaskSelectWidget
 from django_celery_beat.models import PeriodicTask
 
-from vmc.common.tasks import start_workflow
+from vmc.common.tasks import start_workflow, workflow_in_progress
 
 
 class TaskSelectWidget(CeleryTaskSelectWidget):
@@ -89,6 +91,7 @@ class ConfigBaseAdmin(admin.ModelAdmin):
         'created_date', 'modified_date', 'last_update_status',
         'last_success_date', 'error_description'
     ]
+    change_list_template = "common/admin/change_list.html"
     model = None
 
     def _message_user_about_update(self, request, rows_updated, verb):
@@ -101,6 +104,17 @@ class ConfigBaseAdmin(admin.ModelAdmin):
                 verb,
             ),
         )
+
+    def get_urls(self):
+        urls = super().get_urls()
+        custom_urls = [
+            path(
+                r'import/',
+                self.admin_site.admin_view(self.import_all_data),
+                name=F'{self.model._meta.app_label}_{self.model._meta.model_name}_import_all',
+            )
+        ]
+        return custom_urls + urls
 
     def enable_configs(self, request, queryset):
         rows_updated = queryset.update(enabled=True)
@@ -124,21 +138,48 @@ class ConfigBaseAdmin(admin.ModelAdmin):
     toggle_configs.short_description = 'Toggle activity of selected configs'
 
     def run_configs(self, request, queryset):
-        for config in queryset:
-            config.set_status(status=self.model.Status.PENDING)
-            workflow = self.update_workflow(config)
-            start_workflow(workflow, config.tenant)
+        started = 0
+        dropped = 0
 
-        self.message_user(
-            request,
-            '{0} config{1} {2} successfully run'.format(
-                queryset.count(),
-                pluralize(queryset.count()),
-                pluralize(queryset.count(), 'was,were'),
+        for config in queryset:
+            if not workflow_in_progress(config):
+                started += 1
+                config.set_status(status=self.model.Status.PENDING)
+                workflow = self.update_workflow(config)
+                start_workflow(workflow, config.tenant)
+            else:
+                dropped += 1
+
+        if started:
+            self.message_user(
+                request,
+                '{0} config{1} {2} successfully run'.format(
+                    started,
+                    pluralize(started),
+                    pluralize(started, 'was,were'),
+                )
             )
-        )
+
+        if dropped:
+            self.message_user(
+                request,
+                '{0} config{1} {2} dropped because {3} already run'.format(
+                    dropped,
+                    pluralize(dropped),
+                    pluralize(dropped, 'was,were'),
+                    pluralize(dropped, 'it is, there are')
+                ),
+                messages.WARNING
+            )
+
+        if not started and not dropped:
+            self.message_user(request, 'There are no configs to perform import')
 
     run_configs.short_description = 'Import selected configs'
+
+    def import_all_data(self, request):
+        self.run_configs(request, self.get_queryset(request).filter(enabled=True))
+        return HttpResponseRedirect("../")
 
     def update_workflow(self, config):
         raise NotImplementedError()

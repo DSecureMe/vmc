@@ -55,6 +55,20 @@ def __release_lock(key: str):
         cache.delete(key)
 
 
+def _get_key(config):
+    return 'workflow-{}'.format(config.tenant.name if config.tenant else 'default')
+
+
+def workflow_in_progress(config, global_lock=False):
+    if not global_lock and cache.get(ALL_TENANTS_KEY, None):
+        return True
+
+    elif global_lock and cache.keys('workflow-*'):
+        return True
+
+    return cache.get(_get_key(config), False)
+
+
 def start_workflow(workflow, tenant=None, global_lock=False):
     key = 'workflow-{}'.format(tenant.name if tenant else 'default')
     return __workflow.apply_async((key, global_lock),

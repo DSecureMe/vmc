@@ -94,13 +94,22 @@ class AdminPanelTest(LiveServerTestCase):
         self.client.force_login(User.objects.get(username='admin'))
 
     def test_button_exists(self):
-        self.assertContains(self.client.get('/admin/scanners/config/'), 'scanners-import')
+        self.assertContains(self.client.get('/admin/scanners/config/'), 'import-all')
 
-    @patch('vmc.scanners.admin.start_update_scans')
-    def test_call_update(self, mock):
+    @patch('vmc.common.admin.start_workflow')
+    @patch('vmc.scanners.admin.get_update_scans_workflow')
+    def test_call_update(self, get_workflow, start):
+        get_workflow.return_value = 'get_workflow'
+
         response = self.client.get('/admin/scanners/config/import', follow=True)
-        mock.assert_called_once()
-        self.assertContains(response, 'Importing started.')
+
+        get_workflow.assert_called_once_with(Config.objects.first())
+        start.assert_called_once_with('get_workflow', None)
+
+        self.assertEqual(response.status_code, 200)
+        messages = list(response.context['messages'])
+        self.assertEqual(len(messages), 1)
+        self.assertEqual(str(messages[0]), '1 config was successfully run')
 
     @patch('vmc.common.admin.start_workflow')
     @patch('vmc.scanners.admin.get_update_scans_workflow')

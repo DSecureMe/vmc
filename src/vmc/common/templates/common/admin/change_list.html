@@ -19,11 +19,12 @@
 -->
 
 {% extends "admin/change_list.html" %}
-{% load i18n admin_static %}
+{% load i18n admin_static admin_urls %}
 
 {% block object-tools-items %}
 {{ block.super }}
 <li>
-    <a id="scanners-import" href="{% url 'admin:scanners-import' %}" class="btn btn-primary btn-xs" data-toggle="tooltip" data-placement="bottom" title="Update all scans">Update</a>
+    {% url cl.opts|admin_urlname:'import_all' as import_all_url %}
+    <a id="import-all" href="{{ import_all_url }}" class="btn btn-primary btn-xs" data-toggle="tooltip" data-placement="bottom" title="Import all">Import all</a>
 </li>
 {% endblock %}

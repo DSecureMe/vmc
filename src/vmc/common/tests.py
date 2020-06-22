@@ -24,10 +24,9 @@ from unittest import TestCase
 from unittest.mock import patch, Mock
 
 from parameterized import parameterized
-from vmc.common.enum import TupleValueEnum
 
 from vmc.common.apps import CommonConfig
-
+from vmc.common.enum import TupleValueEnum
 from vmc.common.utils import is_downloadable, get_file, handle_ranges
 
 
