@@ -57,7 +57,8 @@ setup(
         '': ['*.txt', '*.md'],
     },
     data_files=[
-        ('/etc/vmc/', ['config/config.yml'])
+        ('/etc/vmc/', ['config/config.yml']),
+        ('/usr/share/local/vmc/static', [])
     ],
     install_requires=install_requires(),
     tests_require=tests_require(),
