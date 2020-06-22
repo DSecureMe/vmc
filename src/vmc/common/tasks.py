@@ -85,7 +85,9 @@ def workflow_in_progress(config, global_lock=False):
 
 
 def get_task_error_handler(config=None):
-    return __release_lock_error.si(_get_key(config), config.__module__, config.__class__.__name__, config.pk)
+    if config:
+        return __release_lock_error.si(_get_key(config), config.__module__, config.__class__.__name__, config.pk)
+    return __release_lock.si(_get_key(config))
 
 
 def start_workflow(workflow, config=None, global_lock=False):
