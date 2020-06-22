@@ -142,7 +142,7 @@ class ConfigBaseAdmin(admin.ModelAdmin):
         dropped = 0
 
         for config in queryset:
-            if not workflow_in_progress(config) or config.last_update_status != self.model.Status.PENDING:
+            if not workflow_in_progress(config) and config.last_update_status != self.model.Status.PENDING.value:
                 started += 1
                 config.set_status(status=self.model.Status.PENDING)
                 workflow = self.update_workflow(config)
