@@ -66,7 +66,7 @@ class GmpParser(Parser):
                         solution=tags['solution'],
                         cve=cve,
                         asset=asset,
-                        tags=['OpenVas']
+                        source='OpenVas'
                     )
 
         return self.__parsed, self.__scanned_host

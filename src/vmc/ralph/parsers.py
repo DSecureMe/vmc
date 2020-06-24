@@ -77,8 +77,7 @@ class AssetsParser:
                 LOGGER.debug(F'Unable to parse field {field} ex: {ex}')
                 setattr(asset, field, 'UNKNOWN')
 
-        asset.tags.append(self.__config.name)
-        asset.tags = list(set(asset.tags))
+        asset.source = self.__config.name
         self.__parsed[asset.id] = asset
 
     def id(self, _, iface: dict) -> str:

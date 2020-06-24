@@ -59,6 +59,7 @@ class AssetInnerDoc(InnerDoc):
     hostname = Keyword()
     tags = ListField()
     url = Keyword()
+    source = Keyword()
 
 
 @registry.register_document

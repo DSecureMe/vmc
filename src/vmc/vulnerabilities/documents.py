@@ -45,6 +45,7 @@ class VulnerabilityDocument(Document):
     cve = Object(CveInnerDoc, include_in_parent=True)
     asset = Object(AssetInnerDoc, include_in_parent=True)
     tags = Keyword()
+    source = Keyword()
 
     class Index:
         name = 'vulnerability'
