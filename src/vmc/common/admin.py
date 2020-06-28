@@ -184,6 +184,16 @@ class ConfigBaseAdmin(admin.ModelAdmin):
     def update_workflow(self, config):
         raise NotImplementedError()
 
+    def has_change_permission(self, request, obj=None):
+        if obj.last_update_status in [self.model.Status.ERROR.value, self.model.Status.SUCCESS.value]:
+            self.message_user(request, F'Unable to change {obj.last_update_status} config')
+        return True
+
+    def has_delete_permission(self, request, obj=None):
+        if obj.last_update_status in [self.model.Status.ERROR.value, self.model.Status.SUCCESS.value]:
+            self.message_user(request, F'Unable to delete {obj.last_update_status} config')
+        return True
+
 
 admin.site.unregister(PeriodicTask)
 admin.site.register(PeriodicTask, PeriodicTaskAdmin)
