@@ -31,6 +31,8 @@ from parameterized import parameterized
 from django.core.exceptions import ValidationError
 from django.contrib.auth.models import User
 from django.test import TestCase, LiveServerTestCase
+from rest_framework.authtoken.models import Token
+from rest_framework.test import APIRequestFactory, APIClient
 
 from vmc.ralph.parsers import AssetsParser, OwnerParser
 from vmc.config.test_settings import elastic_configured
@@ -67,10 +69,12 @@ class RalphConfigTest(TestCase):
         self.assertEqual(RalphConfig.name, 'vmc.ralph')
 
 
-class ModelConfigTest(TestCase):
+@skipIf(not elastic_configured(), 'Skip if elasticsearch is not configured')
+class ModelConfigTest(ESTestCase, TestCase):
     fixtures = ['config.json']
 
     def setUp(self) -> None:
+        super().setUp()
         self.uut = Config.objects.get(id=1)
 
     @parameterized.expand([
@@ -400,3 +404,55 @@ class WorkflowTests(TestCase):
 
     def tearDown(self) -> None:
         cache.clear()
+
+
+class GetAssetManagerConfigTest(LiveServerTestCase):
+    fixtures = ['users.json', 'config.json']
+    URL = reverse('get_asset_manager_config')
+
+    def setUp(self) -> None:
+        self.user = User.objects.get(pk=1)
+        self.client = APIClient()
+        self.config = Config.objects.get(pk=1)
+
+    def test_auth_missing(self):
+        resp = self.client.get(self.URL)
+        self.assertEqual(resp.status_code, 401)
+
+    def test_call_get_without_param(self):
+        token = Token.objects.create(user=self.user)
+        self.client.credentials(HTTP_AUTHORIZATION='Token ' + token.key)
+
+        resp = self.client.get(self.URL)
+        self.assertEqual(resp.status_code, 404)
+
+    def test_call_get_unknown_name(self):
+        token = Token.objects.create(user=self.user)
+        self.client.credentials(HTTP_AUTHORIZATION='Token ' + token.key)
+
+        resp = self.client.get(F'{self.URL}?name=aaaaaaaaaaa')
+        self.assertEqual(resp.status_code, 404)
+
+    def test_call_post(self):
+        token = Token.objects.create(user=self.user)
+        self.client.credentials(HTTP_AUTHORIZATION='Token ' + token.key)
+
+        resp = self.client.post(F'{self.URL}?name=aaaaaaaaaaa')
+        self.assertEqual(resp.status_code, 405)
+
+    def test_call(self):
+        token = Token.objects.create(user=self.user)
+        self.client.credentials(HTTP_AUTHORIZATION='Token ' + token.key)
+
+        resp = self.client.get(F'{self.URL}?name={self.config.name}')
+        self.assertEqual(resp.status_code, 200)
+        resp = resp.json()
+
+        self.assertEqual(resp['name'], self.config.name)
+        self.assertEqual(resp['schema'], self.config.schema)
+        self.assertEqual(resp['host'], self.config.host)
+        self.assertEqual(resp['port'], self.config.port)
+        self.assertEqual(resp['username'], self.config.username)
+        self.assertEqual(resp['password'], self.config.password)
+        self.assertEqual(resp['insecure'], self.config.insecure)
+        self.assertEqual(resp['enabled'], self.config.enabled)

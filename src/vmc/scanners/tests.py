@@ -17,6 +17,7 @@
  * under the License.
  */
 """
+from unittest import skipIf
 from unittest.mock import patch, MagicMock
 
 from datetime import datetime
@@ -28,6 +29,7 @@ from django.core.exceptions import ValidationError
 from django.contrib.auth.models import User
 from django.test import TestCase, LiveServerTestCase
 
+from vmc.config.test_settings import elastic_configured
 from vmc.assets.documents import AssetStatus
 from vmc.scanners.models import Config
 from vmc.scanners.registries import scanners_registry
@@ -37,6 +39,7 @@ from vmc.scanners.clients import Client
 from vmc.elasticsearch.models import Tenant, Config as Prefix
 
 
+@skipIf(not elastic_configured(), 'Skip if elasticsearch is not configured')
 class ConfigTest(TestCase):
     fixtures = ['config.json']
 

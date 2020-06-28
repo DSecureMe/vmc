@@ -73,6 +73,7 @@ def _update_scans(config_pk: int):
         config.save(update_fields=['last_scans_pull'])
 
     except Exception as e:
+        config.set_status(status=Config.Status.ERROR, error_description=e)
         LOGGER.error(F'Error while loading vulnerability data {e}')
     finally:
         thread_pool_executor.wait_for_all()

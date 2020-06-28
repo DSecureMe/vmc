@@ -17,19 +17,12 @@
  * under the License.
  *
 """
-from django.contrib import admin
-from django.shortcuts import redirect
-from django.urls import path
-from vmc.knowledge_base.views import update_knowledge_base
-from vmc.ralph.views import get_asset_manager_config
+from rest_framework import serializers
+from vmc.ralph.models import Config
 
-admin.site.site_header = "VMC Admin Panel"
-admin.site.site_title = "VMC Admin Panel"
-admin.site.index_title = "Dashboard"
 
-urlpatterns = [
-    path('', lambda request: redirect('admin/', permanent=False)),
-    path('admin/', admin.site.urls),
-    path('admin/knowlege-base/update', update_knowledge_base, name='update_knowledge_base'),
-    path('api/v1/assets-manager/config', get_asset_manager_config, name='get_asset_manager_config')
-]
+class ConfigSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Config
+        fields = ['name', 'schema', 'host', 'port', 'username', 'password',
+                  'insecure', 'enabled']
