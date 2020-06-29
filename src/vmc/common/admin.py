@@ -19,12 +19,10 @@
 """
 from django import forms
 from django.contrib import admin, messages
-from django.core.exceptions import ValidationError, PermissionDenied
 from django.http.response import HttpResponseRedirect
 from django.template.defaultfilters import pluralize
 from django.db.models import When, Value, Case
 from django.urls import path
-from django.utils.text import get_text_list
 
 from django_celery_beat.admin import PeriodicTaskAdmin as CeleryPeriodicTaskAdmin
 from django_celery_beat.admin import PeriodicTaskForm as CeleryPeriodicTaskForm
