@@ -83,7 +83,8 @@ class EnumField(CustomField):
 class ListField(CustomField):
     builtin_type = Keyword()
 
-    def _empty(self):
+    @staticmethod
+    def _empty():
         return []
 
 

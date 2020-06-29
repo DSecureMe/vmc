@@ -18,14 +18,39 @@
  */
 """
 from django.contrib import admin
+
+from vmc.common.tasks import workflow_in_progress
 from vmc.elasticsearch.models import Config, Tenant
 
 
-class DisableActionsAdmin(admin.ModelAdmin):
+class DisableChangeActionAdmin(admin.ModelAdmin):
 
     def has_change_permission(self, request, obj=None):
         return False
 
 
-admin.site.register(Config, DisableActionsAdmin)
-admin.site.register(Tenant, DisableActionsAdmin)
+class ConfigMock:
+    def __init__(self, tenant):
+        self.tenant = tenant
+
+
+class TenantAdmin(DisableChangeActionAdmin):
+
+    def has_delete_permission(self, request, obj=None):
+        if obj and workflow_in_progress(ConfigMock(obj)):
+            return False
+        return super().has_delete_permission(request, obj)
+
+
+class ConfigAdmin(DisableChangeActionAdmin):
+
+    def has_delete_permission(self, request, obj=None):
+        if obj:
+            for tenant in obj.tenant_set.all():
+                if workflow_in_progress(ConfigMock(tenant)):
+                    return False
+        return super().has_delete_permission(request, obj)
+
+
+admin.site.register(Config, ConfigAdmin)
+admin.site.register(Tenant, TenantAdmin)

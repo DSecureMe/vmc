@@ -136,7 +136,8 @@ class DocumentRegistry:
 
             async_bulk(updates)
 
-    def _update_by_query(self, index, field_name, old_version, new_version):
+    @staticmethod
+    def _update_by_query(index, field_name, old_version, new_version):
         ubq = UpdateByQuery(using=get_connection(), index=index).filter(
             'term', **{F'{field_name}__id': old_version.id}
         ).script(source=F'ctx._source.{field_name} = params.new_value',

@@ -19,10 +19,12 @@
 """
 from django import forms
 from django.contrib import admin, messages
+from django.core.exceptions import ValidationError, PermissionDenied
 from django.http.response import HttpResponseRedirect
 from django.template.defaultfilters import pluralize
 from django.db.models import When, Value, Case
 from django.urls import path
+from django.utils.text import get_text_list
 
 from django_celery_beat.admin import PeriodicTaskAdmin as CeleryPeriodicTaskAdmin
 from django_celery_beat.admin import PeriodicTaskForm as CeleryPeriodicTaskForm
@@ -126,7 +128,8 @@ class ConfigBaseAdmin(admin.ModelAdmin):
         self._message_user_about_update(request, rows_updated, 'disabled')
     disable_configs.short_description = 'Disable selected configs'
 
-    def _toggle_configs_activity(self, queryset):
+    @staticmethod
+    def _toggle_configs_activity(queryset):
         return queryset.update(enabled=Case(
             When(enabled=True, then=Value(False)),
             default=Value(True),
@@ -183,6 +186,20 @@ class ConfigBaseAdmin(admin.ModelAdmin):
 
     def update_workflow(self, config):
         raise NotImplementedError()
+
+    def has_delete_permission(self, request, obj=None):
+        if self._is_config_running(obj):
+            return False
+        return super().has_delete_permission(request, obj)
+
+    def has_change_permission(self, request, obj=None):
+        if self._is_config_running(obj):
+            return False
+        return super().has_change_permission(request, obj)
+
+    def _is_config_running(self, obj):
+        return obj and obj.last_update_status in [self.model.Status.PENDING.value,
+                                                  self.model.Status.IN_PROGRESS.value]
 
 
 admin.site.unregister(PeriodicTask)
