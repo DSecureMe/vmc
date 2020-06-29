@@ -20,6 +20,7 @@
 
 import logging
 import uuid
+import netaddr
 from typing import Dict, List
 
 from defusedxml.lxml import RestrictedElement
@@ -30,7 +31,6 @@ from vmc.scanners.parsers import Parser
 from vmc.assets.documents import AssetDocument
 from vmc.common.xml import iter_elements_by_name, get_root_element
 from vmc.knowledge_base.documents import CveDocument
-import netaddr
 
 
 LOGGER = logging.getLogger(__name__)

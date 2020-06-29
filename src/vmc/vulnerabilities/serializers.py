@@ -18,13 +18,22 @@
  *
 """
 from rest_framework import serializers
-from vmc.ralph.models import Config
 
 
-class ConfigSerializer(serializers.ModelSerializer):
-    tenant = serializers.StringRelatedField()
+class VulnerabilityDocumentSerializer(serializers.Serializer):
+    port = serializers.IntegerField()
+    svc_name = serializers.CharField()
+    protocol = serializers.CharField()
+    description = serializers.CharField()
+    environmental_score_v2 = serializers.FloatField()
+    environmental_score_vector_v2 = serializers.CharField()
+    environmental_score_v3 = serializers.FloatField()
+    environmental_score_vector_v3 = serializers.CharField()
+    tags = serializers.ListField()
+    source = serializers.CharField()
 
-    class Meta:
-        model = Config
-        fields = ['name', 'schema', 'host', 'port', 'username', 'password',
-                  'insecure', 'enabled', 'tenant']
+    def create(self, validated_data):
+        raise NotImplementedError()
+
+    def update(self, instance, validated_data):
+        raise NotImplementedError()

@@ -406,8 +406,9 @@ class WorkflowTests(TestCase):
         cache.clear()
 
 
-class GetAssetManagerConfigTest(LiveServerTestCase):
-    fixtures = ['users.json', 'config.json']
+@skipIf(not elastic_configured(), 'Skip if elasticsearch is not configured')
+class GetAssetManagerConfigTest(ESTestCase, LiveServerTestCase):
+    fixtures = ['users.json', 'tenant_test.json']
     URL = reverse('get_asset_manager_config')
 
     def setUp(self) -> None:
@@ -456,3 +457,4 @@ class GetAssetManagerConfigTest(LiveServerTestCase):
         self.assertEqual(resp['password'], self.config.password)
         self.assertEqual(resp['insecure'], self.config.insecure)
         self.assertEqual(resp['enabled'], self.config.enabled)
+        self.assertEqual(resp['tenant'], self.config.tenant.name)

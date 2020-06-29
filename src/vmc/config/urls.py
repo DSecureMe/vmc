@@ -22,6 +22,7 @@ from django.shortcuts import redirect
 from django.urls import path
 from vmc.knowledge_base.views import update_knowledge_base
 from vmc.ralph.views import get_asset_manager_config
+from vmc.vulnerabilities.views import search_vulnerabilities
 
 admin.site.site_header = "VMC Admin Panel"
 admin.site.site_title = "VMC Admin Panel"
@@ -31,5 +32,6 @@ urlpatterns = [
     path('', lambda request: redirect('admin/', permanent=False)),
     path('admin/', admin.site.urls),
     path('admin/knowlege-base/update', update_knowledge_base, name='update_knowledge_base'),
-    path('api/v1/assets-manager/config', get_asset_manager_config, name='get_asset_manager_config')
+    path('api/v1/assets-manager/config', get_asset_manager_config, name='get_asset_manager_config'),
+    path('api/v1/vulnerabilities', search_vulnerabilities, name='search_vulnerabilities')
 ]

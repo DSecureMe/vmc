@@ -20,7 +20,11 @@
 
 from unittest import skipIf
 
-from django.test import TestCase
+from django.contrib.auth.models import User
+from django.test import TestCase, LiveServerTestCase
+from django.urls import reverse
+from rest_framework.authtoken.models import Token
+from rest_framework.test import APIClient
 
 from vmc.knowledge_base.tests import create_cve
 from vmc.common.utils import thread_pool_executor
@@ -34,7 +38,7 @@ from vmc.vulnerabilities.apps import VulnerabilitiesConfig
 from vmc.vulnerabilities.documents import VulnerabilityDocument, VulnerabilityStatus
 
 
-def create_vulnerability(asset, cve, save=True):
+def create_vulnerability(asset, cve, save=True, index=None):
     vulnerability = VulnerabilityDocument(
         id=F"{asset.id}-{cve.id}",
         asset=asset,
@@ -47,7 +51,7 @@ def create_vulnerability(asset, cve, save=True):
         tags=['test']
     )
     if save:
-        vulnerability.save()
+        vulnerability.save(index=index)
     return vulnerability
 
 
@@ -218,3 +222,99 @@ class VulnerabilityDocumentTest(ESTestCase, TestCase):
             'term', asset__ip_address=self.asset.ip_address).sort('-modified_date').execute()
 
         self.assertEqual(result_2.hits[0].tags, ['test', VulnerabilityStatus.FIXED])
+
+
+@skipIf(not elastic_configured(), 'Skip if elasticsearch is not configured')
+class SearchVulnerabilitiesTest(ESTestCase, LiveServerTestCase):
+    fixtures = ['users.json', 'tenant_test.json']
+    URL = reverse('search_vulnerabilities')
+
+    def setUp(self) -> None:
+        super().setUp()
+        self.user = User.objects.get(pk=1)
+        self.client = APIClient()
+
+    def test_auth_missing(self):
+        resp = self.client.get(self.URL)
+        self.assertEqual(resp.status_code, 401)
+
+    def test_call_get_without_param(self):
+        token = Token.objects.create(user=self.user)
+        self.client.credentials(HTTP_AUTHORIZATION='Token ' + token.key)
+
+        resp = self.client.get(self.URL)
+        self.assertEqual(resp.status_code, 404)
+
+    def test_call_search_invalid_ip_address(self):
+        token = Token.objects.create(user=self.user)
+        self.client.credentials(HTTP_AUTHORIZATION='Token ' + token.key)
+
+        resp = self.client.get(F'{self.URL}?ip_address=aaaaaaaaaaa')
+        self.assertEqual(resp.status_code, 404)
+
+    def test_call_post(self):
+        token = Token.objects.create(user=self.user)
+        self.client.credentials(HTTP_AUTHORIZATION='Token ' + token.key)
+
+        resp = self.client.post(F'{self.URL}?ip_address=aaaaaaaaaaa')
+        self.assertEqual(resp.status_code, 405)
+
+    def test_call_ip_not_found(self):
+        token = Token.objects.create(user=self.user)
+        self.client.credentials(HTTP_AUTHORIZATION='Token ' + token.key)
+
+        resp = self.client.get(F'{self.URL}?ip_address=10.10.10.1')
+        self.assertEqual(resp.status_code, 200)
+        resp = resp.json()
+
+        self.assertEqual(len(resp), 0)
+
+    def test_call_without_tenant(self):
+        asset = create_asset()
+        cve = create_cve()
+        vuln = create_vulnerability(asset, cve)
+        create_vulnerability(asset, cve, index='test.tenant.vulnerability')
+
+        token = Token.objects.create(user=self.user)
+        self.client.credentials(HTTP_AUTHORIZATION='Token ' + token.key)
+
+        resp = self.client.get(F'{self.URL}?ip_address={asset.ip_address}')
+        self.assertEqual(resp.status_code, 200)
+        resp = resp.json()
+
+        self.assertEqual(len(resp), 1)
+        self.assertEqual(resp[0]['port'], vuln.port)
+        self.assertEqual(resp[0]['svc_name'], vuln.svc_name)
+        self.assertEqual(resp[0]['protocol'], vuln.protocol)
+        self.assertEqual(resp[0]['description'], vuln.description)
+        self.assertEqual(resp[0]['environmental_score_v2'], vuln.environmental_score_v2)
+        self.assertEqual(resp[0]['environmental_score_vector_v2'], vuln.environmental_score_vector_v2)
+        self.assertEqual(resp[0]['environmental_score_v3'], vuln.environmental_score_v3)
+        self.assertEqual(resp[0]['environmental_score_vector_v3'], vuln.environmental_score_vector_v3)
+        self.assertEqual(resp[0]['tags'], vuln.tags)
+        self.assertEqual(resp[0]['source'], vuln.source)
+
+    def test_call_not_existing_tenant(self):
+        asset = create_asset()
+        cve = create_cve()
+        create_vulnerability(asset, cve)
+
+        token = Token.objects.create(user=self.user)
+        self.client.credentials(HTTP_AUTHORIZATION='Token ' + token.key)
+
+        resp = self.client.get(F'{self.URL}?ip_address={asset.ip_address}&tenant=aaaaa')
+        self.assertEqual(resp.status_code, 404)
+
+    def test_call_tenant(self):
+        asset = create_asset()
+        cve = create_cve()
+        create_vulnerability(asset, cve, index='test.tenant.vulnerability')
+
+        token = Token.objects.create(user=self.user)
+        self.client.credentials(HTTP_AUTHORIZATION='Token ' + token.key)
+
+        resp = self.client.get(F'{self.URL}?ip_address={asset.ip_address}&tenant=Tenant')
+        self.assertEqual(resp.status_code, 200)
+        resp = resp.json()
+
+        self.assertEqual(len(resp), 1)
