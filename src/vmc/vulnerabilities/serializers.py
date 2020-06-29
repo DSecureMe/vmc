@@ -21,6 +21,10 @@ from rest_framework import serializers
 
 
 class VulnerabilityDocumentSerializer(serializers.Serializer):
+    cve = serializers.SerializerMethodField()
+    summary = serializers.SerializerMethodField()
+    base_score_v2 = serializers.SerializerMethodField()
+    base_score_v3 = serializers.SerializerMethodField()
     port = serializers.IntegerField()
     svc_name = serializers.CharField()
     protocol = serializers.CharField()
@@ -31,9 +35,23 @@ class VulnerabilityDocumentSerializer(serializers.Serializer):
     environmental_score_vector_v3 = serializers.CharField()
     tags = serializers.ListField()
     source = serializers.CharField()
+    created_date = serializers.DateTimeField()
+    modified_date = serializers.DateTimeField()
 
     def create(self, validated_data):
         raise NotImplementedError()
 
     def update(self, instance, validated_data):
         raise NotImplementedError()
+
+    def get_cve(self, obj):
+        return obj.cve.id
+
+    def get_summary(self, obj):
+        return obj.cve.summary
+
+    def get_base_score_v2(self, obj):
+        return obj.cve.base_score_v2
+
+    def get_base_score_v3(self, obj):
+        return obj.cve.base_score_v3

@@ -293,6 +293,10 @@ class SearchVulnerabilitiesTest(ESTestCase, LiveServerTestCase):
         self.assertEqual(resp[0]['environmental_score_vector_v3'], vuln.environmental_score_vector_v3)
         self.assertEqual(resp[0]['tags'], vuln.tags)
         self.assertEqual(resp[0]['source'], vuln.source)
+        self.assertEqual(resp[0]['cve'], vuln.cve.id)
+        self.assertEqual(resp[0]['summary'], vuln.cve.summary)
+        self.assertEqual(resp[0]['base_score_v2'], vuln.cve.base_score_v2)
+        self.assertEqual(resp[0]['base_score_v3'], vuln.cve.base_score_v3)
 
     def test_call_not_existing_tenant(self):
         asset = create_asset()
