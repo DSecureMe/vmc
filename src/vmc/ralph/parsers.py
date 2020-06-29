@@ -119,8 +119,9 @@ class AssetsParser:
         return owners if owners else [OwnerInnerDoc()]
 
     @staticmethod
-    def hostname(item: dict, _) -> str:
-        return item['hostname']
+    def hostname(item: dict, iface: dict) -> str:
+        hostname = iface['ipaddress'].get('hostname', None)
+        return hostname if hostname else item['hostname']
 
     @staticmethod
     def confidentiality_requirement(item: dict, _) -> Impact:

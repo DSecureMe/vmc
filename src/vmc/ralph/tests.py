@@ -32,7 +32,7 @@ from django.core.exceptions import ValidationError
 from django.contrib.auth.models import User
 from django.test import TestCase, LiveServerTestCase
 from rest_framework.authtoken.models import Token
-from rest_framework.test import APIRequestFactory, APIClient
+from rest_framework.test import APIClient
 
 from vmc.ralph.parsers import AssetsParser, OwnerParser
 from vmc.config.test_settings import elastic_configured
@@ -243,7 +243,7 @@ class AssetsParserTest(TestCase):
         self.assertEqual(result[self.asset_id].availability_requirement, AssetImpact.NOT_DEFINED)
         self.assertIsInstance(result[self.asset_id].availability_requirement, AssetImpact)
         self.assertEqual(result[self.asset_id].os, 'Windows Server 2003')
-        self.assertEqual(result[self.asset_id].hostname, 'ralph1.allegro.pl')
+        self.assertEqual(result[self.asset_id].hostname, 'testhostname2')
         self.assertEqual(result[self.asset_id].url, 'http://test:80/data_center/datacenterasset/62')
         self.assertEqual(result[self.asset_id].service, 'load_balancing')
         self.assertEqual(result[self.asset_id].environment, 'dev')
