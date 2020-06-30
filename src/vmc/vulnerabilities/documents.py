@@ -17,10 +17,11 @@
  * under the License.
  *
 """
+from elasticsearch_dsl import Q
 
 from vmc.assets.documents import AssetInnerDoc, AssetDocument
 
-from vmc.elasticsearch import Document, Keyword, Object, Float
+from vmc.elasticsearch import Document, Keyword, Object, Float, ListField
 from vmc.elasticsearch.registries import registry
 from vmc.elasticsearch.helpers import async_bulk
 from vmc.knowledge_base.documents import CveInnerDoc, CveDocument
@@ -44,7 +45,7 @@ class VulnerabilityDocument(Document):
     environmental_score_vector_v3 = Keyword()
     cve = Object(CveInnerDoc, include_in_parent=True)
     asset = Object(AssetInnerDoc, include_in_parent=True)
-    tags = Keyword()
+    tags = ListField()
     source = Keyword()
 
     class Index:
@@ -56,7 +57,9 @@ class VulnerabilityDocument(Document):
     def create_or_update(vulnerabilities: dict, scanned_hosts: list, config=None) -> None:
         index = VulnerabilityDocument.get_index(config)
         docs = []
-        all_vulnerability_docs = VulnerabilityDocument.search(index=index)
+        all_vulnerability_docs = VulnerabilityDocument.search(index=index).filter(
+            ~Q('match', tags=VulnerabilityStatus.FIXED)
+        )
         for current_vuln in all_vulnerability_docs.scan():
             vuln_id = current_vuln.id
             if vuln_id in vulnerabilities:
@@ -73,5 +76,5 @@ class VulnerabilityDocument(Document):
                 async_bulk(docs, index=index)
                 docs = []
 
-        docs.extend([v for v in vulnerabilities.values()])
+        docs.extend(list(map(lambda x: x.save(weak=True).to_dict(), vulnerabilities.values())))
         async_bulk(docs, index=index)

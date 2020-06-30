@@ -20,6 +20,7 @@
 
 from __future__ import absolute_import, unicode_literals
 
+import copy
 import logging
 
 from django.utils.timezone import now
@@ -38,7 +39,7 @@ from vmc.processing.tasks import start_processing_per_tenant
 LOGGER = logging.getLogger(__name__)
 
 
-@shared_task(trail=True)
+@shared_task
 def _update_scans(config_pk: int):
     config = Config.objects.filter(pk=config_pk)
     if config.exists():
@@ -53,14 +54,17 @@ def _update_scans(config_pk: int):
         for scan_id in scan_list:
             LOGGER.info(F'Trying to download report form {config.name}')
             file = client.download_scan(scan_id)
+            targets = copy.deepcopy(file)
             LOGGER.info(F'Retrieving discovered assets for {config.name}')
             discovered_assets = AssetDocument.get_assets_with_tag(tag=AssetStatus.DISCOVERED, config=config)
             LOGGER.info(F'Trying to parse scan file {scan_id}')
             vulns, scanned_hosts = parser.parse(file)
             LOGGER.info(F'File parsed: {scan_id}')
             LOGGER.info(F'Trying to parse targets from file {scan_id}')
-            get_target_method = getattr(client, "get_targets", parser.get_targets)
-            targets = get_target_method(file)
+            if getattr(parser, "get_targets"):
+                targets = parser.get_targets(targets)
+            else:
+                targets = client.get_targets(targets)
             LOGGER.info(F'Targets parsed: {scan_id}')
             if targets:
                 LOGGER.info(F'Attempting to update discovered assets in {config.name}')

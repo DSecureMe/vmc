@@ -313,14 +313,15 @@ def start_processing_per_tenant(vulnerability_index: str, asset_index: str):
         workers_count = get_workers_count()
         vuln_count = vuln_search.count()
 
+        slices_count = 1
         if vuln_count > 500:
             slices_count = vuln_count // workers_count
             slices_count = slices_count if slices_count <= workers_count else workers_count
 
-            (
-                group(_processing.si(idx, slices_count, assets_count, vulnerability_index) for idx in range(slices_count)) |
-                _end_processing.si(vulnerability_index, asset_index)
-            )()
+        (
+            group(_processing.si(idx, slices_count, assets_count, vulnerability_index) for idx in range(slices_count)) |
+            _end_processing.si(vulnerability_index, asset_index)
+        )()
     except Exception as ex:
         LOGGER.error(F'Unknown processing exception {ex}')
 

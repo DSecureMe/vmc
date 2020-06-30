@@ -24,6 +24,7 @@ import defusedxml.ElementTree as ET
 
 from django.test import TestCase
 
+from vmc.common.xml import get_root_element
 from vmc.scanners.clients import Client
 from vmc.scanners.models import Config
 from vmc.scanners.registries import scanners_registry
@@ -95,10 +96,10 @@ class OpenVasClientTest(TestCase):
         self.assertIsInstance(self.uut, Client)
 
     def test_get_targets(self):
-        xml = get_fixture_location(__file__, "report_with_target.xml")
-        target_xml = get_fixture_location(__file__, "target.xml")
-        target2_xml = get_fixture_location(__file__, "target2.xml")
-        target3_xml = get_fixture_location(__file__, "target3.xml")
+        xml = get_root_element(get_fixture_location(__file__, "report_with_target.xml"))
+        target_xml = get_root_element(get_fixture_location(__file__, "target.xml"))
+        target2_xml = get_root_element(get_fixture_location(__file__, "target2.xml"))
+        target3_xml = get_root_element(get_fixture_location(__file__, "target3.xml"))
 
         with patch.object(self.uut, "_get_target_definition", return_value=target_xml) as target_def:
             target = self.uut.get_targets(xml)

@@ -38,7 +38,7 @@ class ElasticSearchConfig(AppConfig):
                 'create snapshot every day at midnight': {
                     'task': 'Snapshot',
                     'schedule': crontab(hour=0, minute=0),
-                    'args': ('dayli', )
+                    'args': ('daily', )
                 },
                 'create snapshot every first day of month at midnight': {
                     'task': 'Snapshot',

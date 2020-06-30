@@ -105,7 +105,10 @@ class Document(ESDocument):
         self.modified_date = date
 
         if not weak:
-            kwargs['refresh'] = getattr(settings, 'TEST', False)
+
+            if getattr(settings, 'TEST', False):
+                kwargs['refresh'] = True
+
             super().save(**kwargs)
 
         post_save.send(sender=type(self),

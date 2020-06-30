@@ -105,7 +105,7 @@ class NessusClient(Client):
     @staticmethod
     def _raise_exception(headers, endpoint, status_code, data=None, content=None):
         data = json.loads(data)
-        if 'X-ApiKeys' in data:
+        if 'X-ApiKeys' in headers:
             data['X-ApiKeys'] = '*********'
 
         LOGGER.error("*****************START ERROR*****************")

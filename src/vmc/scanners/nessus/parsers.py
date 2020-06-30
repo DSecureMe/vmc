@@ -62,8 +62,10 @@ class NessusReportParser(Parser):
 
     @staticmethod
     def get_scans_ids(scan_list: Dict) -> List:
-        return [x['id'] for x in scan_list['scans']
-                if x['folder_id'] != NessusReportParser.get_trash_folder_id(scan_list)]
+        if scan_list['scans']:
+            return [x['id'] for x in scan_list['scans']
+                    if x['folder_id'] != NessusReportParser.get_trash_folder_id(scan_list)]
+        return []
 
     @staticmethod
     def get_trash_folder_id(scan_list: Dict) -> [int, None]:
@@ -73,7 +75,7 @@ class NessusReportParser(Parser):
                     return folder['id']
         return scan_list
 
-    def parse(self, report) -> [Dict, Dict, netaddr.IPSet]:
+    def parse(self, report) -> [Dict, Dict]:
         vuln = dict()
         for host in iter_elements_by_name(report, "ReportHost"):
             self.__scanned_hosts.append(host.get('name'))
@@ -123,7 +125,7 @@ class NessusReportParser(Parser):
         for preference in root.findall(".//Preferences/ServerPreferences/preference"):
             if preference[0].tag == "name" and preference[0].text == "TARGET":
                 for target in map(str.strip, preference[1].text.split(sep=",")):
-                    if not "-" in target:
+                    if "-" not in target:
                         targets.add(target)
                     else:
                         ip_range = target.split(sep="-")

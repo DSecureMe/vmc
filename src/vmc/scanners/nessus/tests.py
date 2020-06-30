@@ -166,7 +166,7 @@ class NessusReportParserTest(ESTestCase, TestCase):
         self.assertEqual(netaddr.IPNetwork("192.168.2.88/32"), multiple_targets.iter_cidrs()[8])
 
         ip_set = netaddr.IPSet()
-        for n in range(9,90,1):
+        for n in range(9, 90, 1):
             ip_set.add(F"192.168.2.{n}")
 
         check_set = netaddr.IPSet()

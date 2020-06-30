@@ -74,7 +74,7 @@ class AssetDocument(Document, AssetInnerDoc):
         assets = AssetDocument._update_existing_assets(assets, index)
         assets = AssetDocument._update_discovered_assets(assets, index)
 
-        async_bulk([a.to_dict() for a in assets.values()], index)
+        async_bulk(list(map(lambda x: x.save(weak=True).to_dict(), assets.values())), index)
 
     @staticmethod
     def _update_existing_assets(assets: dict, index):
@@ -126,11 +126,11 @@ class AssetDocument(Document, AssetInnerDoc):
         index = AssetDocument.get_index(config)
         result = AssetDocument.search(index=index).filter(
             Q('term', ip_address=ip_address) & ~Q('match', tags=AssetStatus.DELETED)).execute()
-        if result.hits:
-            return result.hits[0]
+        if result:
+            return result[0]
         return AssetDocument(id=ip_address,
                              ip_address=ip_address,
-                             tags=[AssetStatus.DISCOVERED]).save(index=index)
+                             tags=[AssetStatus.DISCOVERED]).save(index=index, refresh=True)
 
     @staticmethod
     def get_assets_with_tag(tag: str, config=None):
@@ -142,6 +142,7 @@ class AssetDocument(Document, AssetInnerDoc):
     @staticmethod
     def update_gone_discovered_assets(targets, scanned_hosts, discovered_assets, config=None):
         index = AssetDocument.get_index(config)
+        # FIXME: update by query
         for asset in discovered_assets.scan():
             if asset.ip_address in targets and asset.ip_address not in scanned_hosts:
                 asset.tags.append(AssetStatus.DELETED)

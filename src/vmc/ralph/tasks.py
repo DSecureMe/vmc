@@ -55,12 +55,13 @@ def _update_assets(config_id: int):
             assets = client.get_assets()
             assets = parser.parse(assets, users)
             AssetDocument.create_or_update(assets, config)
-            thread_pool_executor.wait_for_all()
             LOGGER.info(F'Finish loading data from Ralph: {config.name}')
             config.set_status(Config.Status.SUCCESS)
         except Exception as ex:
             LOGGER.error(F'Error with loading data from Ralph: {ex}')
             config.set_status(status=Config.Status.ERROR, error_description=ex)
+        finally:
+            thread_pool_executor.wait_for_all()
 
 
 def get_update_assets_workflow(config):

@@ -20,15 +20,16 @@
 from contextlib import contextmanager
 
 import logging
+import netaddr
+
 from gvm.connections import TLSConnection
 from gvm.protocols.gmp import Gmp
 from gvm.transforms import EtreeTransform
 
 from vmc.scanners.clients import Client
 from vmc.scanners.models import Config
-from vmc.common.xml import get_root_element
 from vmc.common.utils import handle_ranges
-import netaddr
+
 
 LOGGER = logging.getLogger(__name__)
 
@@ -61,9 +62,9 @@ class OpenVasClient(Client):
             return gmp.get_target(target_id)
 
     def get_targets(self, file):
-        target_id = get_root_element(file).find(".//report/task/target").attrib["id"]
+        target_id = file.find(".//report/task/target").attrib["id"]
         target = self._get_target_definition(target_id)
-        hosts = get_root_element(target).find(".//target/hosts").text
+        hosts = target.find(".//target/hosts").text
         targets = netaddr.IPSet()
         for h in hosts.split(sep=","):
             h = h.strip()

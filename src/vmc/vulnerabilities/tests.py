@@ -191,7 +191,7 @@ class VulnerabilityDocumentTest(ESTestCase, TestCase):
         self.assertEqual(VulnerabilityDocument.search().count(), 1)
 
         result_2 = VulnerabilityDocument.search().filter(
-            'term', asset__ip_address=self.asset.ip_address).sort('-modified_date').filter(
+            'term', asset__ip_address=self.asset.ip_address).filter(
             'term', cve__id=self.cve.id).execute()
         self.assertEqual(result_2.hits[0].description, 'Updated Desc')
 
@@ -219,7 +219,7 @@ class VulnerabilityDocumentTest(ESTestCase, TestCase):
         self.assertEqual(VulnerabilityDocument.search().count(), 1)
 
         result_2 = VulnerabilityDocument.search().filter(
-            'term', asset__ip_address=self.asset.ip_address).sort('-modified_date').execute()
+            'term', asset__ip_address=self.asset.ip_address).execute()
 
         self.assertEqual(result_2.hits[0].tags, ['test', VulnerabilityStatus.FIXED])
 

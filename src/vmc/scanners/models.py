@@ -33,5 +33,5 @@ class Config(ConfigBaseModel):
         db_table = 'scanners'
 
     def clean(self):
-        if not self.pk and Config.objects.filter(tenant=self.tenant, scanner=self.scanner).exists():
+        if not self.pk and Config.objects.filter(tenant=self.tenant).exists():
             raise ValidationError('Only one type of Scanner can be assigned to one Tenant')

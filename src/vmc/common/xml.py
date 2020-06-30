@@ -29,6 +29,7 @@ def iter_elements_by_name(handle, name: str):
             yield elem
             root.clear()
 
+
 def get_root_element(file):
     return cElementTree.parse(file).getroot()
 

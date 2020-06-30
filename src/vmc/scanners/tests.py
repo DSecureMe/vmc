@@ -17,9 +17,10 @@
  * under the License.
  */
 """
+from io import BytesIO
 from unittest import skipIf
 from unittest.mock import patch, MagicMock
-
+from pathlib import Path
 from datetime import datetime
 
 from django.urls import reverse
@@ -29,6 +30,8 @@ from django.core.exceptions import ValidationError
 from django.contrib.auth.models import User
 from django.test import TestCase, LiveServerTestCase
 
+from vmc.scanners.nessus.parsers import NessusReportParser
+from vmc.elasticsearch.tests import ESTestCase
 from vmc.config.test_settings import elastic_configured
 from vmc.assets.documents import AssetStatus
 from vmc.scanners.models import Config
@@ -36,10 +39,10 @@ from vmc.scanners.registries import scanners_registry
 from vmc.scanners.tasks import _update_scans
 from vmc.scanners.parsers import Parser
 from vmc.scanners.clients import Client
+from vmc.vulnerabilities.documents import VulnerabilityDocument
 from vmc.elasticsearch.models import Tenant, Config as Prefix
 
 
-@skipIf(not elastic_configured(), 'Skip if elasticsearch is not configured')
 class ConfigTest(TestCase):
     fixtures = ['config.json']
 
@@ -161,10 +164,12 @@ class ClientTest(TestCase):
             self.uut.download_scan('scan')
 
 
-class TasksTest(TestCase):
+@skipIf(not elastic_configured(), 'Skip if elasticsearch is not configured')
+class TasksTest(ESTestCase, TestCase):
     fixtures = ['config.json']
 
     def setUp(self):
+        super(TasksTest, self).setUp()
         self.client = MagicMock()
         self.parser = MagicMock()
         self.config = Config.objects.first()
@@ -189,6 +194,17 @@ class TasksTest(TestCase):
         asset_mock.update_gone_discovered_assets.assert_called_once_with(targets='targets', scanned_hosts='second',
                                                     discovered_assets='discovered_assets', config=self.config)
         vuln_mock.create_or_update.assert_called_once_with('first', 'second', self.config)
+
+    def test__update_call_nessus_parser(self):
+        scanners_registry.register('test-scanner', self.client, NessusReportParser)
+        self.client().get_scans.return_value = {'scans': [{'id': 2, 'folder_id': 2}]}
+        with open(Path(__file__).parent / "nessus/fixtures/internal.xml", 'rb') as f:
+            self.client().download_scan.return_value = BytesIO(f.read())
+
+        _update_scans(self.config.pk)
+
+        self.client().download_scan.assert_called_once_with(2)
+        self.assertEqual(VulnerabilityDocument.search().count(), 1)
 
     @patch('vmc.scanners.tasks.VulnerabilityDocument')
     def test___update_scan_exception(self, document):

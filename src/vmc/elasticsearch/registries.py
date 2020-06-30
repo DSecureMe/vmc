@@ -32,7 +32,7 @@ from vmc.elasticsearch.helpers import async_bulk
 
 
 class SnapShotMode(Enum):
-    DAYLI = 'dayli'
+    DAILY = 'daily'
     MONTHLY = 'monthly'
 
     @classmethod
