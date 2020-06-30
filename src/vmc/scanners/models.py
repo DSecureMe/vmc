@@ -26,12 +26,13 @@ from vmc.elasticsearch.models import Tenant
 
 class Config(ConfigBaseModel):
     last_scans_pull = models.DateTimeField(default=None, null=True, blank=True)
-    tenant = models.ForeignKey(Tenant, null=True, blank=True, on_delete=models.CASCADE)
+    tenant = models.OneToOneField(Tenant, null=True, blank=True, on_delete=models.CASCADE)
     scanner = models.CharField(max_length=128)
 
     class Meta:
         db_table = 'scanners'
 
     def clean(self):
+        super(Config, self).clean()
         if not self.pk and Config.objects.filter(tenant=self.tenant).exists():
             raise ValidationError('Only one type of Scanner can be assigned to one Tenant')
