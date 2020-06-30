@@ -61,7 +61,7 @@ def _update_scans(config_pk: int):
             vulns, scanned_hosts = parser.parse(file)
             LOGGER.info(F'File parsed: {scan_id}')
             LOGGER.info(F'Trying to parse targets from file {scan_id}')
-            if getattr(parser, "get_targets"):
+            if hasattr(parser, "get_targets"):
                 targets = parser.get_targets(targets)
             else:
                 targets = client.get_targets(targets)
