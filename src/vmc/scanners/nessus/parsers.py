@@ -31,6 +31,7 @@ from vmc.scanners.parsers import Parser
 from vmc.assets.documents import AssetDocument
 from vmc.common.xml import iter_elements_by_name, get_root_element
 from vmc.knowledge_base.documents import CveDocument
+from vmc.knowledge_base import metrics
 
 
 LOGGER = logging.getLogger(__name__)
@@ -76,31 +77,90 @@ class NessusReportParser(Parser):
         return scan_list
 
     def parse(self, report) -> [Dict, Dict]:
-        vuln = dict()
         for host in iter_elements_by_name(report, "ReportHost"):
             self.__scanned_hosts.append(host.get('name'))
             for item in host.iter('ReportItem'):
-                vuln['asset'] = AssetFactory.create(host, self.__config)
-                vuln['plugin_id'] = item.get('pluginID')
-                for cve in item.findall('cve'):
-                    vuln['cve_id'] = get_value(cve)
-                    if item.get('severity') != NessusReportParser.INFO and vuln['cve_id']:
-                        vuln['cve'] = CveDocument.get_or_create(cve_id=vuln['cve_id'])
-                        vuln['port'] = item.get('port')
+                if item.get('severity') != NessusReportParser.INFO:
+                    vuln = dict()
+                    vuln['asset'] = AssetFactory.create(host, self.__config)
+                    vuln['plugin_id'] = item.get('pluginID')
+                    vuln['port'] = item.get('port')
 
-                        if vuln['port'] != '0':
-                            vuln['svc_name'] = item.get('svc_name')
-                            vuln['protocol'] = item.get('protocol')
-                        else:
-                            vuln['port'] = None
-                            vuln['svc_name'] = None
-                            vuln['protocol'] = None
-                        vuln['description'] = get_value(item.find('description'))
-                        vuln['solution'] = get_value(item.find('solution'))
-                        vuln['exploit_available'] = True if get_value(item.find('exploit_available')) == 'true' else False
-                        vuln['id'] = self._vuln_id(vuln['asset'].ip_address, vuln['protocol'], vuln['plugin_id'])
+                    if vuln['port'] != '0':
+                        vuln['svc_name'] = item.get('svc_name')
+                        vuln['protocol'] = item.get('protocol')
+                    else:
+                        vuln['port'] = None
+                        vuln['svc_name'] = None
+                        vuln['protocol'] = None
+                    vuln['description'] = get_value(item.find('description'))
+                    vuln['solution'] = get_value(item.find('solution'))
+                    vuln['exploit_available'] = True if get_value(item.find('exploit_available')) == 'true' else False
+                    vuln['id'] = self._vuln_id(vuln['asset'].ip_address, vuln['protocol'], vuln['plugin_id'])
+
+                    cves = item.findall('cve')
+                    if cves:
+                        for cve in cves:
+                            vuln['cve_id'] = get_value(cve)
+                            vuln['cve'] = CveDocument.get_or_create(cve_id=vuln['cve_id'])
+                            self._create(vuln)
+                    else:
+                        vuln['cve'] = self._create_nessus_cve(item)
                         self._create(vuln)
+
         return self.__parsed, self.__scanned_hosts
+
+    def _create_nessus_cve(self, item):
+        cve = CveDocument()
+        cve.id = 'NESSUS-{}'.format(item.get('pluginID'))
+
+        base_score_v2 = get_value(item.find('cvss_base_score'))
+        if base_score_v2:
+            cve.base_score_v2 = float(base_score_v2)
+
+        base_score_v3 = get_value(item.find('cvss3_base_score'))
+        if base_score_v3:
+            cve.base_score_v3 = float(base_score_v3)
+
+        cve = self._create_nessus_cve_cvss3_vector(item, cve)
+        cve = self._create_nessus_cve_cvss_vector(item, cve)
+        return cve
+
+    @staticmethod
+    def _create_nessus_cve_cvss3_vector(item, cve):
+        cvss3_vector = get_value(item.find('cvss3_vector'))
+        if cvss3_vector:
+            cvss3_vector = NessusReportParser.parse_vector(cvss3_vector, 'CVSS:3.0/')
+            cve.attack_vector_v3 = metrics.AttackVectorV3(cvss3_vector['AV'])
+            cve.attack_complexity_v3 = metrics.AttackComplexityV3(cvss3_vector['AC'])
+            cve.privileges_required_v3 = metrics.PrivilegesRequiredV3(cvss3_vector['PR'])
+            cve.user_interaction_v3 = metrics.UserInteractionV3(cvss3_vector['AV'])
+            cve.scope_v3 = metrics.ScopeV3(cvss3_vector['S'])
+            cve.confidentiality_impact_v3 = metrics.ImpactV3(cvss3_vector['C'])
+            cve.integrity_impact_v3 = metrics.ImpactV3(cvss3_vector['I'])
+            cve.availability_impact_v3 = metrics.ImpactV3(cvss3_vector['A'])
+        return cve
+
+    @staticmethod
+    def _create_nessus_cve_cvss_vector(item, cve):
+        cvss_vector = get_value(item.find('cvss_vector'))
+        if cvss_vector:
+            cvss_vector = NessusReportParser.parse_vector(cvss_vector, 'CVSS2#')
+            cve.access_vector_v2 = metrics.AccessVectorV2(cvss_vector['AV'])
+            cve.access_complexity_v2 = metrics.AccessComplexityV2(cvss_vector['AC'])
+            cve.authentication_v2 = metrics.AuthenticationV2(cvss_vector['Au'])
+            cve.confidentiality_impact_v2 = metrics.ImpactV2(cvss_vector['C'])
+            cve.integrity_impact_v2 = metrics.ImpactV2(cvss_vector['I'])
+            cve.availability_impact_v2 = metrics.ImpactV2(cvss_vector['A'])
+
+        return cve
+
+    @staticmethod
+    def parse_vector(vector, version):
+        cvss_vector = vector.replace(version, '')
+        cvss_vector = cvss_vector.split('/')
+        cvss_vector = [v.split(':') for v in cvss_vector]
+        return {v[0]: v[1] for v in cvss_vector}
 
     def _create(self, item: dict):
         vuln = VulnerabilityDocument()

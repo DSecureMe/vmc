@@ -204,7 +204,7 @@ class TasksTest(ESTestCase, TestCase):
         _update_scans(self.config.pk)
 
         self.client().download_scan.assert_called_once_with(2)
-        self.assertEqual(VulnerabilityDocument.search().count(), 1)
+        self.assertEqual(VulnerabilityDocument.search().count(), 2)
 
     @patch('vmc.scanners.tasks.VulnerabilityDocument')
     def test___update_scan_exception(self, document):

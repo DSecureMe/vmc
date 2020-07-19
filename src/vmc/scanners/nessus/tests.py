@@ -33,6 +33,8 @@ from vmc.scanners.nessus.parsers import NessusReportParser
 from vmc.scanners.nessus.apps import NessusConfig
 from vmc.scanners.nessus.clients import NessusClient
 
+
+from vmc.knowledge_base import metrics
 from vmc.config.test_settings import elastic_configured
 from vmc.elasticsearch.tests import ESTestCase
 
@@ -133,22 +135,42 @@ class NessusReportParserTest(ESTestCase, TestCase):
 
     def test_parse_call(self):
         parsed, scanned_hosts = self.uut.parse(self.internal_xml)
-        vuln_id = str(uuid.uuid3(uuid.NAMESPACE_OID, '10.0.2.15-tcp-70658'))
-        self.assertEquals(len(parsed), 1)
+        vuln_id = str(uuid.uuid3(uuid.NAMESPACE_OID, '10.31.2.30-tcp-70658'))
+        self.assertEquals(len(parsed), 2)
         self.assertIsInstance(parsed[vuln_id], VulnerabilityDocument)
-        self.assertEquals(parsed[vuln_id].asset.ip_address, '10.0.2.15')
+        self.assertEquals(parsed[vuln_id].asset.ip_address, '10.31.2.30')
         self.assertEquals(parsed[vuln_id].cve.id, 'CVE-2008-5161')
         self.assertEquals(parsed[vuln_id].port, '22')
         self.assertEquals(parsed[vuln_id].svc_name, 'ssh')
         self.assertEquals(parsed[vuln_id].protocol, 'tcp')
         self.assertEquals(parsed[vuln_id].solution, 'Contact the vendor or consult product documentation to disable CBC mode '
                                         'cipher encryption, and enable CTR or GCM cipher mode encryption.')
-        self.assertEquals(parsed[vuln_id].description, 'The SSH server is configured to support Cipher Block Chaining (CBC) '
-                                                 'encryption.  This may allow an attacker to recover the plaintext '
-                                                 'message from the ciphertext. Note that this plugin only checks for '
-                                                 'the options of the SSH server and does not check for vulnerable'
-                                                 ' software versions.')
-        self.assertEquals(scanned_hosts, ['10.0.2.15', '10.0.2.4', '10.0.2.3', '10.0.2.2'])
+        self.assertIn('The SSH server is configured to support Cipher Block Chaining (CBC)', parsed[vuln_id].description)
+        self.assertEquals(scanned_hosts, ['10.31.2.30'])
+
+        vuln_id = str(uuid.uuid3(uuid.NAMESPACE_OID, '10.31.2.30-tcp-42263'))
+        self.assertIsInstance(parsed[vuln_id], VulnerabilityDocument)
+        self.assertEquals(parsed[vuln_id].asset.ip_address, '10.31.2.30')
+        self.assertEquals(parsed[vuln_id].cve.id, 'NESSUS-42263')
+        self.assertEqual(parsed[vuln_id].cve.base_score_v3, 6.5)
+
+        self.assertEqual(parsed[vuln_id].cve.attack_vector_v3, metrics.AttackVectorV3.NETWORK)
+        self.assertEqual(parsed[vuln_id].cve.attack_complexity_v3, metrics.AttackComplexityV3.LOW)
+        self.assertEqual(parsed[vuln_id].cve.privileges_required_v3, metrics.PrivilegesRequiredV3.NONE)
+        self.assertEqual(parsed[vuln_id].cve.user_interaction_v3, metrics.UserInteractionV3.NONE)
+        self.assertEqual(parsed[vuln_id].cve.scope_v3, metrics.ScopeV3.UNCHANGED)
+        self.assertEqual(parsed[vuln_id].cve.confidentiality_impact_v3, metrics.ImpactV3.LOW)
+        self.assertEqual(parsed[vuln_id].cve.integrity_impact_v3, metrics.ImpactV3.LOW)
+        self.assertEqual(parsed[vuln_id].cve.availability_impact_v3, metrics.ImpactV3.NONE)
+
+        self.assertEqual(parsed[vuln_id].cve.base_score_v2, 5.8)
+        self.assertEqual(parsed[vuln_id].cve.access_vector_v2, metrics.AccessVectorV2.NETWORK)
+        self.assertEqual(parsed[vuln_id].cve.access_complexity_v2, metrics.AccessComplexityV2.MEDIUM)
+        self.assertEqual(parsed[vuln_id].cve.authentication_v2, metrics.AuthenticationV2.NONE)
+        self.assertEqual(parsed[vuln_id].cve.confidentiality_impact_v2, metrics.ImpactV2.PARTIAL)
+        self.assertEqual(parsed[vuln_id].cve.integrity_impact_v2, metrics.ImpactV2.PARTIAL)
+        self.assertEqual(parsed[vuln_id].cve.availability_impact_v2, metrics.ImpactV2.NONE)
+
 
     def test__get_targets_call(self):
 
