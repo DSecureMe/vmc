@@ -44,14 +44,18 @@ class VulnerabilityDocumentSerializer(serializers.Serializer):
     def update(self, instance, validated_data):
         raise NotImplementedError()
 
-    def get_cve(self, obj):
+    @staticmethod
+    def get_cve(obj):
         return obj.cve.id
 
-    def get_summary(self, obj):
+    @staticmethod
+    def get_summary(obj):
         return obj.cve.summary
 
-    def get_base_score_v2(self, obj):
+    @staticmethod
+    def get_base_score_v2(obj):
         return obj.cve.base_score_v2
 
-    def get_base_score_v3(self, obj):
+    @staticmethod
+    def get_base_score_v3(obj):
         return obj.cve.base_score_v3
