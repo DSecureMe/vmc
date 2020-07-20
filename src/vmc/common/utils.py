@@ -21,9 +21,28 @@
 import gzip
 
 import requests
+import concurrent.futures
 
 from io import BytesIO
 from zipfile import ZipFile
+from vmc.config.celery import app as celery_app
+
+
+class ThreadPoolExecutor:
+    def __init__(self):
+        self._executors = concurrent.futures.ThreadPoolExecutor()
+        self._pool = []
+
+    def submit(self, method, *args, **kwargs):
+        self._pool.append(self._executors.submit(method, *args, **kwargs))
+
+    def wait_for_all(self):
+        if self._pool:
+            concurrent.futures.wait(self._pool)
+            self._pool = []
+
+
+thread_pool_executor = ThreadPoolExecutor()
 
 
 def is_downloadable(url: str, verify: bool = True) -> bool:
@@ -54,3 +73,29 @@ def get_file(url: str, verify: bool = True) -> [BytesIO, None]:
                 content = response.content
 
     return content
+
+
+def handle_ranges(ips: list):
+
+    start_octets = ips[0].split(sep=".")
+    end_octets = ips[1].split(sep=".")
+    end_length = len(end_octets)
+    end = start_octets[:(4 - end_length)]
+    end.append(ips[1])
+    ip_range = [ips[0], '.'.join(end)]
+    return ip_range
+
+
+def get_workers_count():
+    workes = celery_app.control.inspect().stats()
+    active_count = 0
+
+    for w in workes.values():
+        if 'autoscaler' in w:
+            active_count += w['autoscaler']['max']
+        elif 'pool' in w and w['pool']['max-concurrency'] > 0:
+            active_count += w['pool']['max-concurrency']
+        else:
+            w += 1
+
+    return active_count

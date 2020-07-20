@@ -57,7 +57,8 @@ setup(
         '': ['*.txt', '*.md'],
     },
     data_files=[
-        ('/etc/vmc/', ['config/config.yml'])
+        ('/etc/vmc/', ['config/config.yml']),
+        ('/usr/share/vmc/static', [])
     ],
     install_requires=install_requires(),
     tests_require=tests_require(),
@@ -66,6 +67,7 @@ setup(
             'vmc = vmc.__main__:main'
         ]
     },
+    scripts=['bin/vmcctl'],
     classifiers=[
         'Development Status :: 3 - Alpha',
         'Intended Audience :: Developers',

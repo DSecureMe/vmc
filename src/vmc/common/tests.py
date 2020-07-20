@@ -24,11 +24,10 @@ from unittest import TestCase
 from unittest.mock import patch, Mock
 
 from parameterized import parameterized
-from vmc.common.enum import TupleValueEnum
 
 from vmc.common.apps import CommonConfig
-
-from vmc.common.utils import is_downloadable, get_file
+from vmc.common.enum import TupleValueEnum
+from vmc.common.utils import is_downloadable, get_file, handle_ranges
 
 
 def get_fixture_location(module, name):
@@ -57,7 +56,7 @@ class TupleValueEnumTest(TestCase):
         (TestEnum.MEDIUM, Decimal('1.0')),
         (TestEnum.HIGH, Decimal('1.0'))
     ])
-    def test_call_float(self, first, second):
+    def test_call_second_value(self, first, second):
         self.assertEqual(first.second_value, second)
 
     @parameterized.expand([
@@ -65,7 +64,7 @@ class TupleValueEnumTest(TestCase):
         (TestEnum.MEDIUM, 'M'),
         (TestEnum.HIGH, 'H')
     ])
-    def test_call_float(self, first, second):
+    def test_call_first_value(self, first, second):
         self.assertEqual(first.value, second)
 
     @parameterized.expand([
@@ -133,3 +132,16 @@ class UtilsTest(TestCase):
         requests.head.return_value = Mock(headers={'Content-Type': 'text'})
         requests.get.return_value = Mock(headers={'Content-Type': 'text'}, status_code=404)
         self.assertIsNone(get_file(UtilsTest.URL))
+
+    def test_handle_ranges(self):
+        s = "192.168.1.1"
+        e1 = "10"
+        e2 = "20.10"
+        e3 = "169.1.1"
+        e4 = "192.168.1.10"
+
+        self.assertEqual(handle_ranges([s, e1]), ["192.168.1.1", "192.168.1.10"])
+        self.assertEqual(handle_ranges([s, e2]), ["192.168.1.1", "192.168.20.10"])
+        self.assertEqual(handle_ranges([s, e3]), ["192.168.1.1", "192.169.1.1"])
+        self.assertEqual(handle_ranges([s, e4]), ["192.168.1.1", "192.168.1.10"])
+        self.assertEqual(handle_ranges([s, e4]), ["192.168.1.1", "192.168.1.10"])

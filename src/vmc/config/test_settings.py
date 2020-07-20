@@ -43,11 +43,15 @@ ALLOWED_HOSTS = ['*']
 INTERNAL_APPS = [
     'vmc',
     'vmc.common',
-    'vmc.assets',
-    'vmc.vulnerabilities',
-    'vmc.nessus',
+    'vmc.elasticsearch',
     'vmc.knowledge_base',
-    'vmc.ralph'
+    'vmc.assets',
+    'vmc.ralph',
+    'vmc.vulnerabilities',
+    'vmc.processing',
+    'vmc.scanners',
+    'vmc.scanners.openvas',
+    'vmc.scanners.nessus',
 ]
 
 THIRD_PARTY_APPS = [
@@ -59,7 +63,8 @@ THIRD_PARTY_APPS = [
     'django.contrib.staticfiles',
     'django_celery_beat',
     'django_celery_results',
-    'simple_history',
+    'rest_framework',
+    'rest_framework.authtoken',
 ]
 
 
@@ -68,10 +73,10 @@ def elastic_configured():
 
 
 if elastic_configured():
-    THIRD_PARTY_APPS.append('django_elasticsearch_dsl')
     ELASTICSEARCH_DSL = {
         'default': {
             'hosts': os.environ.get('ELASTICSEARCH_URL', None),
+            'timeout': 60,
         },
     }
 
@@ -86,7 +91,6 @@ MIDDLEWARE = [
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
-    'simple_history.middleware.HistoryRequestMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
@@ -138,6 +142,12 @@ AUTH_PASSWORD_VALIDATORS = [
         'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
     },
 ]
+
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework.authentication.TokenAuthentication',
+    ]
+}
 
 EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 

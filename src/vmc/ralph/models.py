@@ -19,14 +19,19 @@
 """
 
 from django.db import models
-from vmc.common.models import BaseModel
+from django.core.exceptions import ValidationError
+from vmc.common.models import ConfigBaseModel
+from vmc.elasticsearch.models import Tenant
 
 
-class Config(BaseModel):
-    name = models.CharField(max_length=128)
-    url = models.CharField(max_length=128)
-    username = models.TextField()
-    password = models.TextField()
+class Config(ConfigBaseModel):
+    tenant = models.OneToOneField(Tenant, null=True, blank=True, related_name='tenant', on_delete=models.CASCADE)
 
-    def __str__(self):
-        return self.name
+    class Meta:
+        db_table = 'ralph_config'
+
+    def clean(self):
+        super().clean()
+        if not self.pk and Config.objects.filter(tenant=self.tenant).exists():
+            raise ValidationError('Only one Ralph can be assigned to one Tenant')
+

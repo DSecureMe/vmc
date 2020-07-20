@@ -18,32 +18,28 @@
  *
 """
 from django.contrib import admin
-from django.http import HttpResponseRedirect
-from django.urls import path
+from django.forms import PasswordInput, ModelForm
 
+from vmc.common.admin import ConfigBaseAdmin
 from vmc.ralph.models import Config
-from vmc.ralph.tasks import load_all_assets
+from vmc.ralph.tasks import get_update_assets_workflow
 
 
-class ConfigAdmin(admin.ModelAdmin):
-    change_list_template = "ralph/admin/change_list.html"
-    list_display = ('name', 'url')
+class ConfigForm(ModelForm):
+    class Meta:
+        model = Config
+        widgets = {
+            'password': PasswordInput(render_value=True),
+        }
+        fields = ['name', 'enabled', 'schema', 'host', 'port', 'username', 'insecure', 'password', 'tenant']
 
-    def get_urls(self):
-        urls = super().get_urls()
-        custom_urls = [
-            path(
-                r'import/',
-                self.admin_site.admin_view(self.import_data),
-                name='ralph-import',
-            )
-        ]
-        return custom_urls + urls
 
-    def import_data(self, request):
-        load_all_assets.delay()
-        self.message_user(request, "Importing started.")
-        return HttpResponseRedirect("../")
+class ConfigAdmin(ConfigBaseAdmin):
+    form = ConfigForm
+    model = Config
+
+    def update_workflow(self, config):
+        return get_update_assets_workflow(config)
 
 
 admin.site.register(Config, ConfigAdmin)

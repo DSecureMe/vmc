@@ -23,6 +23,7 @@ import yaml
 
 CFG = None
 CFG_PATH = '/etc/vmc/config.yml'
+VMC_PATH = os.path.realpath(os.path.dirname(__file__))
 
 try:
     with open(CFG_PATH, 'r') as ymlfile:
@@ -53,14 +54,20 @@ ALLOWED_HOSTS = ['*']
 
 INTERNAL_APPS = [
     'vmc.common',
-    'vmc.assets',
-    'vmc.vulnerabilities',
-    'vmc.nessus',
+    'vmc.elasticsearch',
     'vmc.knowledge_base',
-    'vmc.ralph'
+    'vmc.assets',
+    'vmc.ralph',
+    'vmc.vulnerabilities',
+    'vmc.processing',
+    'vmc.scanners',
+    'vmc.scanners.openvas',
+    'vmc.scanners.nessus',
 ]
 
 THIRD_PARTY_APPS = [
+    'vmc.branding',
+    'bootstrap_admin',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -69,11 +76,10 @@ THIRD_PARTY_APPS = [
     'django.contrib.staticfiles',
     'django_celery_beat',
     'django_celery_results',
-    'simple_history'
+    'rest_framework',
+    'rest_framework.authtoken',
 ]
 
-if get_config('elasticsearch.hosts', False):
-    THIRD_PARTY_APPS.append('django_elasticsearch_dsl')
 
 INSTALLED_APPS = THIRD_PARTY_APPS + INTERNAL_APPS
 
@@ -84,7 +90,6 @@ MIDDLEWARE = [
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
-    'simple_history.middleware.HistoryRequestMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
@@ -93,7 +98,7 @@ ROOT_URLCONF = 'vmc.config.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
+        'DIRS': [os.path.join(VMC_PATH, app.replace('.', '/'), 'templates') for app in INTERNAL_APPS],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -136,6 +141,11 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework.authentication.TokenAuthentication',
+    ]
+}
 
 # Internationalization
 # https://docs.djangoproject.com/en/2.1/topics/i18n/
@@ -155,7 +165,8 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/2.1/howto/static-files/
 
 STATIC_URL = '/static/'
-STATIC_ROOT = os.path.join(BASE_DIR, 'static')
+STATIC_ROOT = '/usr/share/vmc/static'
+
 
 CELERY_BROKER_URL = 'amqp://{}:{}@{}:{}'.format(
     get_config('rabbitmq.username', 'guest'),
@@ -175,6 +186,7 @@ if get_config('elasticsearch.hosts', False):
     ELASTICSEARCH_DSL = {
         'default': {
             'hosts': get_config('elasticsearch.hosts', 'localhost:9200'),
+            'timeout': 3000,
             'http_auth': [
                 get_config('elasticsearch.user', 'elastic'),
                 get_config('elasticsearch.password', 'elastic')
@@ -197,21 +209,27 @@ CACHE_TTL = 60 * 15
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
+    'formatters': {
+        'console': {
+            'format': '%(asctime)s %(levelname)-8s %(name)-12s %(message)s',
+        },
+    },
     'handlers': {
         'console': {
             'class': 'logging.StreamHandler',
+            'formatter': 'console'
         }
     },
     'loggers': {
         'django': {
             'handlers': ['console'],
             'level': 'INFO',
+            'propagate': False,
         },
-    }
-}
-
-for app in INTERNAL_APPS:
-    LOGGING['loggers'][app] = {
+        'vmc': {
             'handlers': ['console'],
             'level': 'DEBUG' if DEBUG else 'INFO',
+            'propagate': False,
+        }
     }
+}

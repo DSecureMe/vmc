@@ -1,0 +1,24 @@
+#overlay .spinner > div {
+  background-color: #347ab7;
+}
+
+.sidebar-menu .django-admin-logo {
+  background: #efefef;
+  border-bottom: 0 solid;
+}
+
+.sidebar-menu {
+  background-color: #efefef;
+  border-right: #e5e5e5 1px solid;
+}
+
+.sidebar-menu .nav-sidebar a {
+  color: #347ab7;
+  border-color: #efefef;
+}
+
+.sidebar-menu .nav-sidebar a:hover {
+  background: #347ab7;
+  color: #ccc;
+  border-color: #428bca;
+}

@@ -19,25 +19,64 @@
 """
 
 import logging
+
 from celery import shared_task
 
-from vmc.ralph.api import Ralph
+from vmc.vulnerabilities.documents import VulnerabilityDocument
+
+from vmc.elasticsearch.registries import DocumentRegistry
+from vmc.common.utils import thread_pool_executor
+from vmc.common.tasks import start_workflow
+from vmc.assets.documents import AssetDocument
+from vmc.processing.tasks import start_processing_per_tenant
+
+from vmc.ralph.clients import RalphClient
 from vmc.ralph.models import Config
 
-from vmc.ralph.factories import AssetFactory
+from vmc.ralph.parsers import AssetsParser, OwnerParser
 
 LOGGER = logging.getLogger(__name__)
 
 
 @shared_task
-def load_all_assets():
-    LOGGER.info('Start loading data from ralph')
-    try:
-        ralph_api = Ralph(config=Config.objects.first())
-        all_assets = ralph_api.get_all_assets()
+def _update_assets(config_id: int):
+    config = Config.objects.filter(pk=config_id)
 
-        for asset in all_assets:
-            AssetFactory.process(asset)
-    except Exception as ex:
-        LOGGER.error(ex)
-    LOGGER.info('Finish loading data from ralph')
+    if config.exists():
+        config = config.first()
+
+        try:
+            config.set_status(Config.Status.IN_PROGRESS)
+            client = RalphClient(config)
+            parser = AssetsParser(config)
+            LOGGER.info(F'Start loading data from Ralph: {config.name}')
+            users = client.get_users()
+            users = OwnerParser.parse(users)
+            assets = client.get_assets()
+            assets = parser.parse(assets, users)
+            AssetDocument.create_or_update(assets, config)
+            LOGGER.info(F'Finish loading data from Ralph: {config.name}')
+            config.set_status(Config.Status.SUCCESS)
+        except Exception as ex:
+            LOGGER.error(F'Error with loading data from Ralph: {ex}')
+            config.set_status(status=Config.Status.ERROR, error_description=ex)
+        finally:
+            thread_pool_executor.wait_for_all()
+
+
+def get_update_assets_workflow(config):
+    vulnerability_index = DocumentRegistry.get_index_for_tenant(config.tenant, VulnerabilityDocument)
+    asset_index = DocumentRegistry.get_index_for_tenant(config.tenant, AssetDocument)
+    return (
+        _update_assets.si(config_id=config.pk) |
+        start_processing_per_tenant.si(vulnerability_index, asset_index)
+    )
+
+
+@shared_task(name='Update all assets')
+def start_update_assets():
+    for config in Config.objects.filter(enabled=True):
+        config.set_status(status=Config.Status.PENDING)
+        workflow = get_update_assets_workflow(config)
+        start_workflow(workflow, config)
+

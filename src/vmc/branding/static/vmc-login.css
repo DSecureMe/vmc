@@ -1,0 +1,15 @@
+#content-main {
+  background: #fff;
+  border-bottom: 2px solid #347ab7;
+  border-top: 2px solid #347ab7;
+  padding: 20px 0;
+}
+
+#login-form legend {
+  border-color: transparent;
+  color: #000;
+}
+
+#overlay .spinner > div {
+  background-color: #347ab7;
+}

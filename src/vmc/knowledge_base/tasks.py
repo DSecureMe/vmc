@@ -27,7 +27,10 @@ from datetime import datetime
 
 from celery import shared_task, group
 
+from vmc.common.tasks import start_workflow
+from vmc.common.utils import thread_pool_executor
 from vmc.common.utils import get_file
+from vmc.processing.tasks import start_processing
 from vmc.knowledge_base.factories import CveFactory, CWEFactory, ExploitFactory
 
 
@@ -53,43 +56,53 @@ def update_cwe():
             LOGGER.info('Unable to download CWE file')
     except Exception as ex:
         LOGGER.error(ex)
+    finally:
+        thread_pool_executor.wait_for_all()
 
 
 @shared_task
 def update_cve(year: int):
     try:
-        LOGGER.info('Trying to get file for %d year', year)
+        LOGGER.info(F'Trying to get file for {year} year')
         file = get_file(CVE_NVD_URL.format(year))
         if file:
-            LOGGER.info('File downloaded for %d year, parsing...', year)
+            LOGGER.info(F'File downloaded for {year} year, parsing...')
             CveFactory.process(file)
             file.close()
-            LOGGER.info('Parsing for %d, done.', year)
+            LOGGER.info(F'Parsing for {year}, done.')
         else:
-            LOGGER.info('Unable to download file for %d year', year)
+            LOGGER.info(F'Unable to download file for {year} year')
     except Exception as ex:
         LOGGER.error(ex)
+    finally:
+        thread_pool_executor.wait_for_all()
 
 
 @shared_task
 def update_exploits():
     try:
-        LOGGER.info('Trying to get %s', VIA4_URL)
+        LOGGER.info(F'Trying to get {VIA4_URL}')
         file = get_file(VIA4_URL)
         if file:
             LOGGER.info('File downloaded, updating database.')
             ExploitFactory.process(file)
             LOGGER.info('Database updated')
         else:
-            LOGGER.error('Unable do download file %s', VIA4_URL)
+            LOGGER.error(F'Unable do download file {VIA4_URL}')
     except Exception as ex:
         LOGGER.error(ex)
+    finally:
+        thread_pool_executor.wait_for_all()
 
 
-@shared_task
-def update_cve_cwe():
-    (
-        group(update_cve.si(year) for year in range(START_YEAR, datetime.now().year + 1)) |
-        update_cwe.si() |
-        update_exploits.si()
-    )()
+@shared_task(name='Update knowledge base')
+def start_update_knowledge_base():
+    workflow = (
+            group(
+                update_cwe.si() |
+                group(update_cve.si(year) for year in range(START_YEAR, datetime.now().year + 1)) |
+                update_exploits.si()
+            ) |
+            start_processing.si()
+    )
+    return start_workflow(workflow, global_lock=True)

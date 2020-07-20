@@ -1,0 +1,24 @@
+#changelist-filter h2 {
+  background: #efefef;
+  border-bottom: 0 solid #428bca;
+  color: #347ab7;
+  margin: 0;
+  padding: 5px;
+}
+
+#changelist-filter h3 {
+  background: #efefef;
+  color: #347ab7;
+  margin: 0;
+  padding: 5px;
+}
+
+#changelist-filter .selected a {
+  color: #347ab7;
+  font-size: 11px;
+}
+
+#changelist-filter .filter-list a {
+  color: #347ab7;
+  font-size: 11px;
+}
