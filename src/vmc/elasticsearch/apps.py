@@ -33,8 +33,7 @@ class ElasticSearchConfig(AppConfig):
         self.module.autodiscover()
         if getattr(settings, 'ELASTICSEARCH_DSL', None):
             connections.configure(**settings.ELASTICSEARCH_DSL)
-
-            app.conf.beat_schedule = {
+            es_scheduler = {
                 'create snapshot every day at midnight': {
                     'task': 'Snapshot',
                     'schedule': crontab(hour=0, minute=0),
@@ -46,3 +45,7 @@ class ElasticSearchConfig(AppConfig):
                     'args': ('monthly', )
                 },
             }
+            if not app.conf.beat_schedule:
+                app.conf.beat_schedule = es_scheduler
+            else:
+                app.conf.beat_schedule.update(es_scheduler)

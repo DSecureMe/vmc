@@ -19,9 +19,22 @@
 """
 
 from django.apps import AppConfig
+from vmc.config.celery import app
+from celery.schedules import crontab
 
 
 class KnowledgeBaseConfig(AppConfig):
     name = 'vmc.knowledge_base'
     verbose_name = 'Knowledge Base'
 
+    def ready(self):
+        kb_scheduler = {
+            'Update knowledge base': {
+                'task': 'Update knowledge base',
+                'schedule': crontab(hour=7, minute=0),
+            },
+        }
+        if not app.conf.beat_schedule:
+            app.conf.beat_schedule = kb_scheduler
+        else:
+            app.conf.beat_schedule.update(kb_scheduler)
