@@ -56,7 +56,7 @@ class TupleValueEnumTest(TestCase):
         (TestEnum.MEDIUM, Decimal('1.0')),
         (TestEnum.HIGH, Decimal('1.0'))
     ])
-    def test_call_float(self, first, second):
+    def test_call_second_value(self, first, second):
         self.assertEqual(first.second_value, second)
 
     @parameterized.expand([
@@ -64,7 +64,7 @@ class TupleValueEnumTest(TestCase):
         (TestEnum.MEDIUM, 'M'),
         (TestEnum.HIGH, 'H')
     ])
-    def test_call_float(self, first, second):
+    def test_call_first_value(self, first, second):
         self.assertEqual(first.value, second)
 
     @parameterized.expand([
