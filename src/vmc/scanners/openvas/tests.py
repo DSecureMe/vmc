@@ -63,7 +63,7 @@ class GmpResultParserTest(ESTestCase, TestCase):
 
     def test_get_reports_ids_call(self):
         xml = ET.parse(get_fixture_location(__file__, 'reports.xml'))
-        ids = GmpParser.get_scans_ids(xml)
+        ids = GmpParser.get_scans_ids(xml, None)
         self.assertEquals(ids, ['0f9ea6ca-→abf5-4139-a772-cb68937cdfbb'])
 
     def test_parse(self):

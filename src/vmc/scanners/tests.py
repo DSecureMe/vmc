@@ -143,7 +143,7 @@ class ParserTest(TestCase):
 
     def test_get_scans_ids_call(self):
         with self.assertRaises(NotImplementedError):
-            Parser.get_scans_ids('aa')
+            Parser.get_scans_ids('aa', None)
 
     def test_parse_call(self):
         with self.assertRaises(NotImplementedError):
