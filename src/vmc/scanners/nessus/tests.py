@@ -137,7 +137,7 @@ class NessusReportParserTest(ESTestCase, TestCase):
         self.assertEqual(self.uut.get_scans_ids(
             {'scans': [
                 {'id': 2, 'folder_id': 2, 'name': 'test'},
-                {'id': 3, 'folder_id': 1}
+                {'id': 3, 'folder_id': 1, 'name': 'trash'}
             ],
                 'folders': [{'type': 'trash', 'id': 1}]},
         'test'), [2])
