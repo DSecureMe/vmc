@@ -39,7 +39,7 @@ class GmpParser(Parser):
         self.__scanned_host = list()
 
     @staticmethod
-    def get_scans_ids(reports) -> List:
+    def get_scans_ids(reports, _) -> List:
         return [r.attrib.get('id') for r in reports.findall('report') if r.attrib.get('type') == 'scan']
 
     def parse(self, report) -> [Dict, Dict]:

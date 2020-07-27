@@ -17,7 +17,7 @@
  * under the License.
  *
 """
-
+import re
 import logging
 import uuid
 import netaddr
@@ -62,10 +62,12 @@ class NessusReportParser(Parser):
         self.__scanned_hosts = list()
 
     @staticmethod
-    def get_scans_ids(scan_list: Dict) -> List:
+    def get_scans_ids(scan_list: Dict, filter) -> List:
         if scan_list['scans']:
-            return [x['id'] for x in scan_list['scans']
-                    if x['folder_id'] != NessusReportParser.get_trash_folder_id(scan_list)]
+            if not filter:
+                return [x['id'] for x in scan_list['scans']
+                        if x['folder_id'] != NessusReportParser.get_trash_folder_id(scan_list)]
+            return [x['id'] for x in scan_list['scans'] if re.match(filter, x['name'])]
         return []
 
     @staticmethod

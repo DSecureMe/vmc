@@ -28,6 +28,7 @@ class Config(ConfigBaseModel):
     last_scans_pull = models.DateTimeField(default=None, null=True, blank=True)
     tenant = models.OneToOneField(Tenant, null=True, blank=True, on_delete=models.CASCADE)
     scanner = models.CharField(max_length=128)
+    filter = models.CharField(max_length=256, null=True, blank=True)
 
     class Meta:
         db_table = 'scanners'

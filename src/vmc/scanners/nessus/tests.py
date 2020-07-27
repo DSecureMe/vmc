@@ -128,10 +128,19 @@ class NessusReportParserTest(ESTestCase, TestCase):
         self.assertEqual(self.uut.get_scans_ids(
             {'scans': [
                 {'id': 2, 'folder_id': 2},
-                {'id': 3, 'folder_id': 1}
+                {'id': 3, 'folder_id': 1, 'name': 'test'}
             ],
-                'folders': [{'type': 'trash', 'id': 1}]}
-        ), [2])
+                'folders': [{'type': 'trash', 'id': 1}]},
+        None), [2])
+
+    def test_get_scans_ids(self):
+        self.assertEqual(self.uut.get_scans_ids(
+            {'scans': [
+                {'id': 2, 'folder_id': 2},
+                {'id': 3, 'folder_id': 1, 'name': 'test'}
+            ],
+                'folders': [{'type': 'trash', 'id': 1}]},
+        'test'), [2])
 
     def test_parse_call(self):
         parsed, scanned_hosts = self.uut.parse(self.internal_xml)
