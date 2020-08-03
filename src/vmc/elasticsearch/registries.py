@@ -101,7 +101,7 @@ class DocumentRegistry:
 
                     if isinstance(field_type, Object) and issubclass(sender, field_type._doc_class):
 
-                        for index in self._get_indexes(new_version, field_type._doc_class):
+                        for index in self._get_indexes(new_version, document):
                             search = document.search(index=index).filter(
                                 'term', **{F'{field_name}__id': old_version.id})
                             count = search.count()
