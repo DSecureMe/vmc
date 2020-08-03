@@ -40,7 +40,8 @@ class ConfigForm(forms.ModelForm):
         widgets = {
             'password': PasswordInput(render_value=True),
         }
-        fields = ['name', 'enabled', 'schema', 'host', 'port', 'username', 'insecure', 'password', 'scanner', 'tenant']
+        fields = ['name', 'enabled', 'schema', 'host', 'port', 'filter',
+                  'username', 'insecure', 'password', 'scanner', 'tenant']
 
 
 class ConfigAdmin(ConfigBaseAdmin):

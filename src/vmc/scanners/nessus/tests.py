@@ -136,10 +136,11 @@ class NessusReportParserTest(ESTestCase, TestCase):
     def test_get_scans_ids(self):
         self.assertEqual(self.uut.get_scans_ids(
             {'scans': [
-                {'id': 2, 'folder_id': 2, 'name': 'test'},
-                {'id': 3, 'folder_id': 1, 'name': 'trash'}
+                {'id': 2, 'folder_id': 2},
+                {'id': 3, 'folder_id': 1}
             ],
-                'folders': [{'type': 'trash', 'id': 1}]},
+                'folders': [{'type': 'trash', 'id': 1, 'name': 'Trash'},
+                            {'type': 'custom', 'id': 2, 'name': 'test'}]},
         'test'), [2])
 
     def test_parse_call(self):

@@ -64,19 +64,19 @@ class NessusReportParser(Parser):
     @staticmethod
     def get_scans_ids(scan_list: Dict, filter) -> List:
         if scan_list['scans']:
-            if not filter:
-                return [x['id'] for x in scan_list['scans']
-                        if x['folder_id'] != NessusReportParser.get_trash_folder_id(scan_list)]
-            return [x['id'] for x in scan_list['scans'] if re.match(filter, x['name'])]
+            folders = NessusReportParser._get_folders(scan_list, filter)
+            return [x['id'] for x in scan_list['scans'] if x['folder_id'] in folders]
         return []
 
     @staticmethod
-    def get_trash_folder_id(scan_list: Dict) -> [int, None]:
+    def _get_folders(scan_list: Dict, filter) -> [int, None]:
+        result = set()
         if 'folders' in scan_list:
             for folder in scan_list['folders']:
-                if folder['type'] == NessusReportParser.TRASH_FOLDER_TYPE:
-                    return folder['id']
-        return scan_list
+                if folder['type'] != NessusReportParser.TRASH_FOLDER_TYPE or (
+                        filter and re.match(filter, folder['name'])):
+                    result.add(folder['id'])
+        return result
 
     def parse(self, report) -> [Dict, Dict]:
         for host in iter_elements_by_name(report, "ReportHost"):

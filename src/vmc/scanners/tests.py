@@ -197,7 +197,8 @@ class TasksTest(ESTestCase, TestCase):
 
     def test__update_call_nessus_parser(self):
         scanners_registry.register('test-scanner', self.client, NessusReportParser)
-        self.client().get_scans.return_value = {'scans': [{'id': 2, 'folder_id': 2}]}
+        self.client().get_scans.return_value = {'scans': [{'id': 2, 'folder_id': 2}],
+                                                'folders': [{'type': 'custom', 'id': 2, 'name': 'test'}]}
         with open(Path(__file__).parent / "nessus/fixtures/internal.xml", 'rb') as f:
             self.client().download_scan.return_value = BytesIO(f.read())
 
