@@ -143,7 +143,7 @@ class ParserTest(TestCase):
 
     def test_get_scans_ids_call(self):
         with self.assertRaises(NotImplementedError):
-            Parser.get_scans_ids('aa', None)
+            Parser().get_scans_ids('aa')
 
     def test_parse_call(self):
         with self.assertRaises(NotImplementedError):
@@ -157,7 +157,7 @@ class ClientTest(TestCase):
 
     def test_get_scans_call(self):
         with self.assertRaises(NotImplementedError):
-            self.uut.get_scans('asaasd')
+            self.uut.get_scans()
 
     def test_download_scan_call(self):
         with self.assertRaises(NotImplementedError):

@@ -25,7 +25,7 @@ from typing import Dict
 
 class Client:
 
-    def get_scans(self, last_modification_date=None) -> Dict:
+    def get_scans(self) -> Dict:
         raise NotImplementedError()
 
     @staticmethod

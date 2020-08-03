@@ -40,6 +40,7 @@ class NessusClientException(Exception):
 class NessusClient(Client):
 
     def __init__(self, config: Config):
+        self._config = config
         self.url = config.get_url()
         self.insecure = config.insecure
         self.headers = {
@@ -76,9 +77,9 @@ class NessusClient(Client):
             result = resp.json()
         return result
 
-    def get_scans(self, last_modification_date=None) -> Dict:
-        if last_modification_date:
-            last_modification_date = self._get_epoch_from_lsp(last_modification_date)
+    def get_scans(self) -> Dict:
+        if self._config.last_scans_pull:
+            last_modification_date = self._get_epoch_from_lsp(self._config.last_scans_pull)
             return self._action(action=F"scans?last_modification_date={last_modification_date}", method="GET")
         return self._action(action="scans", method="GET")
 

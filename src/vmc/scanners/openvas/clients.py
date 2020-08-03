@@ -46,11 +46,19 @@ class OpenVasClient(Client):
             gmp.authenticate(self._config.username, self._config.password)
             yield gmp
 
-    def get_scans(self, last_modification_date=None):
+    def get_scans(self):
         with self._connect() as gmp:
-            if last_modification_date:
-                date = last_modification_date.strftime('%Y-%m-%dT%Hh%M')
-                return gmp.get_reports(filter=F'created>{date}')
+
+            f = []
+            if self._config.last_scans_pull:
+                f.append('created>{}'.format( self._config.last_scans_pull.strftime('%Y-%m-%dT%Hh%M')))
+
+            if self._config.filter:
+                f.append(F'tag={self._config.filter}')
+
+            if f:
+                return gmp.get_reports(filter='&'.join(f))
+
             return gmp.get_reports()
 
     def download_scan(self, scan_id):

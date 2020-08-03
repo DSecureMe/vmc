@@ -95,7 +95,9 @@ class NessusClientTest(TestCase):
         self.assert_request(request_mock, 'GET', 'scans')
         self.assertEqual(scan_list, {'scan': 1})
 
-        scan_list2 = self.uut.get_scans(last_modification_date=datetime.datetime.fromtimestamp(1551398400))
+        self.config.last_scans_pull = datetime.datetime.fromtimestamp(1551398400)
+        self.uut = NessusClient(self.config)
+        scan_list2 = self.uut.get_scans()
         self.assert_request(request_mock, 'GET', 'scans?last_modification_date=1551398400')
         self.assertEqual(scan_list2, {'scan': 1})
 
@@ -127,21 +129,26 @@ class NessusReportParserTest(ESTestCase, TestCase):
     def test_get_scans_ids(self):
         self.assertEqual(self.uut.get_scans_ids(
             {'scans': [
+                {'id': 3, 'folder_id': 3},
                 {'id': 2, 'folder_id': 2},
                 {'id': 3, 'folder_id': 1}
-            ],
-                'folders': [{'type': 'trash', 'id': 1}]},
-        None), [2])
+            ], 'folders': [{'type': 'trash', 'id': 1, 'name': 'Trash'},
+                           {'type': 'custom', 'id': 2, 'name':'test'}]}), [2])
 
-    def test_get_scans_ids(self):
+    def test_get_scans_ids_with_filter(self):
+        self.config.filter = r'test$'
+        self.config.save()
+
+        self.uut = NessusReportParser(self.config)
         self.assertEqual(self.uut.get_scans_ids(
             {'scans': [
+                {'id': 3, 'folder_id': 3},
                 {'id': 2, 'folder_id': 2},
                 {'id': 3, 'folder_id': 1}
             ],
                 'folders': [{'type': 'trash', 'id': 1, 'name': 'Trash'},
-                            {'type': 'custom', 'id': 2, 'name': 'test'}]},
-        'test'), [2])
+                            {'type': 'custom', 'id': 2, 'name': 'test'},
+                            {'type': 'custom', 'id': 3, 'name': 'test2'}]}), [2])
 
     def test_parse_call(self):
         parsed, scanned_hosts = self.uut.parse(self.internal_xml)

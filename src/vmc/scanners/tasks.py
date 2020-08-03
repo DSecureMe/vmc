@@ -49,8 +49,8 @@ def _update_scans(config_pk: int):
         client, parser = scanners_registry.get(config)
 
         now_date = now()
-        scan_list = client.get_scans(last_modification_date=config.last_scans_pull)
-        scan_list = parser.get_scans_ids(scan_list, config.filter)
+        scan_list = client.get_scans()
+        scan_list = parser.get_scans_ids(scan_list)
         for scan_id in scan_list:
             LOGGER.info(F'Trying to download report form {config.name}')
             file = client.download_scan(scan_id)
