@@ -24,6 +24,8 @@ import decimal
 
 from celery import shared_task, group
 from django.core.cache import cache
+from elasticsearch.helpers import bulk
+from elasticsearch_dsl.connections import get_connection
 
 from vmc.knowledge_base.metrics import ScopeV3
 from vmc.knowledge_base.utils import exploitability_v2, impact_v2, f_impact_v2
@@ -249,6 +251,7 @@ def get_cve_count(vulnerability_index, cve_id):
     key = F'{vulnerability_index}-{cve_id}'
     count = cache.get(key, None)
     if not count:
+        LOGGER.debug(F'get_cve_count count not found {key}')
         prepare(vulnerability_index)
     return cache.get(key, None)
 
@@ -266,9 +269,12 @@ def _processing(idx, slices_count, assets_count, vulnerability_index):
         LOGGER.debug(F'Calculation for {vulnerability_index} and {idx}, {slices_count} started')
 
         if slices_count > 1:
-            vuln_search = vuln_search.extra(slice={"id": idx, "max": slices_count})
+            vuln_search = vuln_search.extra(slice={"id": idx, "max": slices_count}).params(scroll="60m")
 
-        for vuln in vuln_search.scan():
+        vulns = [vuln for vuln in vuln_search.scan()]
+        LOGGER.debug(F'all vulns for slice {idx} downloaded')
+
+        for vuln in vulns:
             score, vector = calculate_environmental_score_v3(vuln)
             vuln.environmental_score_vector_v3 = vector
             vuln.environmental_score_v3 = score
@@ -280,8 +286,9 @@ def _processing(idx, slices_count, assets_count, vulnerability_index):
 
             docs.append(vuln.to_dict(include_meta=True))
 
-            if len(docs) > 500:
+            if len(docs) > 10000:
                 async_bulk(docs, vulnerability_index)
+                docs = []
 
         async_bulk(docs, vulnerability_index)
     except Exception as ex:

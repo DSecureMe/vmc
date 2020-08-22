@@ -23,14 +23,17 @@ from __future__ import absolute_import, unicode_literals
 import copy
 import logging
 
+import os
+
 from django.utils.timezone import now
 
 from celery import shared_task
 
+from vmc.config import settings
 from vmc.elasticsearch.registries import DocumentRegistry
 from vmc.common.utils import thread_pool_executor
 from vmc.common.tasks import start_workflow
-from vmc.scanners.models import Config
+from vmc.scanners.models import Config, Scan
 from vmc.scanners.registries import scanners_registry
 from vmc.vulnerabilities.documents import VulnerabilityDocument
 from vmc.assets.documents import AssetDocument, AssetStatus
@@ -54,6 +57,7 @@ def _update_scans(config_pk: int):
         for scan_id in scan_list:
             LOGGER.info(F'Trying to download report form {config.name}')
             file = client.download_scan(scan_id)
+            thread_pool_executor.submit(save_scan, config, file)
             targets = copy.deepcopy(file)
             LOGGER.info(F'Retrieving discovered assets for {config.name}')
             discovered_assets = AssetDocument.get_assets_with_tag(tag=AssetStatus.DISCOVERED, config=config)
@@ -83,6 +87,15 @@ def _update_scans(config_pk: int):
         thread_pool_executor.wait_for_all()
 
 
+def save_scan(config, scan):
+    path = _get_save_path(config)
+    file_name = '{}-{}'.format(config.scanner, now().strftime('%H-%M-%S'))
+    file = os.path.join(path, file_name)
+    with open(file, 'w') as f:
+        f.write(scan)
+    Scan.object.create(config=config, file=file)
+
+
 def get_update_scans_workflow(config):
     vulnerability_index = DocumentRegistry.get_index_for_tenant(config.tenant, VulnerabilityDocument)
     asset_index = DocumentRegistry.get_index_for_tenant(config.tenant, AssetDocument)
@@ -95,6 +108,25 @@ def get_update_scans_workflow(config):
 @shared_task(name='Update all scans')
 def start_update_scans():
     for config in Config.objects.filter(enabled=True):
+
+        path = _get_save_path(config)
+        if path:
+            os.makedirs(path)
+
         config.set_status(status=Config.Status.PENDING)
         workflow = get_update_scans_workflow(config)
         start_workflow(workflow, config)
+
+
+def _get_save_path(config):
+    if hasattr(settings, 'BACKUP_ROOT'):
+        current_date = now()
+        return os.path.join(
+            getattr(settings, 'BACKUP_ROOT'),
+            'scans',
+            current_date.year,
+            current_date.month,
+            current_date.day,
+            F'{config.id}-{config.tenant.slug_name}'
+        )
+    return None

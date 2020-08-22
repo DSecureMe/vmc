@@ -166,6 +166,7 @@ USE_TZ = True
 
 STATIC_URL = '/static/'
 STATIC_ROOT = '/usr/share/vmc/static'
+BACKUP_ROOT = '/usr/share/vmc/backup'
 
 
 CELERY_BROKER_URL = 'amqp://{}:{}@{}:{}'.format(

@@ -17,10 +17,10 @@
  * under the License.
  *
 """
-
+import hashlib
 from django.db import models
 from django.core.exceptions import ValidationError
-from vmc.common.models import ConfigBaseModel
+from vmc.common.models import ConfigBaseModel, BaseModel
 from vmc.elasticsearch.models import Tenant
 
 
@@ -37,3 +37,15 @@ class Config(ConfigBaseModel):
         super(Config, self).clean()
         if not self.pk and Config.objects.filter(tenant=self.tenant).exists():
             raise ValidationError('Only one type of Scanner can be assigned to one Tenant')
+
+
+class Scan(BaseModel):
+    config = models.ForeignKey(Config, on_delete=models.DO_NOTHING)
+    file = models.TextField()
+    file_id = models.CharField(max_length=64)
+
+    def save(self, force_insert=False, force_update=False, using=None,
+             update_fields=None):
+        self.file_id = hashlib.sha256(self.file.encode('utf-8')).hexdigest()
+        return super(Scan, self).save(force_insert=force_insert, force_update=force_update,
+                                      using=using, update_fields=update_fields)
