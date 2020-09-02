@@ -36,6 +36,18 @@ def get_config(key, default):
     return CFG[key] if CFG and key in CFG else default
 
 
+#VMC absolute URI settings
+
+SCHEMA = 'https' if get_config('vmc.ssl', False) else 'http'
+DOMAIN = get_config('vmc.domain', 'localhost')
+
+if get_config('vmc.port', '80') not in ["443", "80"]:
+    PORT = F":{get_config('vmc.port', '443')}"
+else:
+    PORT = ""
+
+ABSOLUTE_URI = F"{SCHEMA}://{DOMAIN}{PORT}"
+
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 

@@ -47,6 +47,7 @@ class VulnerabilityDocument(Document):
     asset = Object(AssetInnerDoc, include_in_parent=True)
     tags = ListField()
     source = Keyword()
+    scan_file_url = Keyword()
 
     class Index:
         name = 'vulnerability'

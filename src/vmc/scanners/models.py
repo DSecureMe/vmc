@@ -46,6 +46,6 @@ class Scan(BaseModel):
 
     def save(self, force_insert=False, force_update=False, using=None,
              update_fields=None):
-        self.file_id = hashlib.sha256(self.file.encode('utf-8')).hexdigest()
+        self.file_id = hashlib.sha256(self.file.encode('utf-8')).hexdigest().lower()
         return super(Scan, self).save(force_insert=force_insert, force_update=force_update,
                                       using=using, update_fields=update_fields)

@@ -26,6 +26,7 @@ import logging
 import os
 
 from django.utils.timezone import now
+from django.urls import reverse
 
 from celery import shared_task
 
@@ -57,12 +58,21 @@ def _update_scans(config_pk: int):
         for scan_id in scan_list:
             LOGGER.info(F'Trying to download report form {config.name}')
             file = client.download_scan(scan_id)
-            thread_pool_executor.submit(save_scan, config, file)
+
+            path = _get_save_path(config)
+            file_name = '{}-{}.xml'.format(config.scanner, now().strftime('%H-%M-%S'))
+            full_file_path = os.path.join(path, file_name)
+            LOGGER.debug(F"File full path: {full_file_path}")
+            LOGGER.info(F"Saving file: {full_file_path}")
+            thread_pool_executor.submit(save_scan, full_file_path)
+            saved_scan = Scan.objects.create(config=config, file=full_file_path)
+            file_url = F"{getattr(settings, 'ABSOLUTE_URI', '')}{reverse('download_scan', args=[saved_scan.file_id])}"
             targets = copy.deepcopy(file)
             LOGGER.info(F'Retrieving discovered assets for {config.name}')
             discovered_assets = AssetDocument.get_assets_with_tag(tag=AssetStatus.DISCOVERED, config=config)
             LOGGER.info(F'Trying to parse scan file {scan_id}')
-            vulns, scanned_hosts = parser.parse(file)
+            vulns, scanned_hosts = parser.parse(file, file_url)
+
             LOGGER.info(F'File parsed: {scan_id}')
             LOGGER.info(F'Trying to parse targets from file {scan_id}')
             if hasattr(parser, "get_targets"):
@@ -87,13 +97,14 @@ def _update_scans(config_pk: int):
         thread_pool_executor.wait_for_all()
 
 
-def save_scan(config, scan):
-    path = _get_save_path(config)
-    file_name = '{}-{}'.format(config.scanner, now().strftime('%H-%M-%S'))
-    file = os.path.join(path, file_name)
-    with open(file, 'w') as f:
-        f.write(scan)
-    Scan.object.create(config=config, file=file)
+def save_scan(scan, file):
+    try:
+        print("Saving file ", file)
+        with open(file, 'w') as f:
+            f.write(scan)
+    except (MemoryError, IOError, PermissionError, TimeoutError, FileExistsError) as e:
+        print("Exception ", e)
+        LOGGER.error(F"There were exception during saving file: {file}. Exception:\n{e}")
 
 
 def get_update_scans_workflow(config):
@@ -124,9 +135,9 @@ def _get_save_path(config):
         return os.path.join(
             getattr(settings, 'BACKUP_ROOT'),
             'scans',
-            current_date.year,
-            current_date.month,
-            current_date.day,
-            F'{config.id}-{config.tenant.slug_name}'
+            str(current_date.year),
+            str(current_date.month),
+            str(current_date.day),
+            F'{config.id}-{config.tenant.slug_name}' if config.tenant else F'{config.id}'
         )
     return None

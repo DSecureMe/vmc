@@ -70,7 +70,7 @@ class GmpResultParserTest(ESTestCase, TestCase):
     def test_parse(self):
         xml = ET.parse(get_fixture_location(__file__, 'report.xml'))
         parser = GmpParser(self.config)
-        vulns, scanned_hosts = parser.parse(xml)
+        vulns, scanned_hosts = parser.parse(xml, "report.xml")
         self.assertEquals(
             ['10.10.10.21', '10.10.10.21', '10.10.10.23',
              '10.10.10.23', '10.10.10.30', '10.10.10.7',
@@ -84,6 +84,7 @@ class GmpResultParserTest(ESTestCase, TestCase):
         self.assertEquals(vuln.port, '135')
         self.assertEquals(vuln.protocol, 'tcp')
         self.assertEquals(vuln.solution, 'Filter incoming traffic to this ports.')
+        self.assertEquals(vuln.scan_file_url, "report.xml")
 
 
 class OpenVasClientTest(TestCase):

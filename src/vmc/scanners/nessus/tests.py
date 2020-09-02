@@ -151,7 +151,7 @@ class NessusReportParserTest(ESTestCase, TestCase):
                             {'type': 'custom', 'id': 3, 'name': 'test2'}]}), [2])
 
     def test_parse_call(self):
-        parsed, scanned_hosts = self.uut.parse(self.internal_xml)
+        parsed, scanned_hosts = self.uut.parse(self.internal_xml, "internal.xml")
         vuln_id = str(uuid.uuid3(uuid.NAMESPACE_OID, '10.31.2.30-tcp-70658'))
         self.assertEquals(len(parsed), 2)
         self.assertIsInstance(parsed[vuln_id], VulnerabilityDocument)
@@ -162,6 +162,7 @@ class NessusReportParserTest(ESTestCase, TestCase):
         self.assertEquals(parsed[vuln_id].protocol, 'tcp')
         self.assertEquals(parsed[vuln_id].solution, 'Contact the vendor or consult product documentation to disable CBC mode '
                                         'cipher encryption, and enable CTR or GCM cipher mode encryption.')
+        self.assertEquals(parsed[vuln_id].scan_file_url, "internal.xml")
         self.assertIn('The SSH server is configured to support Cipher Block Chaining (CBC)', parsed[vuln_id].description)
         self.assertEquals(scanned_hosts, ['10.31.2.30'])
 

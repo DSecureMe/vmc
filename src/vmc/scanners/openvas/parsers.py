@@ -41,7 +41,7 @@ class GmpParser(Parser):
     def get_scans_ids(self, reports) -> List:
         return [r.attrib.get('id') for r in reports.findall('report') if r.attrib.get('type') == 'scan']
 
-    def parse(self, report) -> [Dict, Dict]:
+    def parse(self, report, file_url) -> [Dict, Dict]:
         for r in report.findall('.//results/result'):
             if float(r.find('nvt//cvss_base').text) > 0:
                 ip_address = r.find('./host').text
@@ -65,7 +65,8 @@ class GmpParser(Parser):
                         solution=tags['solution'],
                         cve=cve,
                         asset=asset,
-                        source='OpenVas'
+                        source='OpenVas',
+                        scan_file_url=file_url
                     )
 
         return self.__parsed, self.__scanned_host

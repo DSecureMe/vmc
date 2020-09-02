@@ -30,11 +30,12 @@ from django.core.exceptions import ValidationError
 from django.contrib.auth.models import User
 from django.test import TestCase, LiveServerTestCase
 
+from vmc.config import settings
 from vmc.scanners.nessus.parsers import NessusReportParser
 from vmc.elasticsearch.tests import ESTestCase
 from vmc.config.test_settings import elastic_configured
 from vmc.assets.documents import AssetStatus
-from vmc.scanners.models import Config
+from vmc.scanners.models import Config, Scan
 from vmc.scanners.registries import scanners_registry
 from vmc.scanners.tasks import _update_scans
 from vmc.scanners.parsers import Parser
@@ -43,6 +44,7 @@ from vmc.vulnerabilities.documents import VulnerabilityDocument
 from vmc.elasticsearch.models import Tenant, Config as Prefix
 
 
+@skipIf(not elastic_configured(), 'Skip if elasticsearch is not configured')
 class ConfigTest(TestCase):
     fixtures = ['config.json']
 
@@ -147,7 +149,7 @@ class ParserTest(TestCase):
 
     def test_parse_call(self):
         with self.assertRaises(NotImplementedError):
-            Parser().parse('a')
+            Parser().parse('a', 'b')
 
 
 class ClientTest(TestCase):
@@ -177,7 +179,8 @@ class TasksTest(ESTestCase, TestCase):
 
     @patch('vmc.scanners.tasks.VulnerabilityDocument')
     @patch('vmc.scanners.tasks.AssetDocument')
-    def test__update_call(self, asset_mock, vuln_mock):
+    @patch('vmc.scanners.tasks.now')
+    def test__update_call(self, now_mock, asset_mock, vuln_mock):
         self.client().get_scans.return_value = 'get_scans'
         self.parser().get_scans_ids.return_value = [1]
         self.client().download_scan.return_value = 'download_scan'
@@ -185,11 +188,19 @@ class TasksTest(ESTestCase, TestCase):
         self.parser().get_targets.return_value = 'targets'
         self.client().get_targets.return_value = 'targets'
         asset_mock.get_assets_with_tag.return_value = 'discovered_assets'
+        now_mock.return_value = datetime(2020, 9, 2, 20, 20, 20, 0)
 
         _update_scans(self.config.pk)
+        self.assertEqual(Scan.objects.count(), 1)
+
+        scan = Scan.objects.first()
+
+        self.assertEqual(scan.config, self.config)
+        self.assertEqual(scan.file, F'/usr/share/vmc/backup/scans/2020/9/2/{self.config.id}/{self.config.scanner}-20-20-20.xml')
+        self.assertTrue(scan.file_id)
 
         self.client().download_scan.assert_called_once_with(1)
-        self.parser().parse.assert_called_once_with('download_scan')
+        self.parser().parse.assert_called_once_with('download_scan', F'http://localhost/api/v1/scans/backups/{scan.file_id}')
         asset_mock.get_assets_with_tag.assert_called_once_with(tag=AssetStatus.DISCOVERED, config=self.config)
         asset_mock.update_gone_discovered_assets.assert_called_once_with(targets='targets', scanned_hosts='second',
                                                     discovered_assets='discovered_assets', config=self.config)

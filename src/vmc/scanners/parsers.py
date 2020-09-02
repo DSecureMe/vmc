@@ -25,5 +25,5 @@ class Parser:
     def get_scans_ids(self, reports) -> List:
         raise NotImplementedError()
 
-    def parse(self, report) -> [Dict, Dict]:
+    def parse(self, report, file_url) -> [Dict, Dict]:
         raise NotImplementedError()

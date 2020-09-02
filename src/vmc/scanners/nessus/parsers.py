@@ -82,12 +82,13 @@ class NessusReportParser(Parser):
             return re.match(filter, name)
         return True
 
-    def parse(self, report) -> [Dict, Dict]:
+    def parse(self, report, file_url) -> [Dict, Dict]:
         for host in iter_elements_by_name(report, "ReportHost"):
             self.__scanned_hosts.append(host.get('name'))
             for item in host.iter('ReportItem'):
                 if item.get('severity') != NessusReportParser.INFO:
                     vuln = dict()
+                    vuln['scan_file_url'] = file_url
                     vuln['asset'] = AssetFactory.create(host, self.__config)
                     vuln['plugin_id'] = item.get('pluginID')
                     vuln['port'] = item.get('port')
