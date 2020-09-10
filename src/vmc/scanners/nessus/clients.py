@@ -37,7 +37,7 @@ class NessusClientException(Exception):
     pass
 
 
-class NessusClient(Client):
+class _NessusClientBase:
 
     def __init__(self, config: Config):
         self._config = config
@@ -90,18 +90,6 @@ class NessusClient(Client):
     def get_scan_detail(self, scan_id: int) -> Dict:
         return self._action(action=F'scans/{scan_id}', method='GET')
 
-    def download_scan(self, scan_id: int):
-        extra = {"format": "nessus"}
-        res = self._action(F'scans/{scan_id}/export', method="POST", extra=extra)
-
-        if 'file' in res:
-            file_id = res["file"]
-            while self._export_in_progress(scan_id, file_id):
-                time.sleep(2)
-
-            content = self._action(F'scans/{scan_id}/export/{file_id}/download', method="GET", download=True)
-            return BytesIO(content)
-        return None
 
     @staticmethod
     def _raise_exception(headers, endpoint, status_code, data=None, content=None):
@@ -122,6 +110,79 @@ class NessusClient(Client):
             F'response code: {status_code}\n'
             F'response body: {content}\n')
 
+
+class _NessusClient7(_NessusClientBase):
+    version = '7.2.3'
+
+    def __init__(self, config: Config):
+        super().__init__(config)
+
+    def download_scan(self, scan_id: int):
+        extra = {"format": "nessus"}
+        res = self._action(F'scans/{scan_id}/export', method="POST", extra=extra)
+
+        if 'file' in res:
+            file_id = res["file"]
+            while self._export_in_progress(scan_id, file_id):
+                time.sleep(2)
+
+            content = self._action(F'scans/{scan_id}/export/{file_id}/download', method="GET", download=True)
+            return BytesIO(content)
+        return None
+
     def _export_in_progress(self, scan_id, file_id):
         res = self._action(F'scans/{scan_id}/export/{file_id}/status', method="GET")
         return res["status"] != "ready"
+
+
+class _NessusClient8(_NessusClientBase):
+    version = '8.1.11'
+    def download_scan(self, scan_id: int):
+        extra = {"format": "nessus"}
+        res = self._action(F'scans/{scan_id}/export', method="POST", extra=extra)
+
+        if 'file' in res:
+            file_id = res["file"]
+            while self._export_in_progress(file_id):
+                time.sleep(2)
+
+            content = self._action(F'tokens/{file_id}/download', method="GET", download=True)
+            return BytesIO(content)
+        return None
+
+    def _export_in_progress(self, file_id):
+        res = self._action(F'tokens/{file_id}/status', method="GET")
+        return res["status"] != "ready"
+
+
+class NessusClient(Client):
+
+    def __init__(self, config: Config):
+        url = config.get_url()
+
+        if config.insecure and hasattr(requests, 'packages'):
+            requests.packages.urllib3.disable_warnings()
+
+        try:
+            resp = requests.get(F'{url}/server/properties')
+            version = resp.json()
+
+            if _NessusClient8.version in version['nessus_ui_version']:
+                self.client = _NessusClient8(config)
+            if _NessusClient7.version in version['nessus_ui_version']:
+                self.client = _NessusClient7(config)
+            else:
+                raise Exception(F'Unknown nessus version {version}')
+
+        except Exception as ex:
+            LOGGER.error(F'{ex}. Exiting!')
+            raise NessusClientException(ex)
+
+    def get_scans(self) -> Dict:
+        return self.client.get_scans()
+
+    def get_scan_detail(self, scan_id: int) -> Dict:
+        return self.client.get_scan_detail(scan_id)
+
+    def download_scan(self, scan_id: int):
+        return self.client.download_scan(scan_id)

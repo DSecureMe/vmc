@@ -17,7 +17,6 @@
  * under the License.
  *
 """
-
 import uuid
 import datetime
 import netaddr
@@ -60,7 +59,9 @@ class NessusConfigTest(TestCase):
     def test_name(self):
         self.assertEqual(NessusConfig.name, 'vmc.scanners.nessus')
 
-    def test_registry(self):
+    @patch('vmc.scanners.nessus.clients.requests')
+    def test_registry(self, request_mock):
+        request_mock.get.return_value = ResponseMock({"nessus_ui_version": '7.2.3'}, 200)
         config = Config.objects.first()
         self.assertIsInstance(scanners_registry.get_parser(config), NessusReportParser)
         self.assertIsInstance(scanners_registry.get_client(config), NessusClient)
@@ -71,14 +72,17 @@ class NessusClientTest(TestCase):
 
     def setUp(self):
         self.config = Config.objects.first()
+
+    def set_nessus_client(self, request_mock, version='7.2.3'):
+        request_mock.get.return_value = ResponseMock({"nessus_ui_version": version}, 200)
         self.uut = NessusClient(self.config)
+
+    def assert_request(self, request_mock, method, action):
         self.headers = {
             'X-ApiKeys': F'accessKey={self.config.username};secretKey={self.config.password}',
             'Content-type': 'application/json',
             'Accept': 'text/plain'
         }
-
-    def assert_request(self, request_mock, method, action):
         request_mock.request.assert_called_with(
             method,
             F'http://test:80/{action}',
@@ -89,6 +93,7 @@ class NessusClientTest(TestCase):
 
     @patch('vmc.scanners.nessus.clients.requests')
     def test_call_get_scan_list(self, request_mock):
+        self.set_nessus_client(request_mock)
         request_mock.request.return_value = ResponseMock({'scan': 1}, 200)
 
         scan_list = self.uut.get_scans()
@@ -103,6 +108,7 @@ class NessusClientTest(TestCase):
 
     @patch('vmc.scanners.nessus.clients.requests')
     def test_call_get_scan_detail(self, request_mock):
+        self.set_nessus_client(request_mock)
         request_mock.request.return_value = ResponseMock({'foo': 1}, 200)
 
         resp = self.uut.get_scan_detail(1)
