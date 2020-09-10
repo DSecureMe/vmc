@@ -164,7 +164,7 @@ class NessusClient(Client):
             requests.packages.urllib3.disable_warnings()
 
         try:
-            resp = requests.get(F'{url}/server/properties')
+            resp = requests.get(F'{url}/server/properties', verify=not config.insecure)
             version = resp.json()
 
             if _NessusClient8.version in version['nessus_ui_version']:

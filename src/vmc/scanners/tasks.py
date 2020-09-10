@@ -64,7 +64,7 @@ def _update_scans(config_pk: int):
             full_file_path = os.path.join(path, file_name)
             LOGGER.debug(F"File full path: {full_file_path}")
             LOGGER.info(F"Saving file: {full_file_path}")
-            thread_pool_executor.submit(save_scan, full_file_path)
+            thread_pool_executor.submit(save_scan, file, full_file_path)
             saved_scan = Scan.objects.create(config=config, file=full_file_path)
             file_url = F"{getattr(settings, 'ABSOLUTE_URI', '')}{reverse('download_scan', args=[saved_scan.file_id])}"
             targets = copy.deepcopy(file)
@@ -97,10 +97,17 @@ def _update_scans(config_pk: int):
         thread_pool_executor.wait_for_all()
 
 
+def ensure_dir(file_path):
+    directory = os.path.dirname(file_path)
+    if not os.path.exists(directory):
+        os.makedirs(directory)
+
+
 def save_scan(scan, file):
     try:
         print("Saving file ", file)
-        with open(file, 'w') as f:
+        ensure_dir(file)
+        with open(file, 'wb') as f:
             f.write(scan)
     except (MemoryError, IOError, PermissionError, TimeoutError, FileExistsError) as e:
         print("Exception ", e)
