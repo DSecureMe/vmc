@@ -136,7 +136,7 @@ class _NessusClient7(_NessusClientBase):
 
 
 class _NessusClient8(_NessusClientBase):
-    version = '8.1.11'
+    version = '8.11.1'
     def download_scan(self, scan_id: int):
         extra = {"format": "nessus"}
         res = self._action(F'scans/{scan_id}/export', method="POST", extra=extra)
