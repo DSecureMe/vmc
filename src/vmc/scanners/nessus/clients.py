@@ -169,7 +169,7 @@ class NessusClient(Client):
 
             if _NessusClient8.version in version['nessus_ui_version']:
                 self.client = _NessusClient8(config)
-            if _NessusClient7.version in version['nessus_ui_version']:
+            elif _NessusClient7.version in version['nessus_ui_version']:
                 self.client = _NessusClient7(config)
             else:
                 raise Exception(F'Unknown nessus version {version}')
