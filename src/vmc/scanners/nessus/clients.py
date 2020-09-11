@@ -142,16 +142,16 @@ class _NessusClient8(_NessusClientBase):
         res = self._action(F'scans/{scan_id}/export', method="POST", extra=extra)
 
         if 'file' in res:
-            file_id = res["file"]
-            while self._export_in_progress(file_id):
+            token = res["token"]
+            while self._export_in_progress(token):
                 time.sleep(2)
 
-            content = self._action(F'tokens/{file_id}/download', method="GET", download=True)
+            content = self._action(F'tokens/{token}/download', method="GET", download=True)
             return BytesIO(content)
         return None
 
-    def _export_in_progress(self, file_id):
-        res = self._action(F'tokens/{file_id}/status', method="GET")
+    def _export_in_progress(self, token):
+        res = self._action(F'tokens/{token}/status', method="GET")
         return res["status"] != "ready"
 
 
