@@ -24,14 +24,13 @@ from rest_framework.generics import get_object_or_404
 from rest_framework.exceptions import NotFound
 from pathlib import Path
 
-from vmc.config import settings
 from vmc.scanners.models import Scan
 
 
 def download_scan(request, scan_id):
 
     if not request.user.is_authenticated:
-        return redirect('%s?next=%s' % (settings.LOGIN_URL, request.path))
+        return redirect(F'admin/login/?next=request.path')
 
     if not re.match(r"[a-f0-9]{64}", scan_id):
         raise NotFound
