@@ -30,7 +30,7 @@ from vmc.scanners.models import Scan
 def download_scan(request, scan_id):
 
     if not request.user.is_authenticated:
-        return redirect(F'admin/login/?next=request.path')
+        return redirect(F'/admin/login/?next={request.path}')
 
     if not re.match(r"[a-f0-9]{64}", scan_id):
         raise NotFound
