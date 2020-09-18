@@ -128,9 +128,16 @@ class AssetDocument(Document, AssetInnerDoc):
             Q('term', ip_address=ip_address) & ~Q('match', tags=AssetStatus.DELETED)).execute()
         if result:
             return result[0]
+
+        if hasattr(config, 'scanner'):
+            source = config.scanner.split('.')[-1].capitalize()
+        else:
+            source = 'vmc'
+
         return AssetDocument(id=ip_address,
                              ip_address=ip_address,
                              tenant=config.tenant.name if config and config.tenant else None,
+                             source=source,
                              tags=[AssetStatus.DISCOVERED]).save(index=index, refresh=True)
 
     @staticmethod

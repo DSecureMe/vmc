@@ -232,7 +232,7 @@ class AssetsParserTest(TestCase):
     def assert_fields(self, result):
         self.assertEqual(len(result), 2)
         self.assertEqual(set(result[self.asset_id].tags), set(["DMZ", "BOO", "FOO"]))
-        self.assertEqual(result[self.asset_id].source, self.config.name)
+        self.assertEqual(result[self.asset_id].source, 'Ralph')
         self.assertEqual(result[self.asset_id].id, self.asset_id)
         self.assertEqual(result[self.asset_id].ip_address, '10.0.0.25')
         self.assertEqual(result[self.asset_id].mac_address, '02:44:AA:BB:77:99')

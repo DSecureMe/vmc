@@ -19,19 +19,20 @@
 """
 import re
 from django.http import HttpResponse
+from django.shortcuts import redirect
 from rest_framework.generics import get_object_or_404
-from rest_framework.authentication import SessionAuthentication, BasicAuthentication
-from rest_framework.decorators import permission_classes, authentication_classes
-from rest_framework.permissions import IsAuthenticated
 from rest_framework.exceptions import NotFound
 from pathlib import Path
 
+from vmc.config import settings
 from vmc.scanners.models import Scan
 
 
-@authentication_classes([SessionAuthentication, BasicAuthentication])
-@permission_classes([IsAuthenticated])
 def download_scan(request, scan_id):
+
+    if not request.user.is_authenticated:
+        return redirect('%s?next=%s' % (settings.LOGIN_URL, request.path))
+
     if not re.match(r"[a-f0-9]{64}", scan_id):
         raise NotFound
 
