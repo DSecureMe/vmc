@@ -130,6 +130,7 @@ class AssetDocument(Document, AssetInnerDoc):
             return result[0]
         return AssetDocument(id=ip_address,
                              ip_address=ip_address,
+                             tenant=config.tenant.name if config and config.tenant else None,
                              tags=[AssetStatus.DISCOVERED]).save(index=index, refresh=True)
 
     @staticmethod

@@ -166,6 +166,7 @@ class NessusReportParserTest(ESTestCase, TestCase):
         self.assertEquals(parsed[vuln_id].port, '22')
         self.assertEquals(parsed[vuln_id].svc_name, 'ssh')
         self.assertEquals(parsed[vuln_id].protocol, 'tcp')
+        self.assertEquals(parsed[vuln_id].name, 'SSH Server CBC Mode Ciphers Enabled')
         self.assertEquals(parsed[vuln_id].solution, 'Contact the vendor or consult product documentation to disable CBC mode '
                                         'cipher encryption, and enable CTR or GCM cipher mode encryption.')
         self.assertEquals(parsed[vuln_id].scan_file_url, "internal.xml")

@@ -83,6 +83,7 @@ class GmpResultParserTest(ESTestCase, TestCase):
         vuln = vulns['d133b95a-04cc-324b-95d0-fb329f4a811f']
         self.assertEquals(vuln.port, '135')
         self.assertEquals(vuln.protocol, 'tcp')
+        self.assertEquals(vuln.name, 'DCE/RPC and MSRPC Services Enumeration Reporting')
         self.assertEquals(vuln.solution, 'Filter incoming traffic to this ports.')
         self.assertEquals(vuln.scan_file_url, "report.xml")
 

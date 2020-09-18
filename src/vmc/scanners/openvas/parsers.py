@@ -47,6 +47,7 @@ class GmpParser(Parser):
                 ip_address = r.find('./host').text
                 self.__scanned_host.append(ip_address)
                 asset = AssetDocument.get_or_create(ip_address, self._config)
+                name = r.find('./name').text
                 tags = self.parse_tags(r.find('./nvt/tags').text)
                 for cve in r.find('./nvt//cve').text.split(','):
                     port = r.find('./port').text.split('/')[0]
@@ -61,10 +62,12 @@ class GmpParser(Parser):
                         id=uid,
                         port=port,
                         protocol=protocol,
+                        name=name,
                         description=r.find('./description').text,
                         solution=tags['solution'],
                         cve=cve,
                         asset=asset,
+                        tenant=self._config.tenant.name if self._config.tenant else None,
                         source='OpenVas',
                         scan_file_url=file_url
                     )

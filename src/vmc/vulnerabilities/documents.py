@@ -37,6 +37,7 @@ class VulnerabilityDocument(Document):
     port = Keyword()
     svc_name = Keyword()
     protocol = Keyword()
+    name = Keyword()
     description = Keyword()
     solution = Keyword()
     environmental_score_v2 = Float()
@@ -47,6 +48,7 @@ class VulnerabilityDocument(Document):
     asset = Object(AssetInnerDoc, include_in_parent=True)
     tags = ListField()
     source = Keyword()
+    tenant = Keyword()
     scan_file_url = Keyword()
 
     class Index:

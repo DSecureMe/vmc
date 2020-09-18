@@ -78,6 +78,7 @@ class AssetsParser:
                 setattr(asset, field, 'UNKNOWN')
 
         asset.source = self.__config.name
+        asset.tenant = self.__config.tenant.name if self.__config.tenant else None
         self.__parsed[asset.id] = asset
 
     def id(self, _, iface: dict) -> str:

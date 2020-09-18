@@ -91,6 +91,7 @@ class NessusReportParser(Parser):
                     vuln['scan_file_url'] = file_url
                     vuln['asset'] = AssetFactory.create(host, self.__config)
                     vuln['plugin_id'] = item.get('pluginID')
+                    vuln['name'] = item.get('pluginName')
                     vuln['port'] = item.get('port')
 
                     if vuln['port'] != '0':
@@ -100,11 +101,12 @@ class NessusReportParser(Parser):
                         vuln['port'] = None
                         vuln['svc_name'] = None
                         vuln['protocol'] = None
+
                     vuln['description'] = get_value(item.find('description'))
                     vuln['solution'] = get_value(item.find('solution'))
                     vuln['exploit_available'] = True if get_value(item.find('exploit_available')) == 'true' else False
                     vuln['id'] = self._vuln_id(vuln['asset'].ip_address, vuln['protocol'], vuln['plugin_id'])
-
+                    vuln['tenant'] = self.__config.tenant.name if self.__config.tenant else None,
                     cves = item.findall('cve')
                     if cves:
                         for cve in cves:
