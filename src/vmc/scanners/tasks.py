@@ -103,15 +103,14 @@ def ensure_dir(file_path):
         os.makedirs(directory)
 
 
-def save_scan(scan, file):
+def save_scan(file, full_file_path):
     try:
-        print("Saving file ", file)
-        ensure_dir(file)
-        with open(file, 'wb') as f:
-            f.write(scan)
+        print("Saving file ", full_file_path)
+        ensure_dir(full_file_path)
+        with open(full_file_path, 'wb') as f:
+            f.write(file.getvalue())
     except (MemoryError, IOError, PermissionError, TimeoutError, FileExistsError) as e:
-        print("Exception ", e)
-        LOGGER.error(F"There were exception during saving file: {file}. Exception:\n{e}")
+        LOGGER.error(F"There were exception during saving file: {full_file_path}. Exception:\n{e}")
 
 
 def get_update_scans_workflow(config):
