@@ -25,6 +25,8 @@ import logging
 
 import os
 
+from pathlib import Path
+
 from django.utils.timezone import now
 from django.urls import reverse
 
@@ -61,11 +63,10 @@ def _update_scans(config_pk: int):
 
             path = _get_save_path(config)
             file_name = '{}-{}.xml'.format(config.scanner, now().strftime('%H-%M-%S'))
-            full_file_path = os.path.join(path, file_name)
-            LOGGER.debug(F"File full path: {full_file_path}")
+            full_file_path = Path(path) / file_name
             LOGGER.info(F"Saving file: {full_file_path}")
             thread_pool_executor.submit(save_scan, file, full_file_path)
-            saved_scan = Scan.objects.create(config=config, file=full_file_path)
+            saved_scan = Scan.objects.create(config=config, file=str(full_file_path))
             file_url = F"{getattr(settings, 'ABSOLUTE_URI', '')}{reverse('download_scan', args=[saved_scan.file_id])}"
             targets = copy.deepcopy(file)
             LOGGER.info(F'Retrieving discovered assets for {config.name}')
@@ -97,17 +98,11 @@ def _update_scans(config_pk: int):
         thread_pool_executor.wait_for_all()
 
 
-def ensure_dir(file_path):
-    directory = os.path.dirname(file_path)
-    if not os.path.exists(directory):
-        os.makedirs(directory)
-
-
 def save_scan(file, full_file_path):
     try:
-        print("Saving file ", full_file_path)
-        ensure_dir(full_file_path)
-        with open(full_file_path, 'wb') as f:
+        LOGGER.debug("Saving file ", full_file_path)
+        file.parent.mkdir(parents=True, exist_ok=True)
+        with file.open(mode='wb') as f:
             f.write(file.getvalue())
     except (MemoryError, IOError, PermissionError, TimeoutError, FileExistsError) as e:
         LOGGER.error(F"There were exception during saving file: {full_file_path}. Exception:\n{e}")
