@@ -100,9 +100,8 @@ def _update_scans(config_pk: int):
 
 def save_scan(file, full_file_path):
     try:
-        LOGGER.debug("Saving file ", full_file_path)
-        file.parent.mkdir(parents=True, exist_ok=True)
-        with file.open(mode='wb') as f:
+        full_file_path.parent.mkdir(parents=True, exist_ok=True)
+        with full_file_path.open(mode='wb') as f:
             f.write(file.getvalue())
     except (MemoryError, IOError, PermissionError, TimeoutError, FileExistsError) as e:
         LOGGER.error(F"There were exception during saving file: {full_file_path}. Exception:\n{e}")
