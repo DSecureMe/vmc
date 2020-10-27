@@ -57,6 +57,7 @@ class AssetInnerDoc(InnerDoc):
     service = Keyword()
     environment = Keyword()
     hostname = Keyword()
+    tenant = Keyword()
     tags = ListField()
     url = Keyword()
     source = Keyword()
