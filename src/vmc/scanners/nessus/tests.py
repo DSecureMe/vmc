@@ -21,7 +21,7 @@ import uuid
 import datetime
 import netaddr
 from unittest import skipIf
-from unittest.mock import patch
+from unittest.mock import patch, MagicMock, call
 
 from django.test import TestCase
 
@@ -30,8 +30,7 @@ from vmc.scanners.models import Config
 from vmc.scanners.registries import scanners_registry
 from vmc.scanners.nessus.parsers import NessusReportParser
 from vmc.scanners.nessus.apps import NessusConfig
-from vmc.scanners.nessus.clients import NessusClient
-
+from vmc.scanners.nessus.clients import NessusClient, _NessusClient8, _NessusClient7
 
 from vmc.knowledge_base import metrics
 from vmc.config.test_settings import elastic_configured
@@ -65,6 +64,111 @@ class NessusConfigTest(TestCase):
         config = Config.objects.first()
         self.assertIsInstance(scanners_registry.get_parser(config), NessusReportParser)
         self.assertIsInstance(scanners_registry.get_client(config), NessusClient)
+
+
+class NessusClient7Test(TestCase):
+    fixtures = ['nessus_config.json']
+
+    def setUp(self):
+        self.config = Config.objects.first()
+        self.uut = _NessusClient7(self.config)
+
+
+    @patch('vmc.scanners.nessus.clients.requests')
+    def test_download_scan_xml(self, request_mock):
+        rsp = MagicMock(content=b'content', status_code=200)
+        rsp.json.return_value = {'file': "file", 'status': 'ready'}
+        request_mock.request.side_effect = [rsp, rsp, rsp]
+
+        self.uut.download_scan(1, NessusClient.ReportFormat.XML)
+
+        request_mock.request.assert_has_calls([
+            call('POST', 'http://test:80/scans/1/export', data='{"format": "nessus"}',
+                 headers={'X-ApiKeys': 'accessKey=API_KEY;secretKey=SECRET_KEY', 'Content-type': 'application/json',
+                          'Accept': 'text/plain'}, verify=False),
+            call('GET', 'http://test:80/scans/1/export/file/status', data='{}',
+                 headers={'X-ApiKeys': 'accessKey=API_KEY;secretKey=SECRET_KEY', 'Content-type': 'application/json',
+                          'Accept': 'text/plain'}, verify=False),
+            call('GET', 'http://test:80/scans/1/export/file/download', data='{}',
+                 headers={'X-ApiKeys': 'accessKey=API_KEY;secretKey=SECRET_KEY', 'Content-type': 'application/json',
+                          'Accept': 'text/plain'}, verify=False)
+        ])
+
+    @patch('vmc.scanners.nessus.clients.requests')
+    def test_download_scan_pretty(self, request_mock):
+        rsp = MagicMock(content=b'content', status_code=200)
+        rsp.json.return_value = {'file': "file", 'status': 'ready'}
+        request_mock.request.side_effect = [rsp, rsp, rsp]
+
+        self.uut.download_scan(1, NessusClient.ReportFormat.PRETTY)
+
+        request_mock.request.assert_has_calls([
+            call('POST', 'http://test:80/scans/1/export',
+                 data='{"format": "html", "chapters": "vuln_by_host"}',
+                 headers={'X-ApiKeys': 'accessKey=API_KEY;secretKey=SECRET_KEY',
+                          'Content-type': 'application/json',
+                          'Accept': 'text/plain'}, verify=False),
+            call('GET', 'http://test:80/scans/1/export/file/status', data='{}',
+                 headers={'X-ApiKeys': 'accessKey=API_KEY;secretKey=SECRET_KEY',
+                          'Content-type': 'application/json',
+                          'Accept': 'text/plain'}, verify=False),
+            call('GET', 'http://test:80/scans/1/export/file/download', data='{}',
+                 headers={'X-ApiKeys': 'accessKey=API_KEY;secretKey=SECRET_KEY',
+                          'Content-type': 'application/json',
+                          'Accept': 'text/plain'}, verify=False)
+        ])
+
+
+class NessusClient8Test(TestCase):
+    fixtures = ['nessus_config.json']
+
+    def setUp(self):
+        self.config = Config.objects.first()
+        self.uut = _NessusClient8(self.config)
+
+
+    @patch('vmc.scanners.nessus.clients.requests')
+    def test_download_scan_xml(self, request_mock):
+        rsp = MagicMock(content=b'content', status_code=200)
+        rsp.json.return_value = {'file': "file", 'status': 'ready', 'token': 'token'}
+        request_mock.request.side_effect = [rsp, rsp, rsp]
+
+        self.uut.download_scan(1, NessusClient.ReportFormat.XML)
+
+        request_mock.request.assert_has_calls([
+            call('POST', 'http://test:80/scans/1/export', data='{"format": "nessus"}',
+                 headers={'X-ApiKeys': 'accessKey=API_KEY;secretKey=SECRET_KEY', 'Content-type': 'application/json',
+                          'Accept': 'text/plain'}, verify=False),
+            call('GET', 'http://test:80/tokens/token/status', data='{}',
+                 headers={'X-ApiKeys': 'accessKey=API_KEY;secretKey=SECRET_KEY', 'Content-type': 'application/json',
+                          'Accept': 'text/plain'}, verify=False),
+            call('GET', 'http://test:80/tokens/token/download', data='{}',
+                 headers={'X-ApiKeys': 'accessKey=API_KEY;secretKey=SECRET_KEY', 'Content-type': 'application/json',
+                          'Accept': 'text/plain'}, verify=False)
+        ])
+
+    @patch('vmc.scanners.nessus.clients.requests')
+    def test_download_scan_pretty(self, request_mock):
+        rsp = MagicMock(content=b'content', status_code=200)
+        rsp.json.return_value = {'file': "file", 'status': 'ready', 'token': 'token'}
+        request_mock.request.side_effect = [rsp, rsp, rsp]
+
+        self.uut.download_scan(1, NessusClient.ReportFormat.PRETTY)
+
+        request_mock.request.assert_has_calls([
+            call('POST', 'http://test:80/scans/1/export',
+                 data='{"format": "html", "chapters": "custom;vuln_by_host;remediations;vulnerabilities", "reportContents": {"csvColumns": {}, "vulnerabilitySections": {"synopsis": true, "description": true, "see_also": true, "solution": true, "risk_factor": true, "cvss3_base_score": true, "cvss3_temporal_score": true, "cvss_base_score": true, "cvss_temporal_score": true, "stig_severity": true, "references": true, "exploitable_with": true, "plugin_information": true, "plugin_output": true}, "hostSections": {"scan_information": true, "host_information": true}, "formattingOptions": {"page_breaks": true}}, "extraFilters": {"host_ids": [], "plugin_ids": []}}',
+                 headers={'X-ApiKeys': 'accessKey=API_KEY;secretKey=SECRET_KEY', 'Content-type': 'application/json',
+                          'Accept': 'text/plain'}, verify=False),
+            call('GET', 'http://test:80/tokens/token/status', data='{}',
+                 headers={'X-ApiKeys': 'accessKey=API_KEY;secretKey=SECRET_KEY', 'Content-type': 'application/json',
+                          'Accept': 'text/plain'}, verify=False),
+            call('GET', 'http://test:80/tokens/token/download', data='{}',
+                 headers={'X-ApiKeys': 'accessKey=API_KEY;secretKey=SECRET_KEY', 'Content-type': 'application/json',
+                          'Accept': 'text/plain'}, verify=False)
+        ])
+
+
 
 
 class NessusClientTest(TestCase):

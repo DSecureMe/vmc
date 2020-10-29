@@ -24,6 +24,9 @@ from typing import Dict
 
 
 class Client:
+    class ReportFormat:
+        XML = 'xml'
+        PRETTY = 'pretty'
 
     def get_scans(self) -> Dict:
         raise NotImplementedError()
@@ -32,5 +35,5 @@ class Client:
     def _get_epoch_from_lsp(last_pull: datetime.datetime) -> int:
         return int(last_pull.timestamp()) if last_pull else 0
 
-    def download_scan(self, scan_id):
+    def download_scan(self, scan_id, report_format):
         raise NotImplementedError()

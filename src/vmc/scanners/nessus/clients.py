@@ -18,6 +18,7 @@
  *
 """
 
+import re
 import json
 import logging
 import time
@@ -112,13 +113,13 @@ class _NessusClientBase:
 
 
 class _NessusClient7(_NessusClientBase):
-    version = '7.2.3'
+    version = r'^7.'
 
     def __init__(self, config: Config):
         super().__init__(config)
 
-    def download_scan(self, scan_id: int):
-        extra = {"format": "nessus"}
+    def download_scan(self, scan_id: int, report_format: Client.ReportFormat.XML):
+        extra = self._get_report_format(report_format)
         res = self._action(F'scans/{scan_id}/export', method="POST", extra=extra)
 
         if 'file' in res:
@@ -134,11 +135,17 @@ class _NessusClient7(_NessusClientBase):
         res = self._action(F'scans/{scan_id}/export/{file_id}/status', method="GET")
         return res["status"] != "ready"
 
+    @staticmethod
+    def _get_report_format(report_format):
+        if report_format == Client.ReportFormat.PRETTY:
+            return {"format": "html", "chapters": "vuln_by_host"}
+        return {"format": "nessus"}
 
 class _NessusClient8(_NessusClientBase):
-    version = '8.11.1'
-    def download_scan(self, scan_id: int):
-        extra = {"format": "nessus"}
+    version = r'^8.'
+
+    def download_scan(self, scan_id: int, report_format: Client.ReportFormat.XML):
+        extra = self._get_report_format(report_format)
         res = self._action(F'scans/{scan_id}/export', method="POST", extra=extra)
 
         if 'file' in res:
@@ -154,6 +161,43 @@ class _NessusClient8(_NessusClientBase):
         res = self._action(F'tokens/{token}/status', method="GET")
         return res["status"] != "ready"
 
+    @staticmethod
+    def _get_report_format(report_format):
+        if report_format == Client.ReportFormat.PRETTY:
+            return {"format": "html",
+                    "chapters": "custom;vuln_by_host;remediations;vulnerabilities",
+                    "reportContents": {
+                        "csvColumns": {},
+                        "vulnerabilitySections": {
+                            "synopsis": True,
+                            "description": True,
+                            "see_also": True,
+                            "solution": True,
+                            "risk_factor": True,
+                            "cvss3_base_score": True,
+                            "cvss3_temporal_score": True,
+                            "cvss_base_score": True,
+                            "cvss_temporal_score": True,
+                            "stig_severity": True,
+                            "references": True,
+                            "exploitable_with": True,
+                            "plugin_information": True,
+                            "plugin_output": True
+                        },
+                        "hostSections": {
+                            "scan_information": True,
+                            "host_information": True
+                        },
+                        "formattingOptions": {
+                            "page_breaks": True
+                        }
+                    },
+             "extraFilters": {
+                 "host_ids": [],
+                 "plugin_ids": []
+             }
+            }
+        return {"format": "nessus"}
 
 class NessusClient(Client):
 
@@ -167,9 +211,11 @@ class NessusClient(Client):
             resp = requests.get(F'{url}/server/properties', verify=not config.insecure)
             version = resp.json()
 
-            if _NessusClient8.version in version['nessus_ui_version']:
+            if re.match(_NessusClient8.version, version['nessus_ui_version']):
+                LOGGER.debug('Using nessus client version 8')
                 self.client = _NessusClient8(config)
-            elif _NessusClient7.version in version['nessus_ui_version']:
+            elif re.match(_NessusClient7.version, version['nessus_ui_version']):
+                LOGGER.debug('Using nessus client version 7')
                 self.client = _NessusClient7(config)
             else:
                 raise Exception(F'Unknown nessus version {version}')
@@ -184,5 +230,5 @@ class NessusClient(Client):
     def get_scan_detail(self, scan_id: int) -> Dict:
         return self.client.get_scan_detail(scan_id)
 
-    def download_scan(self, scan_id: int):
-        return self.client.download_scan(scan_id)
+    def download_scan(self, scan_id: int, report_format: Client.ReportFormat.XML):
+        return self.client.download_scan(scan_id, report_format)

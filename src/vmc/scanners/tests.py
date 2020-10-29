@@ -19,7 +19,7 @@
 """
 from io import BytesIO
 from unittest import skipIf
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch, MagicMock, call
 from pathlib import Path
 from datetime import datetime
 
@@ -30,14 +30,13 @@ from django.core.exceptions import ValidationError
 from django.contrib.auth.models import User
 from django.test import TestCase, LiveServerTestCase
 
-from vmc.config import settings
 from vmc.scanners.nessus.parsers import NessusReportParser
 from vmc.elasticsearch.tests import ESTestCase
 from vmc.config.test_settings import elastic_configured
 from vmc.assets.documents import AssetStatus
 from vmc.scanners.models import Config, Scan
 from vmc.scanners.registries import scanners_registry
-from vmc.scanners.tasks import _update_scans
+from vmc.scanners.tasks import _update_scans, save_scan
 from vmc.scanners.parsers import Parser
 from vmc.scanners.clients import Client
 from vmc.vulnerabilities.documents import VulnerabilityDocument
@@ -163,7 +162,7 @@ class ClientTest(TestCase):
 
     def test_download_scan_call(self):
         with self.assertRaises(NotImplementedError):
-            self.uut.download_scan('scan')
+            self.uut.download_scan('scan', self.uut.ReportFormat.XML)
 
 
 @skipIf(not elastic_configured(), 'Skip if elasticsearch is not configured')
@@ -196,10 +195,11 @@ class TasksTest(ESTestCase, TestCase):
         scan = Scan.objects.first()
 
         self.assertEqual(scan.config, self.config)
-        self.assertEqual(scan.file, F'/usr/share/vmc/backup/scans/2020/9/2/{self.config.id}/{self.config.scanner}-20-20-20.xml')
+        self.assertEqual(scan.file, F'/usr/share/vmc/backup/scans/2020/9/2/{self.config.id}/{self.config.scanner}-20-20-20.zip')
         self.assertTrue(scan.file_id)
 
-        self.client().download_scan.assert_called_once_with(1)
+        self.client().download_scan.assert_has_calls(
+            [call(1, self.client().ReportFormat.XML), call(1, self.client().ReportFormat.PRETTY)])
         self.parser().parse.assert_called_once_with('download_scan', F'http://localhost/api/v1/scans/backups/{scan.file_id}')
         asset_mock.get_assets_with_tag.assert_called_once_with(tag=AssetStatus.DISCOVERED, config=self.config)
         asset_mock.update_gone_discovered_assets.assert_called_once_with(targets='targets', scanned_hosts='second',
@@ -215,7 +215,8 @@ class TasksTest(ESTestCase, TestCase):
 
         _update_scans(self.config.pk)
 
-        self.client().download_scan.assert_called_once_with(2)
+        self.client().download_scan.assert_has_calls(
+            [call(2, self.client().ReportFormat.XML), call(2, self.client().ReportFormat.PRETTY)])
         self.assertEqual(VulnerabilityDocument.search().count(), 2)
 
     @patch('vmc.scanners.tasks.VulnerabilityDocument')
@@ -225,3 +226,31 @@ class TasksTest(ESTestCase, TestCase):
         self.assertFalse(_update_scans(self.config.pk))
 
         document.create_or_update.assert_not_called()
+
+    @patch('vmc.scanners.tasks.ZipFile')
+    def test_save_scan(self, zip_file_mock):
+        path = MagicMock()
+        path.__str__.return_value = '/fake/patch'
+
+        archive = MagicMock()
+        mocked_writestr = MagicMock()
+        archive.return_value.writestr = mocked_writestr
+        zip_file_mock.return_value.__enter__ = archive
+
+        file = MagicMock()
+        file.getvalue.return_value = 'xml_file'
+        file.read.return_value = 'html_file'
+
+        self.client.download_scan.return_value = file
+
+        save_scan(self.client, 1, file, path)
+
+        path.parent.mkdir.assert_called_once_with(parents=True, exist_ok=True)
+        self.client.download_scan.assert_called_once_with(1, self.client.ReportFormat.PRETTY)
+        file.getvalue.assert_called_once()
+        file.read.assert_called_once()
+
+        mocked_writestr.assert_has_calls([
+            call('report.xml', 'xml_file'),
+            call('report.html', 'html_file')
+        ])

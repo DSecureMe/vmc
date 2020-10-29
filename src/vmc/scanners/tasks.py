@@ -31,6 +31,7 @@ from django.utils.timezone import now
 from django.urls import reverse
 
 from celery import shared_task
+from zipfile import ZipFile
 
 from vmc.config import settings
 from vmc.elasticsearch.registries import DocumentRegistry
@@ -59,13 +60,14 @@ def _update_scans(config_pk: int):
         scan_list = parser.get_scans_ids(scan_list)
         for scan_id in scan_list:
             LOGGER.info(F'Trying to download report form {config.name}')
-            file = client.download_scan(scan_id)
+
+            file = client.download_scan(scan_id, client.ReportFormat.XML)
 
             path = _get_save_path(config)
-            file_name = '{}-{}.xml'.format(config.scanner, now().strftime('%H-%M-%S'))
+            file_name = '{}-{}.zip'.format(config.scanner, now().strftime('%H-%M-%S'))
             full_file_path = Path(path) / file_name
             LOGGER.info(F"Saving file: {full_file_path}")
-            thread_pool_executor.submit(save_scan, file, full_file_path)
+            thread_pool_executor.submit(save_scan, client, scan_id, file, full_file_path)
             saved_scan = Scan.objects.create(config=config, file=str(full_file_path))
             file_url = F"{getattr(settings, 'ABSOLUTE_URI', '')}{reverse('download_scan', args=[saved_scan.file_id])}"
             targets = copy.deepcopy(file)
@@ -98,11 +100,13 @@ def _update_scans(config_pk: int):
         thread_pool_executor.wait_for_all()
 
 
-def save_scan(file, full_file_path):
+def save_scan(client, scan_id, xml_file, full_file_path):
     try:
+        pretty = client.download_scan(scan_id, client.ReportFormat.PRETTY)
         full_file_path.parent.mkdir(parents=True, exist_ok=True)
-        with full_file_path.open(mode='wb') as f:
-            f.write(file.getvalue())
+        with ZipFile(str(full_file_path), 'w') as zipfile:
+            zipfile.writestr('report.xml', xml_file.getvalue())
+            zipfile.writestr('report.html', pretty.read())
     except (MemoryError, IOError, PermissionError, TimeoutError, FileExistsError) as e:
         LOGGER.error(F"There were exception during saving file: {full_file_path}. Exception:\n{e}")
 

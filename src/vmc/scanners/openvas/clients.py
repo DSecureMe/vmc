@@ -61,7 +61,7 @@ class OpenVasClient(Client):
 
             return gmp.get_reports()
 
-    def download_scan(self, scan_id):
+    def download_scan(self, scan_id, scan_format=Client.ReportFormat.XML):
         with self._connect() as gmp:
             return gmp.get_report(scan_id)
 
