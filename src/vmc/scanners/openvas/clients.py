@@ -17,6 +17,8 @@
  * under the License.
  */
 """
+from io import BytesIO
+
 from contextlib import contextmanager
 
 import logging
@@ -35,6 +37,11 @@ LOGGER = logging.getLogger(__name__)
 
 
 class OpenVasClient(Client):
+    _PDF_FORMAT = 'c402cc3e-b531-11e1-9163-406186ea4fc5'
+
+    class ReportFormat:
+        XML = 'xml'
+        PRETTY = 'pdf'
 
     def __init__(self, config: Config):
         self._config = config
@@ -63,7 +70,9 @@ class OpenVasClient(Client):
 
     def download_scan(self, scan_id, scan_format=Client.ReportFormat.XML):
         with self._connect() as gmp:
-            return gmp.get_report(scan_id)
+            if scan_format == Client.ReportFormat.PRETTY:
+                return BytesIO(gmp.get_report(scan_id, report_format_id=OpenVasClient._PDF_FORMAT))
+            return BytesIO(gmp.get_report(scan_id))
 
     def _get_target_definition(self, target_id):
         with self._connect() as gmp:

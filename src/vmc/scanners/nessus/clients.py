@@ -200,6 +200,9 @@ class _NessusClient8(_NessusClientBase):
         return {"format": "nessus"}
 
 class NessusClient(Client):
+    class ReportFormat:
+        XML = 'xml'
+        PRETTY = 'html'
 
     def __init__(self, config: Config):
         url = config.get_url()
