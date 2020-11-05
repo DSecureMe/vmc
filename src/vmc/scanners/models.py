@@ -40,7 +40,7 @@ class Config(ConfigBaseModel):
 
 
 class Scan(BaseModel):
-    config = models.ForeignKey(Config, on_delete=models.DO_NOTHING)
+    config = models.ForeignKey(Config, on_delete=models.SET_NULL, null=True)
     file = models.TextField()
     file_id = models.CharField(max_length=64)
 
