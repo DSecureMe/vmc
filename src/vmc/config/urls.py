@@ -19,7 +19,7 @@
 """
 from django.contrib import admin
 from django.shortcuts import redirect
-from django.urls import path
+from django.urls import path,include
 from vmc.knowledge_base.views import update_knowledge_base
 from vmc.ralph.views import get_asset_manager_config
 from vmc.vulnerabilities.views import search_vulnerabilities
@@ -35,5 +35,6 @@ urlpatterns = [
     path('admin/knowlege-base/update', update_knowledge_base, name='update_knowledge_base'),
     path('api/v1/assets-manager/config', get_asset_manager_config, name='get_asset_manager_config'),
     path('api/v1/vulnerabilities', search_vulnerabilities, name='search_vulnerabilities'),
-    path('api/v1/scans/backups/<str:scan_id>', download_scan, name='download_scan')
+    path('api/v1/scans/backups/<str:scan_id>', download_scan, name='download_scan'),
+    path('webhook', include('vmc.webhook.urls', namespace='webhook'))
 ]

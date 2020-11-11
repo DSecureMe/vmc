@@ -251,6 +251,6 @@ class TasksTest(ESTestCase, TestCase):
         file.read.assert_called_once()
 
         mocked_writestr.assert_has_calls([
-            call('report.xml', 'xml_file'),
-            call('report.html', 'html_file')
+            call(F'report.{self.client.ReportFormat.XML}', 'xml_file'),
+            call(F'report.{self.client.ReportFormat.PRETTY}', 'html_file')
         ])

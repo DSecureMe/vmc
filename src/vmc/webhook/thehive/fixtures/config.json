@@ -1,0 +1,29 @@
+[
+  {
+    "model": "webhook.thehive4logconverter",
+    "pk": 1,
+    "fields": {
+      "log_message": "fixed",
+      "tag": "FIXED",
+      "created_date": "2019-12-07T16:20:31.540Z",
+      "modified_date": "2019-12-07T16:20:31.540Z"
+    }
+  },
+  {
+    "model": "webhook.thehive4",
+    "pk": 1,
+    "fields": {
+      "name": "Hive",
+      "schema": "http",
+      "host": "test",
+      "port": 9000,
+      "token": "token",
+      "insecure": true,
+      "created_date": "2019-12-07T16:20:31.540Z",
+      "modified_date": "2019-12-07T16:20:31.540Z",
+      "vulnerability_status_converter": [
+        1
+      ]
+    }
+  }
+]

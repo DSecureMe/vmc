@@ -38,6 +38,7 @@ LOGGER = logging.getLogger(__name__)
 
 class OpenVasClient(Client):
     _PDF_FORMAT = 'c402cc3e-b531-11e1-9163-406186ea4fc5'
+    _XML_FORMAT = 'a994b278-1f62-11e1-96ac-406186ea4fc5'
 
     class ReportFormat:
         XML = 'xml'
@@ -72,7 +73,7 @@ class OpenVasClient(Client):
         with self._connect() as gmp:
             if scan_format == Client.ReportFormat.PRETTY:
                 return BytesIO(gmp.get_report(scan_id, report_format_id=OpenVasClient._PDF_FORMAT))
-            return BytesIO(gmp.get_report(scan_id))
+            return BytesIO(gmp.get_report(scan_id, report_format_id=OpenVasClient._XML_FORMAT))
 
     def _get_target_definition(self, target_id):
         with self._connect() as gmp:

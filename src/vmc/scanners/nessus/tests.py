@@ -103,19 +103,15 @@ class NessusClient7Test(TestCase):
         self.uut.download_scan(1, NessusClient.ReportFormat.PRETTY)
 
         request_mock.request.assert_has_calls([
-            call('POST', 'http://test:80/scans/1/export',
-                 data='{"format": "html", "chapters": "vuln_by_host"}',
+            call('POST', 'http://test:80/scans/1/export', data='{"format": "html", "chapters": "vuln_by_host"}',
                  headers={'X-ApiKeys': 'accessKey=API_KEY;secretKey=SECRET_KEY',
-                          'Content-type': 'application/json',
-                          'Accept': 'text/plain'}, verify=False),
+                          'Content-type': 'application/json', 'Accept': 'text/plain'}, verify=False),
             call('GET', 'http://test:80/scans/1/export/file/status', data='{}',
                  headers={'X-ApiKeys': 'accessKey=API_KEY;secretKey=SECRET_KEY',
-                          'Content-type': 'application/json',
-                          'Accept': 'text/plain'}, verify=False),
+                          'Content-type': 'application/json', 'Accept': 'text/plain'}, verify=False),
             call('GET', 'http://test:80/scans/1/export/file/download', data='{}',
                  headers={'X-ApiKeys': 'accessKey=API_KEY;secretKey=SECRET_KEY',
-                          'Content-type': 'application/json',
-                          'Accept': 'text/plain'}, verify=False)
+                          'Content-type': 'application/json', 'Accept': 'text/plain'}, verify=False)
         ])
 
 
@@ -136,16 +132,10 @@ class NessusClient8Test(TestCase):
         self.uut.download_scan(1, NessusClient.ReportFormat.XML)
 
         request_mock.request.assert_has_calls([
-            call('POST', 'http://test:80/scans/1/export', data='{"format": "nessus"}',
-                 headers={'X-ApiKeys': 'accessKey=API_KEY;secretKey=SECRET_KEY', 'Content-type': 'application/json',
-                          'Accept': 'text/plain'}, verify=False),
-            call('GET', 'http://test:80/tokens/token/status', data='{}',
-                 headers={'X-ApiKeys': 'accessKey=API_KEY;secretKey=SECRET_KEY', 'Content-type': 'application/json',
-                          'Accept': 'text/plain'}, verify=False),
-            call('GET', 'http://test:80/tokens/token/download', data='{}',
-                 headers={'X-ApiKeys': 'accessKey=API_KEY;secretKey=SECRET_KEY', 'Content-type': 'application/json',
-                          'Accept': 'text/plain'}, verify=False)
-        ])
+            call('POST', 'http://test:80/scans/1/export', data='{"format": "nessus"}', headers={'X-ApiKeys': 'accessKey=API_KEY;secretKey=SECRET_KEY', 'Content-type': 'application/json', 'Accept': 'text/plain'}, verify=False),
+            call('GET', 'http://test:80/tokens/token/status', data='{}', headers={'X-ApiKeys': 'accessKey=API_KEY;secretKey=SECRET_KEY', 'Content-type': 'application/json', 'Accept': 'text/plain'}, verify=False),
+            call('GET', 'http://test:80/tokens/token/download', data='{}', headers={'X-ApiKeys': 'accessKey=API_KEY;secretKey=SECRET_KEY', 'Content-type': 'application/json', 'Accept': 'text/plain'}, verify=False)
+        ], any_order=True)
 
     @patch('vmc.scanners.nessus.clients.requests')
     def test_download_scan_pretty(self, request_mock):

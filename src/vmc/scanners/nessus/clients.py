@@ -137,7 +137,7 @@ class _NessusClient7(_NessusClientBase):
 
     @staticmethod
     def _get_report_format(report_format):
-        if report_format == Client.ReportFormat.PRETTY:
+        if report_format == NessusClient.ReportFormat.PRETTY:
             return {"format": "html", "chapters": "vuln_by_host"}
         return {"format": "nessus"}
 
@@ -163,7 +163,7 @@ class _NessusClient8(_NessusClientBase):
 
     @staticmethod
     def _get_report_format(report_format):
-        if report_format == Client.ReportFormat.PRETTY:
+        if report_format == NessusClient.ReportFormat.PRETTY:
             return {"format": "html",
                     "chapters": "custom;vuln_by_host;remediations;vulnerabilities",
                     "reportContents": {

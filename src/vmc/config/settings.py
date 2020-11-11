@@ -75,6 +75,8 @@ INTERNAL_APPS = [
     'vmc.scanners',
     'vmc.scanners.openvas',
     'vmc.scanners.nessus',
+    'vmc.webhook',
+    'vmc.webhook.thehive'
 ]
 
 THIRD_PARTY_APPS = [
