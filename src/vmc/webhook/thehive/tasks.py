@@ -38,7 +38,7 @@ def process_task_log(event):
             message = event['object']['message']
             task_id = event['object']['case_task']['id']
             tasks = Task.objects.filter(task_id=task_id)
-            converter = TheHive4LogConverter.objects.filter(log_message__in=message)
+            converter = TheHive4LogConverter.objects.filter(log_message=message)
             if tasks.exists() and converter.exists():
                 task = tasks.first()
                 tag = converter.first().tag
