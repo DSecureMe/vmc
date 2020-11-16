@@ -26,6 +26,9 @@ class TheHive4LogConverter(BaseModel):
     log_message = models.TextField()
     tag = models.CharField(max_length=128)
 
+    def __str__(self):
+        return F'Convert log message {self.log_message} to {self.tag} tag'
+
 
 class TheHive4(BaseModel):
     SCHEMA = (
@@ -43,3 +46,6 @@ class TheHive4(BaseModel):
 
     def get_url(self) -> str:
         return F'{self.schema}://{self.host}:{self.port}'
+
+    def __str__(self):
+        return self.name

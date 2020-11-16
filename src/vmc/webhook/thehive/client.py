@@ -64,6 +64,6 @@ class TheHiveClient:
     @staticmethod
     def _log_response_if_error(resp):
         result = resp.json()
-        if resp.status_code != 200 or resp.status_code != 201:
+        if resp.status_code != requests.codes.OK or resp.status_code != requests.codes.CREATED:
             LOGGER.error(F'Response code {resp.status_code}, body {result}')
         return result
