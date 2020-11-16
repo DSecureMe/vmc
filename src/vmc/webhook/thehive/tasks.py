@@ -34,11 +34,14 @@ LOGGER = logging.getLogger(__name__)
 @shared_task
 def process_task_log(event):
     try:
+        LOGGER.debug(event)
         if 'object' in event:
             message = event['object']['message']
             task_id = event['object']['case_task']['id']
             tasks = Task.objects.filter(task_id=task_id)
             converter = TheHive4LogConverter.objects.filter(log_message=message)
+            LOGGER.debug(F'Task id {task_id}, found {tasks}')
+            LOGGER.debug(F'Converter found: {converter}')
             if tasks.exists() and converter.exists():
                 task = tasks.first()
                 tag = converter.first().tag
@@ -48,17 +51,17 @@ def process_task_log(event):
                 except Tenant.DoesNotExist:
                     index = VulnerabilityDocument.Index.name
 
-                docs = VulnerabilityDocument.search(index=index).filter('match', id=task.document_id).execute()
+                doc = VulnerabilityDocument.get(task.document_id, index=index)
 
-                if len(docs.hits) == 1:
-                    doc = docs.hits[0]
+                LOGGER.debug(F'Documents found')
 
-                    if hasattr(docs, 'tags'):
-                        docs.tags.append(tag)
-                    else:
-                        doc.tags = [tag]
+                if hasattr(doc, 'tags'):
+                    doc.tags.append(tag)
+                else:
+                    doc.tags = [tag]
 
-                    doc.save()
+                LOGGER.debug(F'Saved')
+                doc.save()
 
     except Exception as ex:
         LOGGER.error(ex)
