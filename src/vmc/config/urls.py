@@ -36,5 +36,5 @@ urlpatterns = [
     path('api/v1/assets-manager/config', get_asset_manager_config, name='get_asset_manager_config'),
     path('api/v1/vulnerabilities', search_vulnerabilities, name='search_vulnerabilities'),
     path('api/v1/scans/backups/<str:scan_id>', download_scan, name='download_scan'),
-    path('webhook', include('vmc.webhook.urls', namespace='webhook'))
+    path('api/v1/webhook/', include('vmc.webhook.urls', namespace='webhook'))
 ]
