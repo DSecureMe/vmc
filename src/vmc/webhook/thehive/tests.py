@@ -268,8 +268,7 @@ class LogCreateTaskTest(ESTestCase, TestCase):
 
     def test_call(self):
         vuln = create_vulnerability(create_asset(), create_cve())
-        task = Task.objects.create(task_id=15, document_id=vuln.id)
-
+        task = Task.objects.create(task_id=15, document_id=vuln.meta.id)
         process_task_log({
             'operation': 'create',
             'objectType': 'case_task_log',
@@ -280,4 +279,4 @@ class LogCreateTaskTest(ESTestCase, TestCase):
 
         vulns = VulnerabilityDocument.search().filter('match', id=vuln.id).execute()
         self.assertEqual(len(vulns.hits), 1)
-        self.assertEqual(vulns.hits[0].tags, ['FIXED'])
+        self.assertEqual(vulns.hits[0].tags, ['test', 'FIXED'])
