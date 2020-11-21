@@ -25,7 +25,6 @@ class NessusConfig(AppConfig):
     name = 'vmc.scanners.nessus'
 
     def ready(self):
-        from vmc.scanners.nessus.clients import NessusClient
-        from vmc.scanners.nessus.parsers import NessusReportParser
+        from vmc.scanners.nessus.managers import NessusManager
         from vmc.scanners.registries import scanners_registry
-        scanners_registry.register(NessusConfig.name, NessusClient, NessusReportParser)
+        scanners_registry.register(NessusConfig.name, NessusManager)

@@ -53,8 +53,9 @@ def _update_scans(config_pk: int):
         config = config.first()
     try:
         config.set_status(Config.Status.IN_PROGRESS)
-        client, parser = scanners_registry.get(config)
-
+        manager = scanners_registry.get(config)
+        client = manager.get_client()
+        parser = manager.get_parser()
         now_date = now()
         scan_list = client.get_scans()
         scan_list = parser.get_scans_ids(scan_list)
@@ -78,10 +79,7 @@ def _update_scans(config_pk: int):
 
             LOGGER.info(F'File parsed: {scan_id}')
             LOGGER.info(F'Trying to parse targets from file {scan_id}')
-            if hasattr(parser, "get_targets"):
-                targets = parser.get_targets(targets)
-            else:
-                targets = client.get_targets(targets)
+            targets = parser.get_targets(targets)
             LOGGER.info(F'Targets parsed: {scan_id}')
             if targets:
                 LOGGER.info(F'Attempting to update discovered assets in {config.name}')

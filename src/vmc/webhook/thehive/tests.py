@@ -46,12 +46,12 @@ class TheHiveClientTest(TestCase):
     @patch('vmc.webhook.thehive.client.requests')
     def test_call_get_alert(self, requests):
         self.uut.get_alert(1)
-        requests.get('http://localhost/1', headers={"Authorization": "Bearer token"})
+        requests.get.assert_called_once_with('http://localhost/api/alert/1', headers={"Authorization": "Bearer token"})
 
     @patch('vmc.webhook.thehive.client.requests')
     def test_call_create_case(self, requests):
         self.uut.create_case('sample title', 'sample desc')
-        requests.post('http://localhost/1', headers={"Authorization": "Bearer token"}, data={
+        requests.post.assert_called_once_with('http://localhost/api/case', headers={"Authorization": "Bearer token"}, data={
             'title': 'sample title',
             'description': 'sample desc'
         })
@@ -59,7 +59,7 @@ class TheHiveClientTest(TestCase):
     @patch('vmc.webhook.thehive.client.requests')
     def test_call_update_case(self, requests):
         self.uut.update_case(15, 'sample desc', ['tags'])
-        requests.post('http://localhost/api/case/15', headers={"Authorization": "Bearer token"}, data={
+        requests.patch.assert_called_once_with('http://localhost/api/case/15', headers={"Authorization": "Bearer token"}, json={
             'description': 'sample desc',
             'tags': ['tags']
         })
@@ -67,15 +67,15 @@ class TheHiveClientTest(TestCase):
     @patch('vmc.webhook.thehive.client.requests')
     def test_call_merge_alert_to_case(self, requests):
         self.uut.merge_alert_to_case(15, 12)
-        requests.post('http://localhost/api/alert/merge/_bulk', headers={"Authorization": "Bearer token"}, data={
-            "caseId": 15,
-            "alertIds": 12
+        requests.post.assert_called_once_with('http://localhost/api/alert/merge/_bulk', headers={"Authorization": "Bearer token"}, json={
+            "caseId": '12',
+            "alertIds": ['15']
         })
 
     @patch('vmc.webhook.thehive.client.requests')
     def test_call_create_task(self, requests):
         self.uut.create_task(15, 'sample title', 'sample desc', 'group')
-        requests.post('http://localhost/api/case/15/task', headers={"Authorization": "Bearer token"}, data={
+        requests.post.assert_called_once_with('http://localhost/api/case/15/task', headers={"Authorization": "Bearer token"}, data={
             'title': 'sample title',
             'description': 'sample desc',
             'group': 'group'

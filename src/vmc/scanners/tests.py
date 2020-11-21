@@ -173,19 +173,22 @@ class TasksTest(ESTestCase, TestCase):
         super(TasksTest, self).setUp()
         self.client = MagicMock()
         self.parser = MagicMock()
+        self.manager = MagicMock()
+        self.manager().get_client.return_value = self.client
+        self.manager().get_parser.return_value = self.parser
         self.config = Config.objects.first()
-        scanners_registry.register('test-scanner', self.client, self.parser)
+        scanners_registry.register('test-scanner', self.manager)
 
     @patch('vmc.scanners.tasks.VulnerabilityDocument')
     @patch('vmc.scanners.tasks.AssetDocument')
     @patch('vmc.scanners.tasks.now')
     def test__update_call(self, now_mock, asset_mock, vuln_mock):
-        self.client().get_scans.return_value = 'get_scans'
-        self.parser().get_scans_ids.return_value = [1]
-        self.client().download_scan.return_value = 'download_scan'
-        self.parser().parse.return_value = 'first', 'second'
-        self.parser().get_targets.return_value = 'targets'
-        self.client().get_targets.return_value = 'targets'
+        self.client.get_scans.return_value = 'get_scans'
+        self.parser.get_scans_ids.return_value = [1]
+        self.client.download_scan.return_value = 'download_scan'
+        self.parser.parse.return_value = 'first', 'second'
+        self.parser.get_targets.return_value = 'targets'
+        self.client.get_targets.return_value = 'targets'
         asset_mock.get_assets_with_tag.return_value = 'discovered_assets'
         now_mock.return_value = datetime(2020, 9, 2, 20, 20, 20, 0)
 
@@ -198,30 +201,31 @@ class TasksTest(ESTestCase, TestCase):
         self.assertEqual(scan.file, F'/usr/share/vmc/backup/scans/2020/9/2/{self.config.id}/{self.config.scanner}-20-20-20.zip')
         self.assertTrue(scan.file_id)
 
-        self.client().download_scan.assert_has_calls(
-            [call(1, self.client().ReportFormat.XML), call(1, self.client().ReportFormat.PRETTY)])
-        self.parser().parse.assert_called_once_with('download_scan', F'http://localhost/api/v1/scans/backups/{scan.file_id}')
+        self.client.download_scan.assert_has_calls(
+            [call(1, self.client.ReportFormat.XML), call(1, self.client.ReportFormat.PRETTY)])
+        self.parser.parse.assert_called_once_with('download_scan', F'http://localhost/api/v1/scans/backups/{scan.file_id}')
         asset_mock.get_assets_with_tag.assert_called_once_with(tag=AssetStatus.DISCOVERED, config=self.config)
         asset_mock.update_gone_discovered_assets.assert_called_once_with(targets='targets', scanned_hosts='second',
                                                     discovered_assets='discovered_assets', config=self.config)
         vuln_mock.create_or_update.assert_called_once_with('first', 'second', self.config)
 
     def test__update_call_nessus_parser(self):
-        scanners_registry.register('test-scanner', self.client, NessusReportParser)
-        self.client().get_scans.return_value = {'scans': [{'id': 2, 'folder_id': 2}],
+        self.manager().get_parser.return_value = NessusReportParser(self.config)
+        scanners_registry.register('test-scanner', self.manager)
+        self.client.get_scans.return_value = {'scans': [{'id': 2, 'folder_id': 2}],
                                                 'folders': [{'type': 'custom', 'id': 2, 'name': 'test'}]}
         with open(Path(__file__).parent / "nessus/fixtures/internal.xml", 'rb') as f:
-            self.client().download_scan.return_value = BytesIO(f.read())
+            self.client.download_scan.return_value = BytesIO(f.read())
 
         _update_scans(self.config.pk)
 
-        self.client().download_scan.assert_has_calls(
-            [call(2, self.client().ReportFormat.XML), call(2, self.client().ReportFormat.PRETTY)])
+        self.client.download_scan.assert_has_calls(
+            [call(2, self.client.ReportFormat.XML), call(2, self.client.ReportFormat.PRETTY)])
         self.assertEqual(VulnerabilityDocument.search().count(), 2)
 
     @patch('vmc.scanners.tasks.VulnerabilityDocument')
     def test___update_scan_exception(self, document):
-        self.client().get_scans.side_effect = Exception
+        self.client.get_scans.side_effect = Exception
 
         self.assertFalse(_update_scans(self.config.pk))
 

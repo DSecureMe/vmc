@@ -61,9 +61,10 @@ class NessusConfigTest(TestCase):
     @patch('vmc.scanners.nessus.clients.requests')
     def test_registry(self, request_mock):
         request_mock.get.return_value = ResponseMock({"nessus_ui_version": '7.2.3'}, 200)
-        config = Config.objects.first()
-        self.assertIsInstance(scanners_registry.get_parser(config), NessusReportParser)
-        self.assertIsInstance(scanners_registry.get_client(config), NessusClient)
+        manager = scanners_registry.get(Config.objects.first())
+
+        self.assertIsInstance(manager.get_parser(), NessusReportParser)
+        self.assertIsInstance(manager.get_client(), NessusClient)
 
 
 class NessusClient7Test(TestCase):

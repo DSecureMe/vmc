@@ -205,27 +205,43 @@ class NessusClient(Client):
         PRETTY = 'html'
 
     def __init__(self, config: Config):
-        url = config.get_url()
+        self._url = config.get_url()
+        self._config = config
 
         if config.insecure and hasattr(requests, 'packages'):
             requests.packages.urllib3.disable_warnings()
 
         try:
-            resp = requests.get(F'{url}/server/properties', verify=not config.insecure)
-            version = resp.json()
+            self._version = self._get_version()
 
-            if re.match(_NessusClient8.version, version['nessus_ui_version']):
+            if re.match(_NessusClient8.version, self._version):
                 LOGGER.debug('Using nessus client version 8')
                 self.client = _NessusClient8(config)
-            elif re.match(_NessusClient7.version, version['nessus_ui_version']):
+            elif re.match(_NessusClient7.version, self._version):
                 LOGGER.debug('Using nessus client version 7')
                 self.client = _NessusClient7(config)
             else:
-                raise Exception(F'Unknown nessus version {version}')
+                raise Exception(F'Unknown nessus version {self._version}')
 
         except Exception as ex:
             LOGGER.error(F'{ex}. Exiting!')
             raise NessusClientException(ex)
+
+    def get_version(self) -> str:
+        if not self._version:
+            self._version = self._get_version()
+        return self._version
+
+    def _get_version(self) -> str:
+        try:
+            resp = requests.get(F'{self._url}/server/properties', verify=not self._config.insecure)
+            version = resp.json()
+            return version['nessus_ui_version']
+
+        except Exception as ex:
+            LOGGER.error(F'{ex}. Exiting!')
+            raise NessusClientException(ex)
+
 
     def get_scans(self) -> Dict:
         return self.client.get_scans()

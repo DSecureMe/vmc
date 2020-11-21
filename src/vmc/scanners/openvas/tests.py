@@ -44,13 +44,17 @@ class OpenVasConfigTest(TestCase):
     @classmethod
     def setUpTestData(cls):
         cls.config = Config.objects.first()
+        cls.manager = scanners_registry.get(cls.config)
 
     def test_name(self):
         self.assertEqual(OpenVasConfig.name, 'vmc.scanners.openvas')
 
     def test_registry(self):
-        self.assertIsInstance(scanners_registry.get_parser(self.config), GmpParser)
-        self.assertIsInstance(scanners_registry.get_client(self.config), OpenVasClient)
+        self.assertIsInstance(self.manager.get_parser(), GmpParser)
+        self.assertIsInstance(self.manager.get_client(), OpenVasClient)
+
+    def test_parser_has_get_target_method(self):
+        self.assertTrue(self.manager.get_parser().get_targets)
 
 
 @skipIf(not elastic_configured(), 'Skip if elasticsearch is not configured')
@@ -68,9 +72,9 @@ class GmpResultParserTest(ESTestCase, TestCase):
         self.assertEquals(ids, ['0f9ea6ca-→abf5-4139-a772-cb68937cdfbb'])
 
     def test_parse(self):
-        xml = ET.parse(get_fixture_location(__file__, 'report.xml'))
+        xml = ET.parse(get_fixture_location(__file__, 'report_omp_7.xml'))
         parser = GmpParser(self.config)
-        vulns, scanned_hosts = parser.parse(xml, "report.xml")
+        vulns, scanned_hosts = parser.parse(xml, "report_omp_7.xml")
         self.assertEquals(
             ['10.10.10.21', '10.10.10.21', '10.10.10.23',
              '10.10.10.23', '10.10.10.30', '10.10.10.7',
@@ -86,7 +90,7 @@ class GmpResultParserTest(ESTestCase, TestCase):
         self.assertEquals(vuln.scan_date, '2020-04-08T21:06:33Z')
         self.assertEquals(vuln.name, 'DCE/RPC and MSRPC Services Enumeration Reporting')
         self.assertEquals(vuln.solution, 'Filter incoming traffic to this ports.')
-        self.assertEquals(vuln.scan_file_url, "report.xml")
+        self.assertEquals(vuln.scan_file_url, "report_omp_7.xml")
 
 
 class OpenVasClientTest(TestCase):
@@ -100,7 +104,7 @@ class OpenVasClientTest(TestCase):
         self.assertIsInstance(self.uut, Client)
 
     def test_get_targets(self):
-        xml = get_root_element(get_fixture_location(__file__, "report_with_target.xml"))
+        xml = get_root_element(get_fixture_location(__file__, "report_with_target_omp_7.xml"))
         target_xml = get_root_element(get_fixture_location(__file__, "target.xml"))
         target2_xml = get_root_element(get_fixture_location(__file__, "target2.xml"))
         target3_xml = get_root_element(get_fixture_location(__file__, "target3.xml"))
