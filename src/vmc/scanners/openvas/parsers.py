@@ -45,6 +45,7 @@ class GmpParser(Parser):
         for r in report.findall('.//results/result'):
             if float(r.find('nvt//cvss_base').text) > 0:
                 ip_address = r.find('./host').text
+                scan_date = r.find('./creation_time').text
                 self.__scanned_host.append(ip_address)
                 asset = AssetDocument.get_or_create(ip_address, self._config)
                 name = r.find('./name').text
@@ -69,7 +70,8 @@ class GmpParser(Parser):
                         asset=asset,
                         tenant=self._config.tenant.name if self._config.tenant else None,
                         source='OpenVas',
-                        scan_file_url=file_url
+                        scan_file_url=file_url,
+                        scan_date=scan_date
                     )
 
         return self.__parsed, self.__scanned_host

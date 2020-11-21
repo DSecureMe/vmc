@@ -21,7 +21,7 @@ from elasticsearch_dsl import Q
 
 from vmc.assets.documents import AssetInnerDoc, AssetDocument
 
-from vmc.elasticsearch import Document, Keyword, Object, Float, ListField
+from vmc.elasticsearch import Document, Keyword, Object, Float, ListField, Date
 from vmc.elasticsearch.registries import registry
 from vmc.elasticsearch.helpers import async_bulk
 from vmc.knowledge_base.documents import CveInnerDoc, CveDocument
@@ -50,6 +50,7 @@ class VulnerabilityDocument(Document):
     source = Keyword()
     tenant = Keyword()
     scan_file_url = Keyword()
+    scan_date = Date()
 
     class Index:
         name = 'vulnerability'
