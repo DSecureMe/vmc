@@ -18,9 +18,21 @@
  *
 """
 from django.contrib import admin
+from django.contrib.admin import ModelAdmin
+
 from vmc.webhook.models import TheHive4, TheHive4LogConverter
+
+MAX_OBJECTS = 1
+
+
+class TheHive4ConfigAdmin(ModelAdmin):
+
+    def has_add_permission(self, request):
+        if self.model.objects.count() >= MAX_OBJECTS:
+            return False
+        return super().has_add_permission(request)
 
 
 admin.site.register(TheHive4LogConverter)
-admin.site.register(TheHive4)
+admin.site.register(TheHive4, TheHive4ConfigAdmin)
 

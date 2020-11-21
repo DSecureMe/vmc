@@ -17,6 +17,7 @@
  * under the License.
  *
 """
+from django.core.exceptions import ValidationError
 from django.db import models
 
 from vmc.common.models import BaseModel
@@ -49,3 +50,8 @@ class TheHive4(BaseModel):
 
     def __str__(self):
         return self.name
+
+    def save(self, *args, **kwargs):
+        if not self.pk and TheHive4.objects.exists():
+            raise ValidationError('There can be only one TheHive4 configuration')
+        return super().save(*args, **kwargs)
