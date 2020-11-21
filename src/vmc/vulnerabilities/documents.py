@@ -29,6 +29,7 @@ from vmc.knowledge_base.documents import CveInnerDoc, CveDocument
 
 class VulnerabilityStatus:
     FIXED = 'FIXED'
+    REOPEN = 'REOPEN'
 
 
 @registry.register_document
@@ -60,6 +61,7 @@ class VulnerabilityDocument(Document):
     @staticmethod
     def create_or_update(vulnerabilities: dict, scanned_hosts: list, config=None) -> None:
         index = VulnerabilityDocument.get_index(config)
+        vulnerabilities = VulnerabilityDocument._reopen(vulnerabilities, index)
         docs = []
         all_vulnerability_docs = VulnerabilityDocument.search(index=index).filter(
             ~Q('match', tags=VulnerabilityStatus.FIXED)
@@ -82,3 +84,26 @@ class VulnerabilityDocument(Document):
 
         docs.extend(list(map(lambda x: x.save(weak=True).to_dict(), vulnerabilities.values())))
         async_bulk(docs, index=index)
+
+    @staticmethod
+    def _reopen(vulnerabilities: dict, index: str):
+        prev_fixed = VulnerabilityDocument.search(index=index).filter(
+            Q('match', tags=VulnerabilityStatus.FIXED)
+        )
+        docs = []
+        for prev_fixed_vuln in prev_fixed.scan():
+            vuln_id = prev_fixed_vuln.id
+            if vuln_id in vulnerabilities:
+                c = prev_fixed_vuln.update(vulnerabilities[vuln_id], index=index, weak=True)
+                c.tags.append(VulnerabilityStatus.REOPEN)
+                if VulnerabilityStatus.FIXED in c.tags:
+                    c.tags.remove(VulnerabilityStatus.FIXED)
+                docs.append(c.to_dict(include_meta=True))
+                del vulnerabilities[vuln_id]
+
+            if len(docs) > 500:
+                async_bulk(docs, index=index)
+                docs = []
+
+        async_bulk(docs, index=index)
+        return vulnerabilities

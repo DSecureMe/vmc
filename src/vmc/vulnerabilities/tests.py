@@ -223,6 +223,28 @@ class VulnerabilityDocumentTest(ESTestCase, TestCase):
 
         self.assertEqual(result_2.hits[0].tags, ['test', VulnerabilityStatus.FIXED])
 
+    def test_reopen_vulnerability(self):
+        vulnerability = create_vulnerability(self.asset, self.cve)
+        self.assertEqual(VulnerabilityDocument.search().count(), 1)
+
+        VulnerabilityDocument.create_or_update({}, [self.asset.ip_address], ConfigMock())
+        thread_pool_executor.wait_for_all()
+        self.assertEqual(VulnerabilityDocument.search().count(), 1)
+
+        result = VulnerabilityDocument.search().filter(
+            'term', asset__ip_address=self.asset.ip_address).execute()
+
+        self.assertEqual(result.hits[0].tags, ['test', VulnerabilityStatus.FIXED])
+
+        VulnerabilityDocument.create_or_update({vulnerability.id: vulnerability}, [self.asset.ip_address], ConfigMock())
+        thread_pool_executor.wait_for_all()
+        self.assertEqual(VulnerabilityDocument.search().count(), 1)
+
+        result = VulnerabilityDocument.search().filter(
+            'term', asset__ip_address=self.asset.ip_address).execute()
+
+        self.assertEqual(result.hits[0].tags, ['test', VulnerabilityStatus.REOPEN])
+
 
 @skipIf(not elastic_configured(), 'Skip if elasticsearch is not configured')
 class SearchVulnerabilitiesTest(ESTestCase, LiveServerTestCase):
