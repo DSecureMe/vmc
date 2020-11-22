@@ -19,6 +19,7 @@
 """
 
 import uuid
+import defusedxml.ElementTree as ET
 from typing import List, Dict
 
 from vmc.knowledge_base import metrics
@@ -41,21 +42,18 @@ def _parse_tags(tags):
 
 
 def _create_ovasp_cve(oid, tags):
-    cve_id = F'NOCVE-{oid}'
-    cve = CveDocument.get_or_create(cve_id=cve_id)
+    cve = CveDocument()
+    cve.id =  F'NOCVE-{oid}'
 
     vector = tags['cvss_base_vector']
     vector = dict(x.split(':') for x in vector.split('/'))
-    new_cve = CveDocument(id=cve_id)
-    new_cve.access_vector_v2 = metrics.AccessVectorV2(vector['AV'])
-    new_cve.access_complexity_v2 = metrics.AccessComplexityV2(vector['AC'])
-    new_cve.authentication_v2 = metrics.AuthenticationV2(vector['Au'])
-    new_cve.confidentiality_impact_v2 = metrics.ImpactV2(vector['C'])
-    new_cve.integrity_impact_v2 = metrics.ImpactV2(vector['I'])
-    new_cve.availability_impact_v2 = metrics.ImpactV2(vector['A'])
-    new_cve.base_score_v2 = calculate_base_score_v2(new_cve)
-    if cve.has_changed(new_cve):
-        return cve.update(new_cve, refresh=True)
+    cve.access_vector_v2 = metrics.AccessVectorV2(vector['AV'])
+    cve.access_complexity_v2 = metrics.AccessComplexityV2(vector['AC'])
+    cve.authentication_v2 = metrics.AuthenticationV2(vector['Au'])
+    cve.confidentiality_impact_v2 = metrics.ImpactV2(vector['C'])
+    cve.integrity_impact_v2 = metrics.ImpactV2(vector['I'])
+    cve.availability_impact_v2 = metrics.ImpactV2(vector['A'])
+    cve.base_score_v2 = calculate_base_score_v2(cve)
     return cve
 
 
@@ -70,6 +68,7 @@ class GmpParserOMP7(Parser):
         return [r.attrib.get('id') for r in reports.findall('report') if r.attrib.get('type') == 'scan']
 
     def parse(self, report, file_url) -> [Dict, Dict]:
+        report = ET.fromstring(report.read())
         for r in report.findall('.//results/result'):
             ip_address = r.find('./host').text.strip()
             self.__scanned_host.add(ip_address)
@@ -122,6 +121,7 @@ class GMP9Parser(Parser):
         return [r.attrib.get('id') for r in reports.findall('report') if r.attrib.get('content_type') == 'text/xml']
 
     def parse(self, report, file_url) -> [Dict, Dict]:
+        report = ET.fromstring(report.read())
         for r in report.findall('.//results/result'):
             ip_address = r.find('./host').text.strip()
             self.__scanned_host.add(ip_address)

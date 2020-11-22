@@ -17,6 +17,7 @@
  * under the License.
  */
 """
+import defusedxml.ElementTree as ET
 from io import BytesIO
 from base64 import b64decode
 
@@ -76,19 +77,21 @@ class OpenVasClient(Client):
 
     def download_scan(self, scan_id, scan_format=Client.ReportFormat.XML):
         with self._connect() as gmp:
-            if scan_format == Client.ReportFormat.PRETTY:
+            if scan_format == OpenVasClient.ReportFormat.PRETTY:
                 response = gmp.get_report(scan_id, report_format_id=OpenVasClient._PDF_FORMAT,
                                           details=True, ignore_pagination=True)
 
                 return BytesIO(b64decode("".join(response.itertext())))
-            return BytesIO(gmp.get_report(scan_id, report_format_id=OpenVasClient._XML_FORMAT,
-                                          details=True, ignore_pagination=True))
+            response = gmp.get_report(scan_id, report_format_id=OpenVasClient._XML_FORMAT,
+                                      details=True, ignore_pagination=True)
+            return BytesIO(ET.tostring(response))
 
     def _get_target_definition(self, target_id):
         with self._connect() as gmp:
             return gmp.get_target(target_id)
 
     def get_targets(self, file):
+        file = ET.fromstring(file.read())
         target_id = file.find(".//report/task/target").attrib["id"]
         target = self._get_target_definition(target_id)
         hosts = target.find(".//target/hosts").text

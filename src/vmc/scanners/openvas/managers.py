@@ -43,9 +43,7 @@ class OpenVasManager(Manager):
         try:
 
             v = self.get_client().get_version()
-            print(v)
             v = v.find('./version').text.strip()
-            print(v)
 
             if v == '9.0':
                 p = GMP9Parser(self._config)
