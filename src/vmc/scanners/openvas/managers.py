@@ -20,7 +20,7 @@
 """
 from vmc.scanners.managers import Manager
 from vmc.scanners.openvas.clients import OpenVasClient
-from vmc.scanners.openvas.parsers import GmpParser
+from vmc.scanners.openvas.parsers import GmpParserOMP7
 
 
 class OpenVasManager(Manager):
@@ -32,6 +32,6 @@ class OpenVasManager(Manager):
         return OpenVasClient(self._config)
 
     def get_parser(self):
-        parser = GmpParser(self._config)
+        parser = GmpParserOMP7(self._config)
         parser.get_targets = self.get_client().get_targets
         return parser

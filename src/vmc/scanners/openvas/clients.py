@@ -72,8 +72,11 @@ class OpenVasClient(Client):
     def download_scan(self, scan_id, scan_format=Client.ReportFormat.XML):
         with self._connect() as gmp:
             if scan_format == Client.ReportFormat.PRETTY:
-                return BytesIO(gmp.get_report(scan_id, report_format_id=OpenVasClient._PDF_FORMAT))
-            return BytesIO(gmp.get_report(scan_id, report_format_id=OpenVasClient._XML_FORMAT))
+                ##TODO: get from base64
+                return BytesIO(gmp.get_report(scan_id, report_format_id=OpenVasClient._PDF_FORMAT,
+                                              details=True, ignore_pagination=True))
+            return BytesIO(gmp.get_report(scan_id, report_format_id=OpenVasClient._XML_FORMAT,
+                                          details=True, ignore_pagination=True))
 
     def _get_target_definition(self, target_id):
         with self._connect() as gmp:
