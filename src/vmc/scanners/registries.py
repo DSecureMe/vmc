@@ -23,7 +23,6 @@ class Registry:
 
     def __init__(self):
         self.__managers = {}
-        self.__parsers = {}
 
     def register(self, name, manager):
         self.__managers[name] = manager
@@ -31,6 +30,8 @@ class Registry:
     def get(self, config):
         return self.__managers[config.scanner](config)
 
+    def get_scanners(self):
+        return self.__managers.keys()
 
 
 scanners_registry = Registry()
