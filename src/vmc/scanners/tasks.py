@@ -105,6 +105,7 @@ def save_scan(client, scan_id, xml_file, full_file_path):
         with ZipFile(str(full_file_path), 'w') as zipfile:
             zipfile.writestr(F'report.{client.ReportFormat.XML}', xml_file.getvalue())
             zipfile.writestr(F'report.{client.ReportFormat.PRETTY}', pretty.read())
+        LOGGER.info(F'File {str(full_file_path)} saved')
     except (MemoryError, IOError, PermissionError, TimeoutError, FileExistsError) as e:
         LOGGER.error(F"There were exception during saving file: {full_file_path}. Exception:\n{e}")
 
