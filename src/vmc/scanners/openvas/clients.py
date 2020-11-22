@@ -54,6 +54,10 @@ class OpenVasClient(Client):
             gmp.authenticate(self._config.username, self._config.password)
             yield gmp
 
+    def get_version(self):
+        with self._connect() as gmp:
+            return gmp.get_version()
+
     def get_scans(self):
         with self._connect() as gmp:
 

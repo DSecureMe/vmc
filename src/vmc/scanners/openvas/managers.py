@@ -18,9 +18,17 @@
  * under the License.
  *
 """
+import logging
+
 from vmc.scanners.managers import Manager
 from vmc.scanners.openvas.clients import OpenVasClient
-from vmc.scanners.openvas.parsers import GmpParserOMP7
+from vmc.scanners.openvas.parsers import GmpParserOMP7, GMP9Parser
+
+LOGGER = logging.getLogger(__name__)
+
+
+class OpenVasManagerException(Exception):
+    pass
 
 
 class OpenVasManager(Manager):
@@ -32,6 +40,25 @@ class OpenVasManager(Manager):
         return OpenVasClient(self._config)
 
     def get_parser(self):
-        parser = GmpParserOMP7(self._config)
-        parser.get_targets = self.get_client().get_targets
-        return parser
+        try:
+
+            v = self.get_client().get_version()
+            print(v)
+            v = v.find('./version').text.strip()
+            print(v)
+
+            if v == '9.0':
+                p = GMP9Parser(self._config)
+            elif v == '7.0':
+                p = GmpParserOMP7(self._config)
+            else:
+                LOGGER.error(F'Unknown nessus version {v}')
+                raise Exception(F'Unknown openvas protocol version {v}')
+
+            p.get_targets = self.get_client().get_targets
+            return p
+
+        except Exception as e:
+            LOGGER.error(e)
+            raise OpenVasManagerException(e)
+

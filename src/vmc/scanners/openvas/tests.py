@@ -24,6 +24,7 @@ import defusedxml.ElementTree as ET
 
 from django.test import TestCase
 
+from vmc.scanners.openvas.managers import OpenVasManager, OpenVasManagerException
 from vmc.knowledge_base.metrics import ImpactV2, AuthenticationV2, AccessVectorV2, AccessComplexityV2
 from vmc.common.xml import get_root_element
 from vmc.scanners.clients import Client
@@ -51,11 +52,40 @@ class OpenVasConfigTest(TestCase):
         self.assertEqual(OpenVasConfig.name, 'vmc.scanners.openvas')
 
     def test_registry(self):
-        self.assertIsInstance(self.manager.get_parser(), GmpParserOMP7)
-        self.assertIsInstance(self.manager.get_client(), OpenVasClient)
+        self.assertIsInstance(self.manager, OpenVasManager)
 
-    def test_parser_has_get_target_method(self):
-        self.assertTrue(self.manager.get_parser().get_targets)
+
+
+class OpenVasManagerTest(TestCase):
+    fixtures = ['openvas_config.json']
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.config = Config.objects.first()
+        cls.uut = scanners_registry.get(cls.config)
+
+    def test_get_client_call(self):
+        self.assertIsInstance(self.uut.get_client(), OpenVasClient)
+
+    @patch('vmc.scanners.openvas.managers.OpenVasClient')
+    def test_get_parser_exception(self, client):
+        client().get_version.return_value = None
+        with self.assertRaises(OpenVasManagerException):
+            self.uut.get_parser()
+
+    @patch('vmc.scanners.openvas.managers.OpenVasClient')
+    def test_omp_7_get_parser(self, client):
+        client().get_version.return_value = ET.parse(get_fixture_location(__file__, 'omp_7_version.xml'))
+        parser = self.uut.get_parser()
+        self.assertIsInstance(parser, GmpParserOMP7)
+        self.assertTrue(parser.get_targets)
+
+    @patch('vmc.scanners.openvas.managers.OpenVasClient')
+    def test_get_parser_gmp_9_call(self, client):
+        client().get_version.return_value = ET.parse(get_fixture_location(__file__, 'gm_9_version.xml'))
+        parser = self.uut.get_parser()
+        self.assertIsInstance(parser, GMP9Parser)
+        self.assertTrue(parser.get_targets)
 
 
 @skipIf(not elastic_configured(), 'Skip if elasticsearch is not configured')
@@ -160,11 +190,11 @@ class OpenVasClientTest(TestCase):
     def test_is_instance(self):
         self.assertIsInstance(self.uut, Client)
 
-    def test_get_targets(self):
+    def test_get_targets_omp_7(self):
         xml = get_root_element(get_fixture_location(__file__, "report_with_target_omp_7.xml"))
-        target_xml = get_root_element(get_fixture_location(__file__, "target.xml"))
-        target2_xml = get_root_element(get_fixture_location(__file__, "target2.xml"))
-        target3_xml = get_root_element(get_fixture_location(__file__, "target3.xml"))
+        target_xml = get_root_element(get_fixture_location(__file__, "target_omp_7.xml"))
+        target2_xml = get_root_element(get_fixture_location(__file__, "target2_omp_7.xml"))
+        target3_xml = get_root_element(get_fixture_location(__file__, "target3_omp_7.xml"))
 
         with patch.object(self.uut, "_get_target_definition", return_value=target_xml) as target_def:
             target = self.uut.get_targets(xml)
@@ -191,3 +221,14 @@ class OpenVasClientTest(TestCase):
             target = self.uut.get_targets(xml)
             self.assertEqual(target, ip_set)
             target_def.assert_called_once_with("e39cf6fa-1932-42c5-89d4-b66f469c615b")
+
+    def test_get_targets_gmp_9(self):
+        xml = get_root_element(get_fixture_location(__file__, "report_gmp_9.xml"))
+        target_xml = get_root_element(get_fixture_location(__file__, "target_gmp_9.xml"))
+
+
+        with patch.object(self.uut, "_get_target_definition", return_value=target_xml) as target_def:
+            target = self.uut.get_targets(xml)
+            self.assertEqual(target, IPSet(IPNetwork("192.168.0.0/24")))
+            target_def.assert_called_once_with("71ffd436-52da-48c4-a39d-0ac28080c876")
+
