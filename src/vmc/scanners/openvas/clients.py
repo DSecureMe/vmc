@@ -18,6 +18,7 @@
  */
 """
 from io import BytesIO
+from base64 import b64decode
 
 from contextlib import contextmanager
 
@@ -76,9 +77,10 @@ class OpenVasClient(Client):
     def download_scan(self, scan_id, scan_format=Client.ReportFormat.XML):
         with self._connect() as gmp:
             if scan_format == Client.ReportFormat.PRETTY:
-                ##TODO: get from base64
-                return BytesIO(gmp.get_report(scan_id, report_format_id=OpenVasClient._PDF_FORMAT,
-                                              details=True, ignore_pagination=True))
+                response = gmp.get_report(scan_id, report_format_id=OpenVasClient._PDF_FORMAT,
+                                          details=True, ignore_pagination=True)
+
+                return BytesIO(b64decode("".join(response.itertext())))
             return BytesIO(gmp.get_report(scan_id, report_format_id=OpenVasClient._XML_FORMAT,
                                           details=True, ignore_pagination=True))
 
