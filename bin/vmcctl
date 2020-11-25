@@ -25,7 +25,6 @@ start () {
             echo "Starting VMC Admin"
             vmc migrate
             vmc create_index
-            nginx
             gunicorn vmc.config.wsgi:application --bind localhost:8001
             ;;
        *)
