@@ -21,6 +21,7 @@ from unittest import skipIf
 from django.urls import reverse
 from django.test import TestCase
 from unittest.mock import MagicMock, patch
+from parameterized import parameterized
 from rest_framework.test import APIClient
 
 from vmc.assets.tests import create_asset
@@ -86,17 +87,23 @@ class TheHiveClientTest(TestCase):
 
 
 class TaskProcessorTests(TestCase):
-    ALERT_TITLE = 'New low vuln:AAA'
+    ALERT_TITLE = 'New critical vuln:AAA'
 
     def setUp(self) -> None:
         super(TaskProcessorTests, self).setUp()
         self.client_mock = MagicMock()
         self.uut = TaskProcessor(self.client_mock)
 
-    def test_get_task_title_and_group(self):
-        title, group = self.uut.get_task_title_and_group(self.ALERT_TITLE)
-        self.assertEqual('AAA', title)
-        self.assertEqual('low', group)
+    @parameterized.expand([
+        ('New critical vuln:AAA', 'AAA', 'critical'),
+        ('New medium vuln:BBB CCC', 'BBB CCC', 'medium'),
+        ('New high vuln:DDD CCC', 'DDD CCC', 'high'),
+        ('New low vuln:GGG CCC', 'GGG CCC', 'low')
+    ])
+    def test_get_task_title_and_group(self, given_title, expected_title, expected_group):
+        title, group = self.uut.get_task_title_and_group(given_title)
+        self.assertEqual(expected_title, title)
+        self.assertEqual(expected_group, group)
 
     def test_update_task_data(self):
         task = Task.objects.create(alert_id=1)
@@ -118,7 +125,7 @@ class TaskProcessorTests(TestCase):
 
         result = Task.objects.filter(alert_id=1).first()
         self.assertEqual(result.title, 'AAA')
-        self.assertEqual(result.group, 'low')
+        self.assertEqual(result.group, 'critical')
         self.assertEqual(result.source, 'Nessus')
         self.assertEqual(result.document_id, 'ddassdada')
         self.assertEqual(result.description, 'desc')

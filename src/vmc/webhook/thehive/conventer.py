@@ -49,16 +49,16 @@ class TaskProcessor:
 
     @staticmethod
     def get_task_title_and_group(title):
-        title = ''.join(title.split(':')[1:])
+        new_title = ''.join(title.split(':')[1:])
 
         if 'critical' in title:
-            return title, 'critical'
+            return new_title, 'critical'
         if 'high' in title:
-            return title, 'high'
+            return new_title, 'high'
         if 'medium' in title:
-            return title, 'medium'
+            return new_title, 'medium'
 
-        return title, 'low'
+        return new_title, 'low'
 
 
 class CaseManager:
