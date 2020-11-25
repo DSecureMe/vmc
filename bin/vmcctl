@@ -25,7 +25,7 @@ start () {
             echo "Starting VMC Admin"
             vmc migrate
             vmc create_index
-            gunicorn vmc.config.wsgi:application --bind localhost:8001
+            gunicorn vmc.config.wsgi:application --bind localhost:8001 --access-logfile '-'
             ;;
        *)
             echo "Invalid Option, try: worker scheduler monitor admin"

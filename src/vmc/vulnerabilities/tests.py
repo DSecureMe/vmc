@@ -170,6 +170,7 @@ class VulnerabilityDocumentTest(ESTestCase, TestCase):
         result_1 = VulnerabilityDocument.search().filter('term', cve__id=self.cve.id).execute()
 
         self.assertEqual(len(result_1.hits), 2)
+        self.assertNotEqual(result_1.hits[0].created_date, result_1.hits[0].modified_date)
         self.assertEqual(result_1.hits[0].cve.access_vector_v2, self.cve.access_vector_v2)
         self.assertEqual(result_1.hits[1].cve.access_vector_v2, self.cve.access_vector_v2)
 

@@ -89,7 +89,7 @@ class ListField(CustomField):
 
 
 class Document(ESDocument):
-    BASE_DOCUMENT_FIELDS = ['created_date', 'modified_date', 'change_reason', 'BASE_DOCUMENT_FIELDS']
+    BASE_DOCUMENT_FIELDS = ['created_date', 'modified_date', 'BASE_DOCUMENT_FIELDS']
     created_date = Date()
     modified_date = Date()
     snapshot_date = Date()
