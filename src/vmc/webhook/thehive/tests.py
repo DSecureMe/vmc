@@ -50,7 +50,10 @@ class TheHiveClientTest(TestCase):
 
     @patch('vmc.webhook.thehive.client.requests')
     def test_call_create_case(self, requests):
-        self.uut.create_case('sample title', 'sample desc')
+        response = MagicMock()
+        response.json.return_value = {'caseId': 12}
+        requests.post.return_value = response
+        self.assertEqual(12, self.uut.create_case('sample title', 'sample desc'))
         requests.post.assert_called_once_with('http://localhost/api/case', headers={"Authorization": "Bearer token"}, data={
             'title': 'sample title',
             'description': 'sample desc'
@@ -276,7 +279,13 @@ class LogCreateTaskTest(ESTestCase, TestCase):
                 'message': 'fixed',
                 'case_task': {'id': task.task_id}}}
         )
-
+        process_task_log({
+            'operation': 'create',
+            'objectType': 'case_task_log',
+            'object': {
+                'message': 'fixed',
+                'case_task': {'id': task.task_id}}}
+        )
         vulns = VulnerabilityDocument.search().filter('match', id=vuln.id).execute()
         self.assertEqual(len(vulns.hits), 1)
         self.assertEqual(vulns.hits[0].tags, ['test', 'FIXED'])

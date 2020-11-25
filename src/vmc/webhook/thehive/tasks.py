@@ -56,12 +56,14 @@ def process_task_log(event):
                 LOGGER.debug(F'Documents found')
 
                 if hasattr(doc, 'tags'):
-                    doc.tags.append(tag)
+                    if tag not in doc.tags:
+                        doc.tags.append(tag)
+                        LOGGER.debug(F'Saved')
+                        doc.save()
                 else:
                     doc.tags = [tag]
-
-                LOGGER.debug(F'Saved')
-                doc.save()
+                    LOGGER.debug(F'Saved')
+                    doc.save()
 
     except Exception as ex:
         LOGGER.error(ex)
