@@ -38,7 +38,7 @@ class ConfigForm(forms.ModelForm):
     class Meta:
         model = Config
         widgets = {
-            'password': PasswordInput(render_value=True),
+            'password': PasswordInput(),
         }
         fields = ['name', 'enabled', 'schema', 'host', 'port', 'filter',
                   'username', 'insecure', 'password', 'scanner', 'tenant']

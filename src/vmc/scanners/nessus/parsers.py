@@ -110,7 +110,7 @@ class NessusReportParser(Parser):
                     vuln['solution'] = get_value(item.find('solution'))
                     vuln['exploit_available'] = True if get_value(item.find('exploit_available')) == 'true' else False
 
-                    vuln['tenant'] = self.__config.tenant.name if self.__config.tenant else None,
+                    vuln['tenant'] = self.__config.tenant.name if self.__config.tenant else None
                     cves = item.findall('cve')
                     if cves:
                         for cve in cves:
