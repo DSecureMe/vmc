@@ -78,9 +78,9 @@ class NessusReportParser(Parser):
         return result
 
     @staticmethod
-    def _match_folder(filter, name):
-        if filter:
-            return re.match(filter, name)
+    def _match_folder(folder_filter, name):
+        if folder_filter:
+            return re.match(folder_filter, name)
         return True
 
     def parse(self, report, file_url) -> [Dict, Dict]:
