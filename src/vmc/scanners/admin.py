@@ -21,6 +21,7 @@ from django import forms
 from django.contrib import admin
 from django.forms import PasswordInput
 
+from vmc.elasticsearch.models import Tenant
 from vmc.scanners.registries import scanners_registry
 from vmc.common.admin import ConfigBaseAdmin
 from vmc.scanners.models import Config
@@ -32,9 +33,13 @@ def get_scanners_choices():
     return [(s, s.split('.')[-1].capitalize()) for s in scanners]
 
 
+def get_not_related_tenants():
+    return [(x.id, x.name) for x in Tenant.objects.filter(config=None)]
+
+
 class ConfigForm(forms.ModelForm):
     scanner = forms.ChoiceField(choices=lambda: get_scanners_choices())
-
+    tenant = forms.ChoiceField(choices=lambda: get_not_related_tenants())
     class Meta:
         model = Config
         widgets = {
