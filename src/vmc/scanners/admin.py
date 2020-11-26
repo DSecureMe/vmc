@@ -33,13 +33,9 @@ def get_scanners_choices():
     return [(s, s.split('.')[-1].capitalize()) for s in scanners]
 
 
-def get_not_related_tenants():
-    return [(x.id, x.name) for x in Tenant.objects.filter(config=None)]
-
-
 class ConfigForm(forms.ModelForm):
     scanner = forms.ChoiceField(choices=lambda: get_scanners_choices())
-    tenant = forms.ChoiceField(choices=lambda: get_not_related_tenants())
+
     class Meta:
         model = Config
         widgets = {
@@ -47,6 +43,22 @@ class ConfigForm(forms.ModelForm):
         }
         fields = ['name', 'enabled', 'schema', 'host', 'port', 'filter',
                   'username', 'insecure', 'password', 'scanner', 'tenant']
+
+    def __init__(self, *args, **kwargs):
+        super(ConfigForm, self).__init__(*args, **kwargs)
+
+        instance = None
+        if 'instance' in kwargs:
+            instance = kwargs['instance']
+        self.fields['tenant'] = forms.ChoiceField(
+            choices=ConfigForm.get_not_related_tenants(instance))
+
+    @staticmethod
+    def get_not_related_tenants(instance):
+        r = [(x.id, x.name) for x in Tenant.objects.filter(config=None)]
+        if instance and instance.tenant:
+            return r + [(instance.tenant.id, instance.tenant.name)]
+        return r
 
 
 class ConfigAdmin(ConfigBaseAdmin):
