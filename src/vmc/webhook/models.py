@@ -51,7 +51,9 @@ class TheHive4(BaseModel):
     def __str__(self):
         return self.name
 
-    def save(self, *args, **kwargs):
+    def save(self,  force_insert=False, force_update=False, using=None,
+             update_fields=None):
         if not self.pk and TheHive4.objects.exists():
             raise ValidationError('There can be only one TheHive4 configuration')
-        return super().save(*args, **kwargs)
+        return super().save(force_insert=force_insert, force_update=force_update, using=using,
+                            update_fields=update_fields)

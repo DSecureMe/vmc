@@ -75,9 +75,9 @@ class OpenVasClient(Client):
 
             return gmp.get_reports()
 
-    def download_scan(self, scan_id, scan_format=Client.ReportFormat.XML):
+    def download_scan(self, scan_id, report_format=Client.ReportFormat.XML):
         with self._connect() as gmp:
-            if scan_format == OpenVasClient.ReportFormat.PRETTY:
+            if report_format == OpenVasClient.ReportFormat.PRETTY:
                 response = gmp.get_report(scan_id, report_format_id=OpenVasClient._PDF_FORMAT,
                                           details=True, ignore_pagination=True)
 

@@ -62,10 +62,10 @@ class NessusReportParser(Parser):
         self.__parsed = dict()
         self.__scanned_hosts = list()
 
-    def get_scans_ids(self, scan_list: Dict) -> List:
-        if scan_list['scans']:
-            folders = self._get_folders(scan_list)
-            return [x['id'] for x in scan_list['scans'] if x['folder_id'] in folders]
+    def get_scans_ids(self, reports) -> List:
+        if reports['scans']:
+            folders = self._get_folders(reports)
+            return [x['id'] for x in reports['scans'] if x['folder_id'] in folders]
         return []
 
     def _get_folders(self, scan_list: Dict) -> [int, None]:

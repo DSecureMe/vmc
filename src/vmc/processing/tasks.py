@@ -24,8 +24,6 @@ import decimal
 
 from celery import shared_task, group
 from django.core.cache import cache
-from elasticsearch.helpers import bulk
-from elasticsearch_dsl.connections import get_connection
 
 from vmc.knowledge_base.metrics import ScopeV3
 from vmc.knowledge_base.utils import exploitability_v2, impact_v2, f_impact_v2
