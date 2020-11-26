@@ -30,13 +30,28 @@ class Config(ConfigBaseModel):
     scanner = models.CharField(max_length=128)
     filter = models.CharField(max_length=256, null=True, blank=True)
 
+    __original_tenant = None
+
     class Meta:
         db_table = 'scanners'
+
+    def __init__(self, *args, **kwargs):
+        super(Config, self).__init__(*args, **kwargs)
+        self.__original_tenant = self.tenant
 
     def clean(self):
         super(Config, self).clean()
         if not self.pk and Config.objects.filter(tenant=self.tenant).exists():
             raise ValidationError('Only one type of Scanner can be assigned to one Tenant')
+
+    def save(self, force_insert=False, force_update=False, using=None, update_fields=None):
+        if self.tenant != self.__original_tenant:
+            self.last_scans_pull = None
+
+        super(Config, self).save(force_insert=force_insert, force_update=force_update,
+                                      using=using, update_fields=update_fields)
+        self.__original_tenant = self.tenant
+        return self
 
 
 class Scan(BaseModel):

@@ -92,6 +92,15 @@ class ConfigTest(TestCase):
         self.assertEqual(self.uut.error_description, 'desc')
         self.assertIsNone(self.uut.last_success_date)
 
+    def test_change_tenant_clean_last_success_date_field(self):
+        self.assertIsNotNone(self.uut.last_scans_pull)
+
+        prefix = Prefix.objects.create(name='test1', prefix='test1')
+        self.uut.tenant = Tenant.objects.create(name='test1', slug_name='test1', elasticsearch_config=prefix)
+        self.uut.save()
+
+        self.assertIsNone(self.uut.last_scans_pull)
+
 
 class AdminPanelTest(LiveServerTestCase):
     fixtures = ['users.json', 'config.json']
