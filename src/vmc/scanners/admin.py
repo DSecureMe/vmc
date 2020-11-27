@@ -28,14 +28,7 @@ from vmc.scanners.models import Config
 from vmc.scanners.tasks import get_update_scans_workflow
 
 
-def get_scanners_choices():
-    scanners = scanners_registry.get_scanners()
-    return [(s, s.split('.')[-1].capitalize()) for s in scanners]
-
-
 class ConfigForm(forms.ModelForm):
-    scanner = forms.ChoiceField(choices=lambda: get_scanners_choices())
-
     class Meta:
         model = Config
         widgets = {
@@ -47,18 +40,21 @@ class ConfigForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super(ConfigForm, self).__init__(*args, **kwargs)
 
-        instance = None
-        if 'instance' in kwargs:
-            instance = kwargs['instance']
-        self.fields['tenant'] = forms.ChoiceField(
-            choices=ConfigForm.get_not_related_tenants(instance))
+        r = []
+        if kwargs.get('instance', None) and kwargs['instance'].tenant:
+            r += [(kwargs['instance'].tenant.id, kwargs['instance'].tenant.name)]
+
+        self.fields['tenant'] = forms.ChoiceField(choices=ConfigForm.get_not_related_tenants() + r)
+        self.fields['scanner'] = forms.ChoiceField(choices=ConfigForm.get_scanners_choices())
 
     @staticmethod
-    def get_not_related_tenants(instance):
-        r = [(x.id, x.name) for x in Tenant.objects.filter(config=None)]
-        if instance and instance.tenant:
-            return r + [(instance.tenant.id, instance.tenant.name)]
-        return r
+    def get_not_related_tenants():
+        return [(x.id, x.name) for x in Tenant.objects.filter(config=None)]
+
+    @staticmethod
+    def get_scanners_choices():
+        scanners = scanners_registry.get_scanners()
+        return [(s, s.split('.')[-1].capitalize()) for s in scanners]
 
 
 class ConfigAdmin(ConfigBaseAdmin):
