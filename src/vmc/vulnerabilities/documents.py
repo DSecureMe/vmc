@@ -34,7 +34,7 @@ class VulnerabilityStatus:
 
 @registry.register_document
 class VulnerabilityDocument(Document):
-    BASE_DOCUMENT_FIELDS = ['created_date', 'modified_date', 'change_reason', 'scan_date', 'BASE_DOCUMENT_FIELDS']
+    BASE_DOCUMENT_FIELDS = Document.BASE_DOCUMENT_FIELDS + ['scan_date']
     id = Keyword()
     port = Keyword()
     svc_name = Keyword()

@@ -120,7 +120,7 @@ class Document(ESDocument):
 
     def update(self, document, using=None, index=None, refresh=False, weak=False):
         for name in self.get_fields_name():
-            if name not in Document.BASE_DOCUMENT_FIELDS:
+            if name not in self.BASE_DOCUMENT_FIELDS:
                 if getattr(document, name, None) is not None:
                     setattr(self, name, getattr(document, name))
         self.save(using=using, index=index, refresh=refresh, weak=weak)
@@ -149,7 +149,7 @@ class Document(ESDocument):
     def has_changed(self, other):
         changed_fields = []
         for name in self.get_fields_name():
-            if name not in Document.BASE_DOCUMENT_FIELDS and getattr(self, name, None) != getattr(other, name, None):
+            if name not in self.BASE_DOCUMENT_FIELDS and getattr(self, name, None) != getattr(other, name, None):
                 changed_fields.append(name)
         return changed_fields
 
