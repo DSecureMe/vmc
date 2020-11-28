@@ -22,7 +22,7 @@ import json
 import uuid
 from datetime import datetime
 from unittest import skipIf
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch, MagicMock, call
 
 from django.core.cache import cache
 from django.urls import reverse
@@ -153,15 +153,33 @@ class RalphClientTest(TestCase):
     @patch('vmc.ralph.clients.requests')
     def test_get_assets_call(self, request_mock):
         self.uut._api_token = 'auth_token'
-        request_mock.request.return_value = ResponseMock(self._get_response('all_hosts_response.json'))
+        request_mock.request.return_value = ResponseMock(self._get_response('all_data_center_assets.json'))
 
-        result = self.uut.get_assets()
+        result = self.uut.get_data_center_assets()
         self.assertIs(type(result), list)
         self.assertIs(type(result[0]), dict)
         self.assertEqual(len(result), 1)
         request_mock.request.assert_called_once_with(
             'GET',
             'http://test:80/api/data-center-assets/?format=json&limit=500',
+            headers={'Authorization': 'Token auth_token'},
+            verify=False,
+            timeout=360
+        )
+
+
+    @patch('vmc.ralph.clients.requests')
+    def test_get_virtual_assets_call(self, request_mock):
+        self.uut._api_token = 'auth_token'
+        request_mock.request.return_value = ResponseMock(self._get_response('all_virtual_servers.json'))
+
+        result = self.uut.get_virtual_assets()
+        self.assertIs(type(result), list)
+        self.assertIs(type(result[0]), dict)
+        self.assertEqual(len(result), 1)
+        request_mock.request.assert_called_once_with(
+            'GET',
+            'http://test:80/api/virtual-servers/?format=json&limit=500',
             headers={'Authorization': 'Token auth_token'},
             verify=False,
             timeout=360
@@ -261,6 +279,14 @@ class AssetsParserTest(TestCase):
         self.assertEqual(result[self.asset_id].business_owner, [{'name': 'FNAME LNAME (FLBO)', 'email': 'contact@dsecure.me'}])
         self.assertEqual(result[self.asset_id].technical_owner, [{'name': 'FNAME LNAME (FLBO)', 'email': 'contact@dsecure.me'}])
 
+    def test_parse_called_for_vurtual_servers(self):
+        with open(get_fixture_location(__file__, 'virtual_host_response.json')) as f:
+            self.hosts = [json.loads(f.read())]
+            result = self.uut.parse(self.hosts)
+            self.assert_fields(result)
+            self.assertEqual(result[self.asset_id].business_owner, [{}])
+            self.assertEqual(result[self.asset_id].technical_owner, [{}])
+
 
 class UpdateAssetsTaskTest(TestCase):
     fixtures = ['config.json']
@@ -276,7 +302,8 @@ class UpdateAssetsTaskTest(TestCase):
     @patch('vmc.ralph.tasks.AssetsParser')
     @patch('vmc.ralph.tasks.AssetDocument')
     def test_update_assets_call(self, asset_document_mock, asset_parser, owner_parser, mock_api):
-        mock_api().get_assets.return_value = self.RESPONSE
+        mock_api().get_data_center_assets.return_value = self.RESPONSE
+        mock_api().get_virtual_assets.return_value = self.RESPONSE
         mock_api().get_users.return_value = self.USERS
         asset_parser().parse.return_value = self.RESPONSE
         owner_parser.parse.return_value = self.USERS
@@ -286,15 +313,23 @@ class UpdateAssetsTaskTest(TestCase):
         mock_api.assert_called_with(self.config)
         mock_api().get_users.assert_called_once()
         owner_parser.parse.assert_called_with(self.USERS)
-        mock_api().get_assets.assert_called_once()
+        mock_api().get_data_center_assets.assert_called_once()
+        mock_api().get_virtual_assets.assert_called_once()
         asset_parser.assert_called_with(self.config)
-        asset_parser().parse.assert_called_with(self.USERS, self.RESPONSE)
-        asset_document_mock.create_or_update.assert_called_once_with(self.RESPONSE, self.config)
+
+        asset_parser().parse.assert_has_calls([
+            call(self.USERS, self.RESPONSE),
+            call(self.USERS, self.RESPONSE)
+        ])
+        asset_document_mock.create_or_update.assert_has_calls(
+            [call(self.RESPONSE, self.config),
+             call(self.RESPONSE, self.config)
+        ])
 
     @patch('vmc.ralph.tasks.RalphClient')
     @patch('vmc.ralph.tasks.AssetsParser')
     def test_update_assets_call_exception(self, factory_mock, mock_api):
-        mock_api().get_assets.side_effect = Exception
+        mock_api().get_data_center_assets.side_effect = Exception
         _update_assets(self.config.id)
         factory_mock.parse.assert_not_called()
 
@@ -312,7 +347,8 @@ class UpdateAssetsIntegrationTest(ESTestCase, TestCase):
         self.config_id = Config.objects.first().id
 
     def update_assets(self, mock_api):
-        mock_api().get_assets.return_value = self.hosts
+        mock_api().get_data_center_assets.return_value = self.hosts
+        mock_api().get_virtual_assets.return_value = []
         mock_api().get_users.return_value = self.users
 
         _update_assets(self.config_id)

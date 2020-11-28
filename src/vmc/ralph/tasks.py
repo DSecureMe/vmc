@@ -52,10 +52,18 @@ def _update_assets(config_id: int):
             LOGGER.info(F'Start loading data from Ralph: {config.name}')
             users = client.get_users()
             users = OwnerParser.parse(users)
-            assets = client.get_assets()
+
+            assets = client.get_data_center_assets()
             assets = parser.parse(assets, users)
             AssetDocument.create_or_update(assets, config)
+            LOGGER.info(F'Finish loading data center assets from Ralph: {config.name}')
+
+            assets = client.get_virtual_assets()
+            assets = parser.parse(assets, users)
+            AssetDocument.create_or_update(assets, config)
+            LOGGER.info(F'Finish loading virtual assets from Ralph: {config.name}')
             LOGGER.info(F'Finish loading data from Ralph: {config.name}')
+
             config.set_status(Config.Status.SUCCESS)
         except Exception as ex:
             LOGGER.error(F'Error with loading data from Ralph: {ex}')

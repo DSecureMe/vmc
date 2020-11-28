@@ -51,10 +51,11 @@ class AssetsParser:
 
     def __init__(self, config: Config):
         self.__config = config
+
+    def parse(self, assets: list, users: dict = None) -> dict:
         self.__parsed = dict()
         self.__users = dict()
 
-    def parse(self, assets: list, users: dict = None) -> dict:
         if users:
             self.__users = users
 
