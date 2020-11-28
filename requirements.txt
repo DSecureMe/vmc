@@ -8,7 +8,7 @@ django_celery_beat==1.5.0
 django-redis==4.10.0
 lxml==4.5.0
 defusedxml==0.6.0
-django-celery-results==1.2.1
+django-celery-results==2.0.0
 pyyaml==5.3.1
 gunicorn==20.0.4
 awesome-slugify==1.6.5
@@ -17,5 +17,3 @@ python-gvm==20.11.0
 bootstrap-admin==0.4.4
 netaddr==0.7.19
 djangorestframework==3.11.0
-
-urllib3>=1.25.9 # not directly required, pinned by Snyk to avoid a vulnerability
