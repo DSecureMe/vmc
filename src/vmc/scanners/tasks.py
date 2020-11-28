@@ -48,17 +48,28 @@ LOGGER = logging.getLogger(__name__)
 
 @shared_task
 def _update_scans(config_pk: int):
+    LOGGER.debug(F'Starting update scans: {config_pk}')
     config = Config.objects.filter(pk=config_pk)
+
     if config.exists():
         config = config.first()
+    else:
+        LOGGER.error(F'Config: {config_pk} not exist!')
+        return None
+
     try:
         config.set_status(Config.Status.IN_PROGRESS)
         manager = scanners_registry.get(config)
         client = manager.get_client()
         parser = manager.get_parser()
         now_date = now()
+
+        LOGGER.info(F'Trying to download scan lists')
         scan_list = client.get_scans()
         scan_list = parser.get_scans_ids(scan_list)
+        LOGGER.info(F'scan list downloaded')
+        LOGGER.debug(F'Scan list: {scan_list}')
+
         for scan_id in scan_list:
             LOGGER.info(F'Trying to download report form {config.name}')
 
@@ -122,11 +133,6 @@ def get_update_scans_workflow(config):
 @shared_task(name='Update all scans')
 def start_update_scans():
     for config in Config.objects.filter(enabled=True):
-
-        path = _get_save_path(config)
-        if path:
-            os.makedirs(path)
-
         config.set_status(status=Config.Status.PENDING)
         workflow = get_update_scans_workflow(config)
         start_workflow(workflow, config)
