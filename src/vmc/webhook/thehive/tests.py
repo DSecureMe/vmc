@@ -175,6 +175,19 @@ class CasesManagerTest(TestCase):
         self.assertEqual(case.scan_url, 'SCAN_URL')
         self.assertEqual(case.tenant, 'TENANT')
 
+    def test_call_get_or_create_case_create_without_tenant(self):
+        self.client_mock.create_case.return_value = 15
+
+        case = self.uut.get_or_create_case('SCAN_URL', 'SOURCE', None)
+
+        self.client_mock.create_case.assert_called_once_with(
+            F'New scan from SOURCE',
+            F'New scan from SOURCE'
+        )
+        self.assertTrue(Case.objects.get(id=15))
+        self.assertEqual(case.scan_url, 'SCAN_URL')
+        self.assertIsNone(case.tenant)
+
     def test_call_get_or_create_case_exists(self):
         Case.objects.create(id=9, scan_url='SCAN_URL', tenant='TENANT')
         case = self.uut.get_or_create_case('SCAN_URL', 'SOURCE', 'TENANT')

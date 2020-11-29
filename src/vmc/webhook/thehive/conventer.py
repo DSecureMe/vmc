@@ -70,10 +70,13 @@ class CaseManager:
     def get_or_create_case(self, scan_url, source, tenant):
         case = Case.objects.filter(scan_url=scan_url).first()
         if not case:
-            case_id = self._hive.create_case(
-                F'New scan from {source} for {tenant}',
-                F'New scan from {source} for {tenant}'
-            )
+
+            if tenant:
+                title = F'New scan from {source} for {tenant}'
+            else:
+                title = F'New scan from {source}'
+
+            case_id = self._hive.create_case(title, title)
             case = Case.objects.create(id=case_id, scan_url=scan_url, tenant=tenant)
 
             return case

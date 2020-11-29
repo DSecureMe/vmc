@@ -53,11 +53,11 @@ def _process_tasks(new_task):
 
     case_manager = CaseManager(hive_client)
 
-    if new_task.tenant and new_task.title:
+    if new_task.title:
         case = case_manager.get_or_create_case(new_task.scan_url, new_task.source, new_task.tenant)
         case_manager.merge_alert_to_case(case, new_task)
     else:
-        LOGGER.debug(F'Task {new_task.id} with empty tenant or title')
+        LOGGER.debug(F'Task {new_task.id} with empty title')
     case_manager.update_cases_desc()
 
 
