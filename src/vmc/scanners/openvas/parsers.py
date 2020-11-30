@@ -62,7 +62,7 @@ class GmpParserOMP7(Parser):
     def __init__(self, config: Config):
         self._config = config
         self.__parsed = dict()
-        self.__scanned_host = set()
+        self.__scanned_host = {}
 
     def get_scans_ids(self, reports) -> List:
         return [r.attrib.get('id') for r in reports.findall('report') if r.attrib.get('type') == 'scan']
@@ -71,10 +71,17 @@ class GmpParserOMP7(Parser):
         report = ET.fromstring(report.read())
         for r in report.findall('.//results/result'):
             ip_address = r.find('./host').text.strip()
-            self.__scanned_host.add(ip_address)
-            asset = AssetDocument.get_or_create(ip_address, self._config)
+            scan_date = r.find('./creation_time').text
+
+            if ip_address not in self.__scanned_host:
+                asset = AssetDocument.get_or_create(ip_address, self._config)
+                self.__scanned_host[ip_address] = asset
+            else:
+                asset = self.__scanned_host[ip_address]
+
+            asset.last_scan_date = scan_date
+
             if float(r.find('nvt//cvss_base').text) > 0:
-                scan_date = r.find('./creation_time').text
                 name = r.find('./name').text
                 tags = _parse_tags(r.find('./nvt/tags').text)
                 for cve in r.find('./nvt//cve').text.split(','):
@@ -101,7 +108,7 @@ class GmpParserOMP7(Parser):
                         scan_date=scan_date
                     )
 
-        return self.__parsed, list(self.__scanned_host)
+        return self.__parsed, list(self.__scanned_host.values())
 
     @staticmethod
     def get_cve(cve_id, oid, tags):
@@ -115,7 +122,7 @@ class GMP9Parser(Parser):
     def __init__(self, config: Config):
         self._config = config
         self.__parsed = dict()
-        self.__scanned_host = set()
+        self.__scanned_host = {}
 
     def get_scans_ids(self, reports) -> List:
         return [r.attrib.get('id') for r in reports.findall('report') if r.attrib.get('content_type') == 'text/xml']
@@ -124,10 +131,17 @@ class GMP9Parser(Parser):
         report = ET.fromstring(report.read())
         for r in report.findall('.//results/result'):
             ip_address = r.find('./host').text.strip()
-            self.__scanned_host.add(ip_address)
-            asset = AssetDocument.get_or_create(ip_address, self._config)
+            scan_date = r.find('./creation_time').text
+
+            if ip_address not in self.__scanned_host:
+                asset = AssetDocument.get_or_create(ip_address, self._config)
+                self.__scanned_host[ip_address] = asset
+            else:
+                asset = self.__scanned_host[ip_address]
+
+            asset.last_scan_date = scan_date
+
             if float(r.find('nvt//cvss_base').text) > 0:
-                scan_date = r.find('./creation_time').text
                 name = r.find('./name').text
                 tags = _parse_tags(r.find('./nvt/tags').text)
                 for cve in self._get_cves(r, tags):
@@ -153,7 +167,7 @@ class GMP9Parser(Parser):
                         scan_date=scan_date
                     )
 
-        return self.__parsed, list(self.__scanned_host)
+        return self.__parsed, list(self.__scanned_host.values())
 
     @staticmethod
     def _get_cves(element, tags):

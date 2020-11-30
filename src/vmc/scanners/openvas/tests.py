@@ -106,10 +106,10 @@ class GmpParserOMP7Test(ESTestCase, TestCase):
         with open(get_fixture_location(__file__, 'report_omp_7.xml'), 'r') as file:
             parser = GmpParserOMP7(self.config)
             vulns, scanned_hosts = parser.parse(file, "report_omp_7.xml")
-            self.assertEquals(
-                set(['10.10.10.31', '10.10.10.30', '10.10.10.32', '10.10.10.21', '10.10.10.20',
-                 '10.10.10.7', '10.10.10.23']),
-                set(scanned_hosts))
+            self.assertEquals(len(scanned_hosts), 7)
+            self.assertEquals(scanned_hosts[0].last_scan_date, '2020-04-08T21:04:47Z')
+            self.assertEquals(set(['10.10.10.31', '10.10.10.30', '10.10.10.32', '10.10.10.21',
+                     '10.10.10.20', '10.10.10.7', '10.10.10.23']), set(x.ip_address for x in scanned_hosts))
             self.assertEquals(len(vulns), 17)
 
             vuln = vulns['c2649538-c269-3902-9361-de3e3558a449']
@@ -146,6 +146,8 @@ class GMP9ParserTest(ESTestCase, TestCase):
         with open(get_fixture_location(__file__, 'report_gmp_9.xml'), 'r') as file:
             parser = GMP9Parser(self.config)
             vulns, scanned_hosts = parser.parse(file, "report_gmp_9.xml")
+            self.assertEquals(scanned_hosts[0].last_scan_date, '2020-11-03T21:47:56Z')
+            self.assertEquals(len(scanned_hosts), 34)
             self.assertEquals(
                 set(['192.168.0.103', '192.168.0.40', '192.168.0.7', '192.168.0.37', '192.168.0.39', '192.168.0.51',
                  '192.168.0.102', '192.168.0.32', '192.168.0.27', '192.168.0.45', '192.168.0.28', '192.168.0.31',
@@ -153,7 +155,7 @@ class GMP9ParserTest(ESTestCase, TestCase):
                  '192.168.0.13', '192.168.0.5', '192.168.0.42', '192.168.0.25', '192.168.0.6', '192.168.0.2',
                  '192.168.0.10', '192.168.0.14', '192.168.0.3', '192.168.0.15', '192.168.0.30', '192.168.0.38',
                  '192.168.0.8', '192.168.0.23', '192.168.0.50', '192.168.0.26']),
-                set(scanned_hosts))
+                set([x.ip_address for x in scanned_hosts]))
             self.assertEquals(len(vulns), 155)
 
             vuln = vulns['798d53cb-4479-3010-b6ed-7bcf2e816880']

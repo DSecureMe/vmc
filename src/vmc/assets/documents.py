@@ -20,7 +20,7 @@
 from decimal import Decimal
 
 from vmc.common.enum import TupleValueEnum
-from vmc.elasticsearch import Document, TupleValueField, Keyword, InnerDoc, Nested, Q, ListField
+from vmc.elasticsearch import Document, TupleValueField, Keyword, InnerDoc, Nested, Q, ListField, Date
 from vmc.elasticsearch.registries import registry
 from vmc.elasticsearch.helpers import async_bulk
 
@@ -61,6 +61,7 @@ class AssetInnerDoc(InnerDoc):
     tags = ListField()
     url = Keyword()
     source = Keyword()
+    last_scan_date = Date()
 
 
 @registry.register_document
@@ -152,7 +153,11 @@ class AssetDocument(Document, AssetInnerDoc):
     def update_gone_discovered_assets(targets, scanned_hosts, discovered_assets, config=None):
         index = AssetDocument.get_index(config)
         # FIXME: update by query
+        scanned_ips = [x.ip_address for x in scanned_hosts]
+
         for asset in discovered_assets.scan():
-            if asset.ip_address in targets and asset.ip_address not in scanned_hosts:
+            if asset.ip_address in targets and asset.ip_address not in scanned_ips:
                 asset.tags.append(AssetStatus.DELETED)
                 asset.save(index=index)
+
+        async_bulk(list(map(lambda x: x.save(weak=True).to_dict(), scanned_hosts)), index)

@@ -268,7 +268,11 @@ class NessusReportParserTest(ESTestCase, TestCase):
                                         'cipher encryption, and enable CTR or GCM cipher mode encryption.')
         self.assertEquals(parsed[vuln_id].scan_file_url, "internal.xml")
         self.assertIn('The SSH server is configured to support Cipher Block Chaining (CBC)', parsed[vuln_id].description)
-        self.assertEquals(scanned_hosts, ['10.31.2.30'])
+
+        self.assertEquals(1, len(scanned_hosts))
+        self.assertEquals(scanned_hosts[0].ip_address, '10.31.2.30')
+        self.assertEqual(str(scanned_hosts[0].last_scan_date), '2020-07-19 11:49:32')
+
 
         vuln_id = str(uuid.uuid3(uuid.NAMESPACE_OID, '10.31.2.30-tcp-42263-NESSUS-42263'))
         self.assertIsInstance(parsed[vuln_id], VulnerabilityDocument)

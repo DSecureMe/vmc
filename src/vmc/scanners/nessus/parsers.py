@@ -85,15 +85,19 @@ class NessusReportParser(Parser):
 
     def parse(self, report, file_url) -> [Dict, Dict]:
         for host in iter_elements_by_name(report, "ReportHost"):
-            self.__scanned_hosts.append(host.get('name'))
             scan_date = host.find('HostProperties/tag[@name="HOST_START_TIMESTAMP"]').text
             scan_date = datetime.fromtimestamp(int(scan_date))
+
+            asset = AssetFactory.create(host, self.__config)
+            asset.last_scan_date = scan_date
+            self.__scanned_hosts.append(asset)
+
             for item in host.iter('ReportItem'):
                 if item.get('severity') != NessusReportParser.INFO:
                     vuln = dict()
                     vuln['scan_date'] = scan_date
                     vuln['scan_file_url'] = file_url
-                    vuln['asset'] = AssetFactory.create(host, self.__config)
+                    vuln['asset'] = asset
                     vuln['plugin_id'] = item.get('pluginID')
                     vuln['name'] = item.get('pluginName')
                     vuln['port'] = item.get('port')
