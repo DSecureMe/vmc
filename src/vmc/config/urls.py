@@ -19,7 +19,7 @@
 """
 from django.contrib import admin
 from django.shortcuts import redirect
-from django.urls import path,include
+from django.urls import path, include
 from vmc.knowledge_base.views import update_knowledge_base
 from vmc.ralph.views import get_asset_manager_config
 from vmc.vulnerabilities.views import search_vulnerabilities
