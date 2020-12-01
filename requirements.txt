@@ -1,4 +1,4 @@
-django==2.2.15
+django==2.2.16
 psycopg2-binary==2.7.7
 celery==4.4.7
 requests==2.21.0
@@ -17,3 +17,4 @@ python-gvm==20.11.0
 bootstrap-admin==0.4.4
 netaddr==0.7.19
 djangorestframework==3.11.0
+urllib3>=1.25.9 # not directly required, pinned by Snyk to avoid a vulnerability
