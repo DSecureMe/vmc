@@ -22,7 +22,7 @@
 class Registry:
 
     def __init__(self):
-        self.__managers = {}
+        self.__managers = dict()
 
     def register(self, name, manager):
         self.__managers[name] = manager

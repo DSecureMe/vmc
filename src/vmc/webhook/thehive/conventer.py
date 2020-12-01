@@ -50,13 +50,11 @@ class TaskProcessor:
     @staticmethod
     def get_task_title_and_group(title):
         new_title = ''.join(title.split(':')[1:])
+        groups = ['critical', 'medium', 'high']
 
-        if 'critical' in title:
-            return new_title, 'critical'
-        if 'high' in title:
-            return new_title, 'high'
-        if 'medium' in title:
-            return new_title, 'medium'
+        for g in groups:
+            if g in title:
+                return new_title, g
 
         return new_title, 'low'
 

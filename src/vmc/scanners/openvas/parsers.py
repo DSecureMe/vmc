@@ -62,7 +62,7 @@ class GmpParserOMP7(Parser):
     def __init__(self, config: Config):
         self._config = config
         self.__parsed = dict()
-        self.__scanned_host = {}
+        self.__scanned_host = dict()
 
     def get_scans_ids(self, reports) -> List:
         return [r.attrib.get('id') for r in reports.findall('report') if r.attrib.get('type') == 'scan']
@@ -122,7 +122,7 @@ class GMP9Parser(Parser):
     def __init__(self, config: Config):
         self._config = config
         self.__parsed = dict()
-        self.__scanned_host = {}
+        self.__scanned_host = dict()
 
     def get_scans_ids(self, reports) -> List:
         return [r.attrib.get('id') for r in reports.findall('report') if r.attrib.get('content_type') == 'text/xml']

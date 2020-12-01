@@ -5,7 +5,8 @@ from vmc.webhook.thehive.handlers import handlers_map
 from vmc.webhook.models import TheHive4
 
 
-def capitalize(event_name):
+def build_event_name(obj_type, oper):
+    event_name = '{}_{}'.format(obj_type, oper)
     event_name = event_name.replace('_', ' ')
     return ''.join(x for x in event_name.title() if not x.isspace())
 
@@ -18,7 +19,7 @@ def thehive_webhook(request):
         obj_type = event.get('objectType', None)
         oper = event.get('operation', None)
         if obj_type and oper:
-            event_name = capitalize('{}_{}'.format(obj_type, oper))
+            event_name = build_event_name(obj_type, oper)
             if event_name in handlers_map:
                 handlers_map[event_name](event)
     return Response()

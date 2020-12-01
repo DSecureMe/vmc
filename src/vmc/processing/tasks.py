@@ -269,6 +269,7 @@ def _processing(idx, slices_count, assets_count, vulnerability_index):
         if slices_count > 1:
             vuln_search = vuln_search.extra(slice={"id": idx, "max": slices_count}).params(scroll="60m")
 
+        # List competence used due to better performance
         vulns = [vuln for vuln in vuln_search.scan()]
         LOGGER.debug(F'all vulns for slice {idx} downloaded')
 
