@@ -160,4 +160,4 @@ class AssetDocument(Document, AssetInnerDoc):
                 asset.tags.append(AssetStatus.DELETED)
                 asset.save(index=index)
 
-        async_bulk(list(map(lambda x: x.save(weak=True).to_dict(), scanned_hosts)), index)
+        async_bulk(list(map(lambda x: x.save(weak=True).to_dict(include_meta=True), scanned_hosts)), index)

@@ -96,10 +96,20 @@ class ConfigTest(TestCase):
         self.assertIsNotNone(self.uut.last_scans_pull)
 
         prefix = Prefix.objects.create(name='test1', prefix='test1')
-        self.uut.tenant = Tenant.objects.create(name='test1', slug_name='test1', elasticsearch_config=prefix)
+        new_tenant = Tenant.objects.create(name='test1', slug_name='test1', elasticsearch_config=prefix)
+        self.uut.tenant = new_tenant
         self.uut.save()
 
+        self.uut = Config.objects.get(id=1)
         self.assertIsNone(self.uut.last_scans_pull)
+        self.assertEqual(self.uut.tenant, new_tenant)
+
+        new_tenant_2 = Tenant.objects.create(name='test2', slug_name='test2', elasticsearch_config=prefix)
+        self.uut.tenant = new_tenant_2
+        self.uut.save()
+
+        self.uut = Config.objects.get(id=1)
+        self.assertEqual(self.uut.tenant, new_tenant_2)
 
 
 class AdminPanelTest(LiveServerTestCase):
