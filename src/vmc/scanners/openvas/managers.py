@@ -50,7 +50,7 @@ class OpenVasManager(Manager):
             elif v == '7.0':
                 p = GmpParserOMP7(self._config)
             else:
-                LOGGER.error(F'Unknown nessus version {v}')
+                LOGGER.error(F'Unknown openvas version {v}')
                 raise Exception(F'Unknown openvas protocol version {v}')
 
             p.get_targets = self.get_client().get_targets
