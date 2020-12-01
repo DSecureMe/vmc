@@ -170,6 +170,7 @@ class VulnerabilityDocumentTest(ESTestCase, TestCase):
         result_1 = VulnerabilityDocument.search().filter('term', cve__id=self.cve.id).execute()
 
         self.assertEqual(len(result_1.hits), 2)
+        self.assertNotEqual(result_1.hits[0].created_date, result_1.hits[0].modified_date)
         self.assertEqual(result_1.hits[0].cve.access_vector_v2, self.cve.access_vector_v2)
         self.assertEqual(result_1.hits[1].cve.access_vector_v2, self.cve.access_vector_v2)
 
@@ -222,6 +223,28 @@ class VulnerabilityDocumentTest(ESTestCase, TestCase):
             'term', asset__ip_address=self.asset.ip_address).execute()
 
         self.assertEqual(result_2.hits[0].tags, ['test', VulnerabilityStatus.FIXED])
+
+    def test_reopen_vulnerability(self):
+        vulnerability = create_vulnerability(self.asset, self.cve)
+        self.assertEqual(VulnerabilityDocument.search().count(), 1)
+
+        VulnerabilityDocument.create_or_update({}, [self.asset.ip_address], ConfigMock())
+        thread_pool_executor.wait_for_all()
+        self.assertEqual(VulnerabilityDocument.search().count(), 1)
+
+        result = VulnerabilityDocument.search().filter(
+            'term', asset__ip_address=self.asset.ip_address).execute()
+
+        self.assertEqual(result.hits[0].tags, ['test', VulnerabilityStatus.FIXED])
+
+        VulnerabilityDocument.create_or_update({vulnerability.id: vulnerability}, [self.asset.ip_address], ConfigMock())
+        thread_pool_executor.wait_for_all()
+        self.assertEqual(VulnerabilityDocument.search().count(), 1)
+
+        result = VulnerabilityDocument.search().filter(
+            'term', asset__ip_address=self.asset.ip_address).execute()
+
+        self.assertEqual(result.hits[0].tags, ['test', VulnerabilityStatus.REOPEN])
 
 
 @skipIf(not elastic_configured(), 'Skip if elasticsearch is not configured')

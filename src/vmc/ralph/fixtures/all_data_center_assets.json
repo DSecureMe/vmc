@@ -1,0 +1,216 @@
+{
+    "count": 1,
+    "next": null,
+    "previous": null,
+    "results": [
+        {
+            "id": 59,
+            "url": "http://ralph-vmc-demo.dsecure.me/api/data-center-assets/59/",
+            "business_owners": [
+                {
+                    "id": 35,
+                    "url": "http://ralph-vmc-demo.dsecure.me/api/users/35/",
+                    "username": "vmc-demo-admin",
+                    "first_name": "",
+                    "last_name": "",
+                    "ui_url": "http://ralph-vmc-demo.dsecure.me/accounts/ralphuser/35/"
+                }
+            ],
+            "technical_owners": [
+                {
+                    "id": 35,
+                    "url": "http://ralph-vmc-demo.dsecure.me/api/users/35/",
+                    "username": "vmc-demo-admin",
+                    "first_name": "",
+                    "last_name": "",
+                    "ui_url": "http://ralph-vmc-demo.dsecure.me/accounts/ralphuser/35/"
+                }
+            ],
+            "ethernet": [
+                {
+                    "id": 21,
+                    "mac": "00:16:3E:64:45:A5",
+                    "ipaddress": {
+                        "id": 14,
+                        "address": "10.0.0.60",
+                        "hostname": "hostname_10.0.0.60",
+                        "dhcp_expose": false,
+                        "is_management": false,
+                        "url": "http://ralph-vmc-demo.dsecure.me/api/ipaddresses/14/",
+                        "ui_url": "http://ralph-vmc-demo.dsecure.me/networks/ipaddress/14/"
+                    },
+                    "url": "http://ralph-vmc-demo.dsecure.me/api/ethernets/21/",
+                    "ui_url": "http://ralph-vmc-demo.dsecure.me/assets/ethernet/21/"
+                }
+            ],
+            "ipaddresses": [
+                "10.0.0.60"
+            ],
+            "disk": [],
+            "memory": [],
+            "processors": [],
+            "object_type": "datacenterasset",
+            "custom_fields": {
+                "confidentiality": "HIGH",
+                "integrity": "NOT_DEFINED",
+                "availability": "NOT_DEFINED",
+                "os": "Windows Server 2003"
+            },
+            "configuration_variables": {},
+            "__str__": "data center asset: ralph0.allegro.pl (BC: dc100000000 / SN: 696-17-0651)",
+            "tags": [],
+            "service_env": {
+                "id": 57,
+                "service": "Backup systems",
+                "environment": "prod",
+                "url": "http://ralph-vmc-demo.dsecure.me/api/services-environments/57/",
+                "service_uid": "sc-0",
+                "ui_url": "http://ralph-vmc-demo.dsecure.me/assets/serviceenvironment/57/"
+            },
+            "licences": [],
+            "configuration_path": {
+                "id": 58,
+                "url": "http://ralph-vmc-demo.dsecure.me/api/configuration-classes/58/",
+                "module": {
+                    "id": 1,
+                    "url": "http://ralph-vmc-demo.dsecure.me/api/configuration-modules/1/",
+                    "name": "ralph",
+                    "parent": null,
+                    "support_team": null,
+                    "ui_url": "http://ralph-vmc-demo.dsecure.me/assets/configurationmodule/1/"
+                },
+                "ui_url": "http://ralph-vmc-demo.dsecure.me/assets/configurationclass/58/",
+                "created": "2019-12-08T14:47:03.206673",
+                "modified": "2019-12-08T14:47:03.206693",
+                "remarks": "",
+                "class_name": "www",
+                "path": "ralph/www"
+            },
+            "ui_url": "http://ralph-vmc-demo.dsecure.me/data_center/datacenterasset/59/",
+            "rack": {
+                "id": 1,
+                "url": "http://ralph-vmc-demo.dsecure.me/api/racks/1/",
+                "ui_url": "http://ralph-vmc-demo.dsecure.me/data_center/rack/1/",
+                "name": "Rack #100",
+                "description": "",
+                "orientation": "top",
+                "max_u_height": 48,
+                "visualization_col": 1,
+                "visualization_row": 1,
+                "require_position": true,
+                "reverse_ordering": false,
+                "server_room": {
+                    "id": 1,
+                    "url": "http://ralph-vmc-demo.dsecure.me/api/server-rooms/1/",
+                    "ui_url": "http://ralph-vmc-demo.dsecure.me/data_center/serverroom/1/",
+                    "name": "Server Room A",
+                    "visualization_cols_num": 20,
+                    "visualization_rows_num": 20,
+                    "data_center": {
+                        "id": 1,
+                        "url": "http://ralph-vmc-demo.dsecure.me/api/data-centers/1/",
+                        "ui_url": "http://ralph-vmc-demo.dsecure.me/data_center/datacenter/1/",
+                        "name": "DC1",
+                        "show_on_dashboard": true
+                    }
+                }
+            },
+            "scmstatuscheck": null,
+            "securityscan": null,
+            "related_hosts": {
+                "virtual_servers": [],
+                "physical_servers": [],
+                "cloud_hosts": []
+            },
+            "created": "2019-12-08T14:47:03.218701",
+            "modified": "2019-12-08T16:59:33.142686",
+            "remarks": "",
+            "hostname": "ralph0.allegro.pl",
+            "sn": "696-17-0651",
+            "barcode": "dc100000000",
+            "niw": null,
+            "required_support": false,
+            "order_no": "Order number 0",
+            "invoice_no": "Invoice number 0",
+            "invoice_date": "2019-11-23",
+            "price": "77.30",
+            "provider": "Komputronik",
+            "depreciation_rate": "25.00",
+            "force_depreciation": false,
+            "depreciation_end_date": null,
+            "buyout_date": "2023-12-23",
+            "task_url": null,
+            "start_usage": null,
+            "status": "new",
+            "position": 1,
+            "orientation": "front",
+            "slot_no": "",
+            "firmware_version": "1.1.0",
+            "bios_version": "2.2.0",
+            "source": "shipment",
+            "delivery_date": null,
+            "production_year": null,
+            "production_use_date": null,
+            "parent": null,
+            "model": {
+                "id": 14,
+                "url": "http://ralph-vmc-demo.dsecure.me/api/assetmodels/14/",
+                "ui_url": "http://ralph-vmc-demo.dsecure.me/assets/assetmodel/14/",
+                "name": "DL360",
+                "created": "2019-12-08T14:47:03.137081",
+                "modified": "2019-12-08T14:47:03.137101",
+                "type": "data center",
+                "power_consumption": 0,
+                "height_of_device": 1.0,
+                "cores_count": 0,
+                "visualization_layout_front": "N/A",
+                "visualization_layout_back": "N/A",
+                "has_parent": false,
+                "manufacturer": {
+                    "id": 1,
+                    "url": "http://ralph-vmc-demo.dsecure.me/api/manufacturers/1/",
+                    "ui_url": "http://ralph-vmc-demo.dsecure.me/assets/manufacturer/1/",
+                    "name": "Dell",
+                    "created": "2019-12-08T14:47:01.354817",
+                    "modified": "2019-12-08T14:47:01.354838",
+                    "manufacturer_kind": null
+                },
+                "category": {
+                    "id": 13,
+                    "url": "http://ralph-vmc-demo.dsecure.me/api/categories/13/",
+                    "ui_url": "http://ralph-vmc-demo.dsecure.me/assets/category/13/",
+                    "name": "ATS",
+                    "created": "2019-12-08T14:47:03.126476",
+                    "modified": "2019-12-08T14:47:03.126498",
+                    "code": "",
+                    "imei_required": false,
+                    "allow_deployment": false,
+                    "show_buyout_date": false,
+                    "default_depreciation_rate": "25.00",
+                    "lft": 2,
+                    "rght": 3,
+                    "tree_id": 2,
+                    "level": 1,
+                    "parent": "http://ralph-vmc-demo.dsecure.me/api/categories/12/"
+                }
+            },
+            "budget_info": {
+                "id": 1,
+                "url": "http://ralph-vmc-demo.dsecure.me/api/budget-info/1/",
+                "ui_url": "http://ralph-vmc-demo.dsecure.me/assets/budgetinfo/1/",
+                "name": "Python Team",
+                "created": "2019-12-08T14:47:01.407224",
+                "modified": "2019-12-08T14:47:01.407242"
+            },
+            "property_of": {
+                "id": 1,
+                "url": "http://ralph-vmc-demo.dsecure.me/api/assetholders/1/",
+                "ui_url": "http://ralph-vmc-demo.dsecure.me/assets/assetholder/1/",
+                "name": "Grupa Allegro SP. z o.o.",
+                "created": "2019-12-08T14:47:03.179724",
+                "modified": "2019-12-08T14:47:03.179742"
+            },
+            "connections": []
+        }
+      ]
+}

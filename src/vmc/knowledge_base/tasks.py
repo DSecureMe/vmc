@@ -35,7 +35,7 @@ from vmc.knowledge_base.factories import CveFactory, CWEFactory, ExploitFactory
 
 
 START_YEAR = 2002
-CVE_NVD_URL = 'https://nvd.nist.gov/feeds/json/cve/1.0/nvdcve-1.0-{}.json.gz'
+CVE_NVD_URL = 'https://nvd.nist.gov/feeds/json/cve/1.1/nvdcve-1.1-{}.json.gz'
 CWE_MITRE_URL = 'https://cwe.mitre.org/data/xml/cwec_v2.12.xml.zip'
 VIA4_URL = 'https://www.cve-search.org/feeds/via4.json'
 

@@ -22,9 +22,8 @@ from typing import Dict, List
 
 class Parser:
 
-    @staticmethod
-    def get_scans_ids(reports) -> List:
+    def get_scans_ids(self, reports) -> List:
         raise NotImplementedError()
 
-    def parse(self, report) -> [Dict, Dict]:
+    def parse(self, report, file_url) -> [Dict, Dict]:
         raise NotImplementedError()

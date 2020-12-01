@@ -36,8 +36,8 @@ Source code in this repository is covered by one of three licenses:
 The default license throughout the repository is Apache License 2.0 unless the header specifies another license.
 
 # Try it
-We encourage you to try our docker image. You can get it from [here](https://github.com/DSecureMe/vmc-docker)
-Instruction how to use it is in the docker [readme](https://github.com/DSecureMe/vmc-docker/blob/master/README.MD) file
+We encourage you to try our demo instance. You can get it from [here](https://github.com/DSecureMe/vmc-demo)
+Instruction how to use it is in the demo [readme](https://github.com/DSecureMe/vmc-demo/blob/master/README.MD) file
 
 
 # Contributing

@@ -52,6 +52,8 @@ INTERNAL_APPS = [
     'vmc.scanners',
     'vmc.scanners.openvas',
     'vmc.scanners.nessus',
+    'vmc.webhook',
+    'vmc.webhook.thehive'
 ]
 
 THIRD_PARTY_APPS = [
@@ -169,3 +171,4 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/2.1/howto/static-files/
 
 STATIC_URL = '/static/'
+BACKUP_ROOT = '/usr/share/vmc/backup'

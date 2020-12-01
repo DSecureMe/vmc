@@ -22,24 +22,16 @@
 class Registry:
 
     def __init__(self):
-        self.__clients = {}
-        self.__parsers = {}
+        self.__managers = dict()
 
-    def register(self, name, client, parser):
-        self.__clients[name] = client
-        self.__parsers[name] = parser
+    def register(self, name, manager):
+        self.__managers[name] = manager
 
     def get(self, config):
-        return self.__clients[config.scanner](config), self.__parsers[config.scanner](config)
-
-    def get_client(self, config):
-        return self.__clients[config.scanner](config)
-
-    def get_parser(self, config):
-        return self.__parsers[config.scanner](config)
+        return self.__managers[config.scanner](config)
 
     def get_scanners(self):
-        return self.__clients.keys()
+        return self.__managers.keys()
 
 
 scanners_registry = Registry()

@@ -36,6 +36,18 @@ def get_config(key, default):
     return CFG[key] if CFG and key in CFG else default
 
 
+#VMC absolute URI settings
+
+SCHEMA = 'https' if get_config('vmc.ssl', False) else 'http'
+DOMAIN = get_config('vmc.domain', 'localhost')
+
+if get_config('vmc.port', '80') not in ["443", "80"]:
+    PORT = F":{get_config('vmc.port', '443')}"
+else:
+    PORT = ""
+
+ABSOLUTE_URI = F"{SCHEMA}://{DOMAIN}{PORT}"
+
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
@@ -63,6 +75,8 @@ INTERNAL_APPS = [
     'vmc.scanners',
     'vmc.scanners.openvas',
     'vmc.scanners.nessus',
+    'vmc.webhook',
+    'vmc.webhook.thehive'
 ]
 
 THIRD_PARTY_APPS = [
@@ -144,6 +158,8 @@ AUTH_PASSWORD_VALIDATORS = [
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
         'rest_framework.authentication.TokenAuthentication',
+        'rest_framework.authentication.BasicAuthentication',
+        'rest_framework.authentication.SessionAuthentication',
     ]
 }
 
@@ -166,6 +182,7 @@ USE_TZ = True
 
 STATIC_URL = '/static/'
 STATIC_ROOT = '/usr/share/vmc/static'
+BACKUP_ROOT = '/usr/share/vmc/backup'
 
 
 CELERY_BROKER_URL = 'amqp://{}:{}@{}:{}'.format(

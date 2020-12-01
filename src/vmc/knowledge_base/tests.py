@@ -256,7 +256,7 @@ class UpdateCveTaskTest(ESTestCase, TestCase):
         update_cve(2017)
 
         get_file.assert_called_once_with(
-            'https://nvd.nist.gov/feeds/json/cve/1.0/nvdcve-1.0-2017.json.gz'
+            'https://nvd.nist.gov/feeds/json/cve/1.1/nvdcve-1.1-2017.json.gz'
         )
         self.assertEqual(Search().index(CveDocument.Index.name).count(), 2)
 
