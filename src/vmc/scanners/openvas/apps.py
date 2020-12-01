@@ -26,6 +26,5 @@ class OpenVasConfig(AppConfig):
 
     def ready(self):
         from vmc.scanners.registries import scanners_registry
-        from vmc.scanners.openvas.parsers import GmpParser
-        from vmc.scanners.openvas.clients import OpenVasClient
-        scanners_registry.register(self.name, OpenVasClient, GmpParser)
+        from vmc.scanners.openvas.managers import OpenVasManager
+        scanners_registry.register(self.name, OpenVasManager)

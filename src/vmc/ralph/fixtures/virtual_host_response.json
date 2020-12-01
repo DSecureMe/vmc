@@ -1,0 +1,103 @@
+{
+            "id": 62,
+            "url": "http://10.31.2.23/api/virtual-servers/62/",
+            "business_owners": [],
+            "technical_owners": [],
+            "ethernet": [
+                {
+                    "id": 102,
+                    "mac": "02:44:AA:BB:77:99",
+                    "ipaddress": {
+                        "id": 857,
+                        "address": "10.0.0.25",
+                        "hostname": null,
+                        "dhcp_expose": false,
+                        "is_management": true,
+                        "url": "http://10.31.2.23/api/ipaddresses/857/",
+                        "ui_url": "http://10.31.2.23/networks/ipaddress/857/"
+                    },
+                    "url": "http://10.31.2.23/api/ethernets/860/",
+                    "ui_url": "http://10.31.2.23/assets/ethernet/860/"
+                },
+                {
+                    "id": 861,
+                    "mac": "BE:7E:8F:1C:02:29",
+                    "ipaddress": null,
+                    "url": "http://10.31.2.23/api/ethernets/861/",
+                    "ui_url": "http://10.31.2.23/assets/ethernet/861/"
+                }
+            ],
+            "ipaddresses": [
+                "10.31.1.51"
+            ],
+            "disk": [
+                {
+                    "id": 6,
+                    "url": "http://10.31.2.23/api/disks/6/",
+                    "size": 40,
+                    "serial_number": "",
+                    "slot": null,
+                    "firmware_version": "",
+                    "ui_url": "http://10.31.2.23/assets/disk/6/"
+                }
+            ],
+            "memory": [
+                {
+                    "id": 6,
+                    "url": "http://10.31.2.23/api/memory/6/",
+                    "size": 2048,
+                    "speed": null,
+                    "ui_url": "http://10.31.2.23/assets/memory/6/"
+                }
+            ],
+            "processors": [
+                {
+                    "id": 6,
+                    "url": "http://10.31.2.23/api/processors/6/",
+                    "speed": null,
+                    "cores": 2,
+                    "ui_url": "http://10.31.2.23/assets/processor/6/"
+                }
+            ],
+            "object_type": "virtualserver",
+            "custom_fields": {
+                  "confidentiality": "HIGH",
+                  "os": "Windows Server 2003"
+            },
+            "configuration_variables": {},
+            "__str__": "Virtual server (VM): VirtualServer: Centos7_ISOstore (None)",
+            "tags": ["DMZ", "FOO", "BOO"],
+            "service_env": {
+                "id": 821,
+                "service": "load_balancing",
+                "environment": "dev",
+                "url": "http://10.31.2.23/api/services-environments/821/",
+                "service_uid": null,
+                "ui_url": "http://10.31.2.23/assets/serviceenvironment/821/"
+            },
+            "licences": [],
+            "configuration_path": null,
+            "type": {
+                "id": 1,
+                "url": "http://10.31.2.23/api/virtual-server-types/1/",
+                "ui_url": "http://10.31.2.23/virtual/virtualservertype/1/",
+                "name": "CentOS7",
+                "created": "2020-05-18T12:59:29.574253",
+                "modified": "2020-05-18T12:59:29.574274"
+            },
+            "hypervisor": {
+                "url": "http://10.31.2.23/api/data-center-assets/822/",
+                "ui_url": "http://10.31.2.23/r/9/822/"
+            },
+            "scmstatuscheck": null,
+            "securityscan": null,
+            "ui_url": "http://10.31.2.23/virtual/virtualserver/829/",
+            "created": "2020-05-18T14:04:07.646458",
+            "modified": "2020-05-18T14:07:30.071948",
+            "remarks": "",
+            "status": "new",
+            "hostname": "testhostname2",
+            "sn": null,
+            "parent": "http://10.31.2.23/api/base-objects/822/"
+}
+

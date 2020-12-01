@@ -194,7 +194,7 @@ class AssetDocumentTest(ESTestCase, TestCase):
         self.assertEqual(uut.tags, [])
 
     def test_update_gone_discovered_assets(self):
-        AssetDocument.get_or_create('10.0.0.1')
+        asset = AssetDocument.get_or_create('10.0.0.1')
         AssetDocument.get_or_create('10.0.0.2')
         self.assertEqual(2, Search().index(AssetDocument.Index.name).count())
 
@@ -202,7 +202,7 @@ class AssetDocumentTest(ESTestCase, TestCase):
 
         targets = netaddr.IPSet()
         targets.add("10.0.0.0/8")
-        scanned_hosts = ["10.0.0.1"]
+        scanned_hosts = [asset]
 
         AssetDocument.update_gone_discovered_assets(targets=targets, scanned_hosts=scanned_hosts,
                                                     discovered_assets=discovered_assets, config=AssetConfigMock())

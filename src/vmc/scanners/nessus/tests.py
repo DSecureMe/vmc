@@ -17,12 +17,11 @@
  * under the License.
  *
 """
-
 import uuid
 import datetime
 import netaddr
 from unittest import skipIf
-from unittest.mock import patch
+from unittest.mock import patch, MagicMock, call
 
 from django.test import TestCase
 
@@ -31,8 +30,7 @@ from vmc.scanners.models import Config
 from vmc.scanners.registries import scanners_registry
 from vmc.scanners.nessus.parsers import NessusReportParser
 from vmc.scanners.nessus.apps import NessusConfig
-from vmc.scanners.nessus.clients import NessusClient
-
+from vmc.scanners.nessus.clients import NessusClient, _NessusClient8, _NessusClient7
 
 from vmc.knowledge_base import metrics
 from vmc.config.test_settings import elastic_configured
@@ -60,10 +58,108 @@ class NessusConfigTest(TestCase):
     def test_name(self):
         self.assertEqual(NessusConfig.name, 'vmc.scanners.nessus')
 
-    def test_registry(self):
-        config = Config.objects.first()
-        self.assertIsInstance(scanners_registry.get_parser(config), NessusReportParser)
-        self.assertIsInstance(scanners_registry.get_client(config), NessusClient)
+    @patch('vmc.scanners.nessus.clients.requests')
+    def test_registry(self, request_mock):
+        request_mock.get.return_value = ResponseMock({"nessus_ui_version": '7.2.3'}, 200)
+        manager = scanners_registry.get(Config.objects.first())
+
+        self.assertIsInstance(manager.get_parser(), NessusReportParser)
+        self.assertIsInstance(manager.get_client(), NessusClient)
+
+
+class NessusClient7Test(TestCase):
+    fixtures = ['nessus_config.json']
+
+    def setUp(self):
+        self.config = Config.objects.first()
+        self.uut = _NessusClient7(self.config)
+
+
+    @patch('vmc.scanners.nessus.clients.requests')
+    def test_download_scan_xml(self, request_mock):
+        rsp = MagicMock(content=b'content', status_code=200)
+        rsp.json.return_value = {'file': "file", 'status': 'ready'}
+        request_mock.request.side_effect = [rsp, rsp, rsp]
+
+        self.uut.download_scan(1, NessusClient.ReportFormat.XML)
+
+        request_mock.request.assert_has_calls([
+            call('POST', 'http://test:80/scans/1/export', data='{"format": "nessus"}',
+                 headers={'X-ApiKeys': 'accessKey=API_KEY;secretKey=SECRET_KEY', 'Content-type': 'application/json',
+                          'Accept': 'text/plain'}, verify=False),
+            call('GET', 'http://test:80/scans/1/export/file/status', data='{}',
+                 headers={'X-ApiKeys': 'accessKey=API_KEY;secretKey=SECRET_KEY', 'Content-type': 'application/json',
+                          'Accept': 'text/plain'}, verify=False),
+            call('GET', 'http://test:80/scans/1/export/file/download', data='{}',
+                 headers={'X-ApiKeys': 'accessKey=API_KEY;secretKey=SECRET_KEY', 'Content-type': 'application/json',
+                          'Accept': 'text/plain'}, verify=False)
+        ])
+
+    @patch('vmc.scanners.nessus.clients.requests')
+    def test_download_scan_pretty(self, request_mock):
+        rsp = MagicMock(content=b'content', status_code=200)
+        rsp.json.return_value = {'file': "file", 'status': 'ready'}
+        request_mock.request.side_effect = [rsp, rsp, rsp]
+
+        self.uut.download_scan(1, NessusClient.ReportFormat.PRETTY)
+
+        request_mock.request.assert_has_calls([
+            call('POST', 'http://test:80/scans/1/export', data='{"format": "html", "chapters": "vuln_by_host"}',
+                 headers={'X-ApiKeys': 'accessKey=API_KEY;secretKey=SECRET_KEY',
+                          'Content-type': 'application/json', 'Accept': 'text/plain'}, verify=False),
+            call('GET', 'http://test:80/scans/1/export/file/status', data='{}',
+                 headers={'X-ApiKeys': 'accessKey=API_KEY;secretKey=SECRET_KEY',
+                          'Content-type': 'application/json', 'Accept': 'text/plain'}, verify=False),
+            call('GET', 'http://test:80/scans/1/export/file/download', data='{}',
+                 headers={'X-ApiKeys': 'accessKey=API_KEY;secretKey=SECRET_KEY',
+                          'Content-type': 'application/json', 'Accept': 'text/plain'}, verify=False)
+        ])
+
+
+class NessusClient8Test(TestCase):
+    fixtures = ['nessus_config.json']
+
+    def setUp(self):
+        self.config = Config.objects.first()
+        self.uut = _NessusClient8(self.config)
+
+
+    @patch('vmc.scanners.nessus.clients.requests')
+    def test_download_scan_xml(self, request_mock):
+        rsp = MagicMock(content=b'content', status_code=200)
+        rsp.json.return_value = {'file': "file", 'status': 'ready', 'token': 'token'}
+        request_mock.request.side_effect = [rsp, rsp, rsp]
+
+        self.uut.download_scan(1, NessusClient.ReportFormat.XML)
+
+        request_mock.request.assert_has_calls([
+            call('POST', 'http://test:80/scans/1/export', data='{"format": "nessus"}', headers={'X-ApiKeys': 'accessKey=API_KEY;secretKey=SECRET_KEY', 'Content-type': 'application/json', 'Accept': 'text/plain'}, verify=False),
+            call('GET', 'http://test:80/tokens/token/status', data='{}', headers={'X-ApiKeys': 'accessKey=API_KEY;secretKey=SECRET_KEY', 'Content-type': 'application/json', 'Accept': 'text/plain'}, verify=False),
+            call('GET', 'http://test:80/tokens/token/download', data='{}', headers={'X-ApiKeys': 'accessKey=API_KEY;secretKey=SECRET_KEY', 'Content-type': 'application/json', 'Accept': 'text/plain'}, verify=False)
+        ], any_order=True)
+
+    @patch('vmc.scanners.nessus.clients.requests')
+    def test_download_scan_pretty(self, request_mock):
+        rsp = MagicMock(content=b'content', status_code=200)
+        rsp.json.return_value = {'file': "file", 'status': 'ready', 'token': 'token'}
+        request_mock.request.side_effect = [rsp, rsp, rsp]
+
+        self.uut.download_scan(1, NessusClient.ReportFormat.PRETTY)
+
+        request_mock.request.assert_has_calls([
+            call('POST', 'http://test:80/scans/1/export',
+                 data='{"format": "html", "chapters": "custom;vuln_by_host;remediations;vulnerabilities", "reportContents": {"csvColumns": {}, "vulnerabilitySections": {"synopsis": true, "description": true, "see_also": true, "solution": true, "risk_factor": true, "cvss3_base_score": true, "cvss3_temporal_score": true, "cvss_base_score": true, "cvss_temporal_score": true, "stig_severity": true, "references": true, "exploitable_with": true, "plugin_information": true, "plugin_output": true}, "hostSections": {"scan_information": true, "host_information": true}, "formattingOptions": {"page_breaks": true}}, "extraFilters": {"host_ids": [], "plugin_ids": []}}',
+                 headers={'X-ApiKeys': 'accessKey=API_KEY;secretKey=SECRET_KEY', 'Content-type': 'application/json',
+                          'Accept': 'text/plain'}, verify=False),
+            call('GET', 'http://test:80/tokens/token/status', data='{}',
+                 headers={'X-ApiKeys': 'accessKey=API_KEY;secretKey=SECRET_KEY', 'Content-type': 'application/json',
+                          'Accept': 'text/plain'}, verify=False),
+            call('GET', 'http://test:80/tokens/token/download', data='{}',
+                 headers={'X-ApiKeys': 'accessKey=API_KEY;secretKey=SECRET_KEY', 'Content-type': 'application/json',
+                          'Accept': 'text/plain'}, verify=False)
+        ])
+
+
 
 
 class NessusClientTest(TestCase):
@@ -71,14 +167,17 @@ class NessusClientTest(TestCase):
 
     def setUp(self):
         self.config = Config.objects.first()
+
+    def set_nessus_client(self, request_mock, version='7.2.3'):
+        request_mock.get.return_value = ResponseMock({"nessus_ui_version": version}, 200)
         self.uut = NessusClient(self.config)
+
+    def assert_request(self, request_mock, method, action):
         self.headers = {
             'X-ApiKeys': F'accessKey={self.config.username};secretKey={self.config.password}',
             'Content-type': 'application/json',
             'Accept': 'text/plain'
         }
-
-    def assert_request(self, request_mock, method, action):
         request_mock.request.assert_called_with(
             method,
             F'http://test:80/{action}',
@@ -89,18 +188,22 @@ class NessusClientTest(TestCase):
 
     @patch('vmc.scanners.nessus.clients.requests')
     def test_call_get_scan_list(self, request_mock):
+        self.set_nessus_client(request_mock)
         request_mock.request.return_value = ResponseMock({'scan': 1}, 200)
 
         scan_list = self.uut.get_scans()
         self.assert_request(request_mock, 'GET', 'scans')
         self.assertEqual(scan_list, {'scan': 1})
 
-        scan_list2 = self.uut.get_scans(last_modification_date=datetime.datetime.fromtimestamp(1551398400))
+        self.config.last_scans_pull = datetime.datetime.fromtimestamp(1551398400)
+        self.uut = NessusClient(self.config)
+        scan_list2 = self.uut.get_scans()
         self.assert_request(request_mock, 'GET', 'scans?last_modification_date=1551398400')
         self.assertEqual(scan_list2, {'scan': 1})
 
     @patch('vmc.scanners.nessus.clients.requests')
     def test_call_get_scan_detail(self, request_mock):
+        self.set_nessus_client(request_mock)
         request_mock.request.return_value = ResponseMock({'foo': 1}, 200)
 
         resp = self.uut.get_scan_detail(1)
@@ -127,28 +230,51 @@ class NessusReportParserTest(ESTestCase, TestCase):
     def test_get_scans_ids(self):
         self.assertEqual(self.uut.get_scans_ids(
             {'scans': [
+                {'id': 3, 'folder_id': 3},
+                {'id': 2, 'folder_id': 2},
+                {'id': 3, 'folder_id': 1}
+            ], 'folders': [{'type': 'trash', 'id': 1, 'name': 'Trash'},
+                           {'type': 'custom', 'id': 2, 'name':'test'}]}), [2])
+
+    def test_get_scans_ids_with_filter(self):
+        self.config.filter = r'test$'
+        self.config.save()
+
+        self.uut = NessusReportParser(self.config)
+        self.assertEqual(self.uut.get_scans_ids(
+            {'scans': [
+                {'id': 3, 'folder_id': 3},
                 {'id': 2, 'folder_id': 2},
                 {'id': 3, 'folder_id': 1}
             ],
-                'folders': [{'type': 'trash', 'id': 1}]}
-        ), [2])
+                'folders': [{'type': 'trash', 'id': 1, 'name': 'Trash'},
+                            {'type': 'custom', 'id': 2, 'name': 'test'},
+                            {'type': 'custom', 'id': 3, 'name': 'test2'}]}), [2])
 
     def test_parse_call(self):
-        parsed, scanned_hosts = self.uut.parse(self.internal_xml)
-        vuln_id = str(uuid.uuid3(uuid.NAMESPACE_OID, '10.31.2.30-tcp-70658'))
+        parsed, scanned_hosts = self.uut.parse(self.internal_xml, "internal.xml")
+        vuln_id = str(uuid.uuid3(uuid.NAMESPACE_OID, '10.31.2.30-tcp-70658-CVE-2008-5161'))
         self.assertEquals(len(parsed), 2)
         self.assertIsInstance(parsed[vuln_id], VulnerabilityDocument)
+        self.assertEquals(str(parsed[vuln_id].scan_date), '2020-07-19 11:49:32')
         self.assertEquals(parsed[vuln_id].asset.ip_address, '10.31.2.30')
         self.assertEquals(parsed[vuln_id].cve.id, 'CVE-2008-5161')
         self.assertEquals(parsed[vuln_id].port, '22')
         self.assertEquals(parsed[vuln_id].svc_name, 'ssh')
         self.assertEquals(parsed[vuln_id].protocol, 'tcp')
+        self.assertEquals(parsed[vuln_id].tenant, None)
+        self.assertEquals(parsed[vuln_id].name, 'SSH Server CBC Mode Ciphers Enabled')
         self.assertEquals(parsed[vuln_id].solution, 'Contact the vendor or consult product documentation to disable CBC mode '
                                         'cipher encryption, and enable CTR or GCM cipher mode encryption.')
+        self.assertEquals(parsed[vuln_id].scan_file_url, "internal.xml")
         self.assertIn('The SSH server is configured to support Cipher Block Chaining (CBC)', parsed[vuln_id].description)
-        self.assertEquals(scanned_hosts, ['10.31.2.30'])
 
-        vuln_id = str(uuid.uuid3(uuid.NAMESPACE_OID, '10.31.2.30-tcp-42263'))
+        self.assertEquals(1, len(scanned_hosts))
+        self.assertEquals(scanned_hosts[0].ip_address, '10.31.2.30')
+        self.assertEqual(str(scanned_hosts[0].last_scan_date), '2020-07-19 11:49:32')
+
+
+        vuln_id = str(uuid.uuid3(uuid.NAMESPACE_OID, '10.31.2.30-tcp-42263-NESSUS-42263'))
         self.assertIsInstance(parsed[vuln_id], VulnerabilityDocument)
         self.assertEquals(parsed[vuln_id].asset.ip_address, '10.31.2.30')
         self.assertEquals(parsed[vuln_id].cve.id, 'NESSUS-42263')

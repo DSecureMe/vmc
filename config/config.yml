@@ -1,3 +1,8 @@
+#VMC
+vmc.ssl: True
+vmc.domain: test.dsecure.me
+vmc.port: 443
+
 #Redis
 redis.url: redis://redis:6379/1
 

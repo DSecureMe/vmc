@@ -17,8 +17,10 @@
  * under the License.
  */
 """
+
 from enum import Enum
 
+from django.utils.timezone import now
 from django.conf import settings
 from django.db.models.signals import post_delete
 from elasticsearch_dsl import UpdateByQuery
@@ -101,7 +103,7 @@ class DocumentRegistry:
 
                     if isinstance(field_type, Object) and issubclass(sender, field_type._doc_class):
 
-                        for index in self._get_indexes(new_version, field_type._doc_class):
+                        for index in self._get_indexes(new_version, document):
                             search = document.search(index=index).filter(
                                 'term', **{F'{field_name}__id': old_version.id})
                             count = search.count()
@@ -140,9 +142,10 @@ class DocumentRegistry:
     def _update_by_query(index, field_name, old_version, new_version):
         ubq = UpdateByQuery(using=get_connection(), index=index).filter(
             'term', **{F'{field_name}__id': old_version.id}
-        ).script(source=F'ctx._source.{field_name} = params.new_value',
+        ).script(source=F'ctx._source.{field_name} = params.new_value; ctx._source.modified_date = params.new_date',
                  params={
-                     'new_value': new_version.to_dict()
+                     'new_value': new_version.to_dict(),
+                     'new_date': now()
                  })
         refresh = getattr(settings, 'TEST', False)
         ubq.params(refresh=refresh, conflicts='proceed').execute()

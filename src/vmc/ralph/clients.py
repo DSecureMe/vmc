@@ -39,8 +39,11 @@ class RalphClient:
         self._config = config
         self._api_token = None
 
-    def get_assets(self) -> list:
+    def get_data_center_assets(self) -> list:
         return self._get_list('/api/data-center-assets/?format=json&limit=500')
+
+    def get_virtual_assets(self) -> list:
+        return self._get_list('/api/virtual-servers/?format=json&limit=500')
 
     def get_users(self) -> list:
         return self._get_list('/api/users/?format=json&limit=500')

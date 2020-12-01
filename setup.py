@@ -58,7 +58,8 @@ setup(
     },
     data_files=[
         ('/etc/vmc/', ['config/config.yml']),
-        ('/usr/share/vmc/static', [])
+        ('/usr/share/vmc/static', []),
+        ('/usr/share/vmc/backup', [])
     ],
     install_requires=install_requires(),
     tests_require=tests_require(),

@@ -17,11 +17,12 @@
  * under the License.
  *
 """
-
+import re
 import logging
 import uuid
 import netaddr
 from typing import Dict, List
+from datetime import datetime
 
 from defusedxml.lxml import RestrictedElement
 from vmc.vulnerabilities.documents import VulnerabilityDocument
@@ -61,29 +62,44 @@ class NessusReportParser(Parser):
         self.__parsed = dict()
         self.__scanned_hosts = list()
 
-    @staticmethod
-    def get_scans_ids(scan_list: Dict) -> List:
-        if scan_list['scans']:
-            return [x['id'] for x in scan_list['scans']
-                    if x['folder_id'] != NessusReportParser.get_trash_folder_id(scan_list)]
+    def get_scans_ids(self, reports) -> List:
+        if reports['scans']:
+            folders = self._get_folders(reports)
+            return [x['id'] for x in reports['scans'] if x['folder_id'] in folders]
         return []
 
-    @staticmethod
-    def get_trash_folder_id(scan_list: Dict) -> [int, None]:
+    def _get_folders(self, scan_list: Dict) -> [int, None]:
+        result = set()
         if 'folders' in scan_list:
             for folder in scan_list['folders']:
-                if folder['type'] == NessusReportParser.TRASH_FOLDER_TYPE:
-                    return folder['id']
-        return scan_list
+                if folder['type'] != NessusReportParser.TRASH_FOLDER_TYPE and self._match_folder(
+                        self.__config.filter, folder['name']):
+                    result.add(folder['id'])
+        return result
 
-    def parse(self, report) -> [Dict, Dict]:
+    @staticmethod
+    def _match_folder(folder_filter, name):
+        if folder_filter:
+            return re.match(folder_filter, name)
+        return True
+
+    def parse(self, report, file_url) -> [Dict, Dict]:
         for host in iter_elements_by_name(report, "ReportHost"):
-            self.__scanned_hosts.append(host.get('name'))
+            scan_date = host.find('HostProperties/tag[@name="HOST_START_TIMESTAMP"]').text
+            scan_date = datetime.fromtimestamp(int(scan_date))
+
+            asset = AssetFactory.create(host, self.__config)
+            asset.last_scan_date = scan_date
+            self.__scanned_hosts.append(asset)
+
             for item in host.iter('ReportItem'):
                 if item.get('severity') != NessusReportParser.INFO:
                     vuln = dict()
-                    vuln['asset'] = AssetFactory.create(host, self.__config)
+                    vuln['scan_date'] = scan_date
+                    vuln['scan_file_url'] = file_url
+                    vuln['asset'] = asset
                     vuln['plugin_id'] = item.get('pluginID')
+                    vuln['name'] = item.get('pluginName')
                     vuln['port'] = item.get('port')
 
                     if vuln['port'] != '0':
@@ -93,19 +109,24 @@ class NessusReportParser(Parser):
                         vuln['port'] = None
                         vuln['svc_name'] = None
                         vuln['protocol'] = None
+
                     vuln['description'] = get_value(item.find('description'))
                     vuln['solution'] = get_value(item.find('solution'))
                     vuln['exploit_available'] = True if get_value(item.find('exploit_available')) == 'true' else False
-                    vuln['id'] = self._vuln_id(vuln['asset'].ip_address, vuln['protocol'], vuln['plugin_id'])
 
+                    vuln['tenant'] = self.__config.tenant.name if self.__config.tenant else None
                     cves = item.findall('cve')
                     if cves:
                         for cve in cves:
                             vuln['cve_id'] = get_value(cve)
                             vuln['cve'] = CveDocument.get_or_create(cve_id=vuln['cve_id'])
+                            vuln['id'] = self._vuln_id(vuln['asset'].ip_address, vuln['protocol'], vuln['plugin_id'],
+                                                       vuln['cve_id'])
                             self._create(vuln)
                     else:
                         vuln['cve'] = self._create_nessus_cve(item)
+                        vuln['id'] = self._vuln_id(vuln['asset'].ip_address, vuln['protocol'], vuln['plugin_id'],
+                                                   vuln['cve'].id)
                         self._create(vuln)
 
         return self.__parsed, self.__scanned_hosts
@@ -174,8 +195,8 @@ class NessusReportParser(Parser):
         self.__parsed[vuln.id] = vuln
 
     @staticmethod
-    def _vuln_id(ip, protocol, plugin_id) -> str:
-        key = F"{ip}-{protocol}-{plugin_id}"
+    def _vuln_id(ip, protocol, plugin_id, cve_id) -> str:
+        key = F"{ip}-{protocol}-{plugin_id}-{cve_id}"
         return str(uuid.uuid3(uuid.NAMESPACE_OID, key))
 
     @staticmethod

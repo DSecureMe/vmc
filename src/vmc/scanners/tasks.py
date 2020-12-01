@@ -23,14 +23,21 @@ from __future__ import absolute_import, unicode_literals
 import copy
 import logging
 
+import os
+
+from pathlib import Path
+
 from django.utils.timezone import now
+from django.urls import reverse
 
 from celery import shared_task
+from zipfile import ZipFile
 
+from vmc.config import settings
 from vmc.elasticsearch.registries import DocumentRegistry
 from vmc.common.utils import thread_pool_executor
 from vmc.common.tasks import start_workflow
-from vmc.scanners.models import Config
+from vmc.scanners.models import Config, Scan
 from vmc.scanners.registries import scanners_registry
 from vmc.vulnerabilities.documents import VulnerabilityDocument
 from vmc.assets.documents import AssetDocument, AssetStatus
@@ -41,30 +48,49 @@ LOGGER = logging.getLogger(__name__)
 
 @shared_task
 def _update_scans(config_pk: int):
+    LOGGER.debug(F'Starting update scans: {config_pk}')
     config = Config.objects.filter(pk=config_pk)
+
     if config.exists():
         config = config.first()
+    else:
+        LOGGER.error(F'Config: {config_pk} not exist!')
+        return None
+
     try:
         config.set_status(Config.Status.IN_PROGRESS)
-        client, parser = scanners_registry.get(config)
-
+        manager = scanners_registry.get(config)
+        client = manager.get_client()
+        parser = manager.get_parser()
         now_date = now()
-        scan_list = client.get_scans(last_modification_date=config.last_scans_pull)
+
+        LOGGER.info(F'Trying to download scan lists')
+        scan_list = client.get_scans()
         scan_list = parser.get_scans_ids(scan_list)
+        LOGGER.info(F'scan list downloaded')
+        LOGGER.debug(F'Scan list: {scan_list}')
+
         for scan_id in scan_list:
             LOGGER.info(F'Trying to download report form {config.name}')
-            file = client.download_scan(scan_id)
+
+            file = client.download_scan(scan_id, client.ReportFormat.XML)
+
+            path = _get_save_path(config)
+            file_name = '{}-{}.zip'.format(config.scanner, now().strftime('%H-%M-%S'))
+            full_file_path = Path(path) / file_name
+            LOGGER.info(F"Saving file: {full_file_path}")
+            thread_pool_executor.submit(save_scan, client, scan_id, file, full_file_path)
+            saved_scan = Scan.objects.create(config=config, file=str(full_file_path))
+            file_url = F"{getattr(settings, 'ABSOLUTE_URI', '')}{reverse('download_scan', args=[saved_scan.file_id])}"
             targets = copy.deepcopy(file)
             LOGGER.info(F'Retrieving discovered assets for {config.name}')
             discovered_assets = AssetDocument.get_assets_with_tag(tag=AssetStatus.DISCOVERED, config=config)
             LOGGER.info(F'Trying to parse scan file {scan_id}')
-            vulns, scanned_hosts = parser.parse(file)
+            vulns, scanned_hosts = parser.parse(file, file_url)
+
             LOGGER.info(F'File parsed: {scan_id}')
             LOGGER.info(F'Trying to parse targets from file {scan_id}')
-            if hasattr(parser, "get_targets"):
-                targets = parser.get_targets(targets)
-            else:
-                targets = client.get_targets(targets)
+            targets = parser.get_targets(targets)
             LOGGER.info(F'Targets parsed: {scan_id}')
             if targets:
                 LOGGER.info(F'Attempting to update discovered assets in {config.name}')
@@ -83,6 +109,18 @@ def _update_scans(config_pk: int):
         thread_pool_executor.wait_for_all()
 
 
+def save_scan(client, scan_id, xml_file, full_file_path):
+    try:
+        pretty = client.download_scan(scan_id, client.ReportFormat.PRETTY)
+        full_file_path.parent.mkdir(parents=True, exist_ok=True)
+        with ZipFile(str(full_file_path), 'w') as zipfile:
+            zipfile.writestr(F'report.{client.ReportFormat.XML}', xml_file.getvalue())
+            zipfile.writestr(F'report.{client.ReportFormat.PRETTY}', pretty.read())
+        LOGGER.info(F'File {str(full_file_path)} saved')
+    except (MemoryError, IOError, PermissionError, TimeoutError, FileExistsError) as e:
+        LOGGER.error(F"There were exception during saving file: {full_file_path}. Exception:\n{e}")
+
+
 def get_update_scans_workflow(config):
     vulnerability_index = DocumentRegistry.get_index_for_tenant(config.tenant, VulnerabilityDocument)
     asset_index = DocumentRegistry.get_index_for_tenant(config.tenant, AssetDocument)
@@ -98,3 +136,17 @@ def start_update_scans():
         config.set_status(status=Config.Status.PENDING)
         workflow = get_update_scans_workflow(config)
         start_workflow(workflow, config)
+
+
+def _get_save_path(config):
+    if hasattr(settings, 'BACKUP_ROOT'):
+        current_date = now()
+        return os.path.join(
+            getattr(settings, 'BACKUP_ROOT'),
+            'scans',
+            str(current_date.year),
+            str(current_date.month),
+            str(current_date.day),
+            F'{config.id}-{config.tenant.slug_name}' if config.tenant else F'{config.id}'
+        )
+    return None

@@ -19,7 +19,7 @@
 """
 from io import BytesIO
 from unittest import skipIf
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch, MagicMock, call
 from pathlib import Path
 from datetime import datetime
 
@@ -34,15 +34,16 @@ from vmc.scanners.nessus.parsers import NessusReportParser
 from vmc.elasticsearch.tests import ESTestCase
 from vmc.config.test_settings import elastic_configured
 from vmc.assets.documents import AssetStatus
-from vmc.scanners.models import Config
+from vmc.scanners.models import Config, Scan
 from vmc.scanners.registries import scanners_registry
-from vmc.scanners.tasks import _update_scans
+from vmc.scanners.tasks import _update_scans, save_scan
 from vmc.scanners.parsers import Parser
 from vmc.scanners.clients import Client
 from vmc.vulnerabilities.documents import VulnerabilityDocument
 from vmc.elasticsearch.models import Tenant, Config as Prefix
 
 
+@skipIf(not elastic_configured(), 'Skip if elasticsearch is not configured')
 class ConfigTest(TestCase):
     fixtures = ['config.json']
 
@@ -90,6 +91,25 @@ class ConfigTest(TestCase):
         self.assertEqual(self.uut.last_update_status, status.value)
         self.assertEqual(self.uut.error_description, 'desc')
         self.assertIsNone(self.uut.last_success_date)
+
+    def test_change_tenant_clean_last_success_date_field(self):
+        self.assertIsNotNone(self.uut.last_scans_pull)
+
+        prefix = Prefix.objects.create(name='test1', prefix='test1')
+        new_tenant = Tenant.objects.create(name='test1', slug_name='test1', elasticsearch_config=prefix)
+        self.uut.tenant = new_tenant
+        self.uut.save()
+
+        self.uut = Config.objects.get(id=1)
+        self.assertIsNone(self.uut.last_scans_pull)
+        self.assertEqual(self.uut.tenant, new_tenant)
+
+        new_tenant_2 = Tenant.objects.create(name='test2', slug_name='test2', elasticsearch_config=prefix)
+        self.uut.tenant = new_tenant_2
+        self.uut.save()
+
+        self.uut = Config.objects.get(id=1)
+        self.assertEqual(self.uut.tenant, new_tenant_2)
 
 
 class AdminPanelTest(LiveServerTestCase):
@@ -143,11 +163,11 @@ class ParserTest(TestCase):
 
     def test_get_scans_ids_call(self):
         with self.assertRaises(NotImplementedError):
-            Parser.get_scans_ids('aa')
+            Parser().get_scans_ids('aa')
 
     def test_parse_call(self):
         with self.assertRaises(NotImplementedError):
-            Parser().parse('a')
+            Parser().parse('a', 'b')
 
 
 class ClientTest(TestCase):
@@ -157,11 +177,11 @@ class ClientTest(TestCase):
 
     def test_get_scans_call(self):
         with self.assertRaises(NotImplementedError):
-            self.uut.get_scans('asaasd')
+            self.uut.get_scans()
 
     def test_download_scan_call(self):
         with self.assertRaises(NotImplementedError):
-            self.uut.download_scan('scan')
+            self.uut.download_scan('scan', self.uut.ReportFormat.XML)
 
 
 @skipIf(not elastic_configured(), 'Skip if elasticsearch is not configured')
@@ -172,44 +192,88 @@ class TasksTest(ESTestCase, TestCase):
         super(TasksTest, self).setUp()
         self.client = MagicMock()
         self.parser = MagicMock()
+        self.manager = MagicMock()
+        self.manager().get_client.return_value = self.client
+        self.manager().get_parser.return_value = self.parser
         self.config = Config.objects.first()
-        scanners_registry.register('test-scanner', self.client, self.parser)
+        scanners_registry.register('test-scanner', self.manager)
 
     @patch('vmc.scanners.tasks.VulnerabilityDocument')
     @patch('vmc.scanners.tasks.AssetDocument')
-    def test__update_call(self, asset_mock, vuln_mock):
-        self.client().get_scans.return_value = 'get_scans'
-        self.parser().get_scans_ids.return_value = [1]
-        self.client().download_scan.return_value = 'download_scan'
-        self.parser().parse.return_value = 'first', 'second'
-        self.parser().get_targets.return_value = 'targets'
-        self.client().get_targets.return_value = 'targets'
+    @patch('vmc.scanners.tasks.now')
+    def test__update_call(self, now_mock, asset_mock, vuln_mock):
+        self.client.get_scans.return_value = 'get_scans'
+        self.parser.get_scans_ids.return_value = [1]
+        self.client.download_scan.return_value = 'download_scan'
+        self.parser.parse.return_value = 'first', 'second'
+        self.parser.get_targets.return_value = 'targets'
+        self.client.get_targets.return_value = 'targets'
         asset_mock.get_assets_with_tag.return_value = 'discovered_assets'
+        now_mock.return_value = datetime(2020, 9, 2, 20, 20, 20, 0)
 
         _update_scans(self.config.pk)
+        self.assertEqual(Scan.objects.count(), 1)
 
-        self.client().download_scan.assert_called_once_with(1)
-        self.parser().parse.assert_called_once_with('download_scan')
+        scan = Scan.objects.first()
+
+        self.assertEqual(scan.config, self.config)
+        self.assertEqual(scan.file, F'/usr/share/vmc/backup/scans/2020/9/2/{self.config.id}/{self.config.scanner}-20-20-20.zip')
+        self.assertTrue(scan.file_id)
+
+        self.client.download_scan.assert_has_calls(
+            [call(1, self.client.ReportFormat.XML), call(1, self.client.ReportFormat.PRETTY)])
+        self.parser.parse.assert_called_once_with('download_scan', F'http://localhost/api/v1/scans/backups/{scan.file_id}')
         asset_mock.get_assets_with_tag.assert_called_once_with(tag=AssetStatus.DISCOVERED, config=self.config)
         asset_mock.update_gone_discovered_assets.assert_called_once_with(targets='targets', scanned_hosts='second',
                                                     discovered_assets='discovered_assets', config=self.config)
         vuln_mock.create_or_update.assert_called_once_with('first', 'second', self.config)
 
     def test__update_call_nessus_parser(self):
-        scanners_registry.register('test-scanner', self.client, NessusReportParser)
-        self.client().get_scans.return_value = {'scans': [{'id': 2, 'folder_id': 2}]}
+        self.manager().get_parser.return_value = NessusReportParser(self.config)
+        scanners_registry.register('test-scanner', self.manager)
+        self.client.get_scans.return_value = {'scans': [{'id': 2, 'folder_id': 2}],
+                                                'folders': [{'type': 'custom', 'id': 2, 'name': 'test'}]}
         with open(Path(__file__).parent / "nessus/fixtures/internal.xml", 'rb') as f:
-            self.client().download_scan.return_value = BytesIO(f.read())
+            self.client.download_scan.return_value = BytesIO(f.read())
 
         _update_scans(self.config.pk)
 
-        self.client().download_scan.assert_called_once_with(2)
+        self.client.download_scan.assert_has_calls(
+            [call(2, self.client.ReportFormat.XML), call(2, self.client.ReportFormat.PRETTY)])
         self.assertEqual(VulnerabilityDocument.search().count(), 2)
 
     @patch('vmc.scanners.tasks.VulnerabilityDocument')
     def test___update_scan_exception(self, document):
-        self.client().get_scans.side_effect = Exception
+        self.client.get_scans.side_effect = Exception
 
         self.assertFalse(_update_scans(self.config.pk))
 
         document.create_or_update.assert_not_called()
+
+    @patch('vmc.scanners.tasks.ZipFile')
+    def test_save_scan(self, zip_file_mock):
+        path = MagicMock()
+        path.__str__.return_value = '/fake/patch'
+
+        archive = MagicMock()
+        mocked_writestr = MagicMock()
+        archive.return_value.writestr = mocked_writestr
+        zip_file_mock.return_value.__enter__ = archive
+
+        file = MagicMock()
+        file.getvalue.return_value = 'xml_file'
+        file.read.return_value = 'html_file'
+
+        self.client.download_scan.return_value = file
+
+        save_scan(self.client, 1, file, path)
+
+        path.parent.mkdir.assert_called_once_with(parents=True, exist_ok=True)
+        self.client.download_scan.assert_called_once_with(1, self.client.ReportFormat.PRETTY)
+        file.getvalue.assert_called_once()
+        file.read.assert_called_once()
+
+        mocked_writestr.assert_has_calls([
+            call(F'report.{self.client.ReportFormat.XML}', 'xml_file'),
+            call(F'report.{self.client.ReportFormat.PRETTY}', 'html_file')
+        ])

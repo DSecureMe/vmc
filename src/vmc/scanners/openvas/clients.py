@@ -17,6 +17,10 @@
  * under the License.
  */
 """
+import defusedxml.ElementTree as ET
+from io import BytesIO
+from base64 import b64decode
+
 from contextlib import contextmanager
 
 import logging
@@ -35,6 +39,12 @@ LOGGER = logging.getLogger(__name__)
 
 
 class OpenVasClient(Client):
+    _PDF_FORMAT = 'c402cc3e-b531-11e1-9163-406186ea4fc5'
+    _XML_FORMAT = 'a994b278-1f62-11e1-96ac-406186ea4fc5'
+
+    class ReportFormat:
+        XML = 'xml'
+        PRETTY = 'pdf'
 
     def __init__(self, config: Config):
         self._config = config
@@ -46,22 +56,42 @@ class OpenVasClient(Client):
             gmp.authenticate(self._config.username, self._config.password)
             yield gmp
 
-    def get_scans(self, last_modification_date=None):
+    def get_version(self):
         with self._connect() as gmp:
-            if last_modification_date:
-                date = last_modification_date.strftime('%Y-%m-%dT%Hh%M')
-                return gmp.get_reports(filter=F'created>{date}')
+            return gmp.get_version()
+
+    def get_scans(self):
+        with self._connect() as gmp:
+
+            f = []
+            if self._config.last_scans_pull:
+                f.append('created>{}'.format( self._config.last_scans_pull.strftime('%Y-%m-%dT%Hh%M')))
+
+            if self._config.filter:
+                f.append(F'tag={self._config.filter}')
+
+            if f:
+                return gmp.get_reports(filter='&'.join(f))
+
             return gmp.get_reports()
 
-    def download_scan(self, scan_id):
+    def download_scan(self, scan_id, report_format=Client.ReportFormat.XML):
         with self._connect() as gmp:
-            return gmp.get_report(scan_id)
+            if report_format == OpenVasClient.ReportFormat.PRETTY:
+                response = gmp.get_report(scan_id, report_format_id=OpenVasClient._PDF_FORMAT,
+                                          details=True, ignore_pagination=True)
+
+                return BytesIO(b64decode("".join(response.itertext())))
+            response = gmp.get_report(scan_id, report_format_id=OpenVasClient._XML_FORMAT,
+                                      details=True, ignore_pagination=True)
+            return BytesIO(ET.tostring(response))
 
     def _get_target_definition(self, target_id):
         with self._connect() as gmp:
             return gmp.get_target(target_id)
 
     def get_targets(self, file):
+        file = ET.fromstring(file.read())
         target_id = file.find(".//report/task/target").attrib["id"]
         target = self._get_target_definition(target_id)
         hosts = target.find(".//target/hosts").text

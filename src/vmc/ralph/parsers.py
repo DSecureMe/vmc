@@ -51,10 +51,11 @@ class AssetsParser:
 
     def __init__(self, config: Config):
         self.__config = config
+
+    def parse(self, assets: list, users: dict = None) -> dict:
         self.__parsed = dict()
         self.__users = dict()
 
-    def parse(self, assets: list, users: dict = None) -> dict:
         if users:
             self.__users = users
 
@@ -77,7 +78,8 @@ class AssetsParser:
                 LOGGER.debug(F'Unable to parse field {field} ex: {ex}')
                 setattr(asset, field, 'UNKNOWN')
 
-        asset.source = self.__config.name
+        asset.source = 'Ralph'
+        asset.tenant = self.__config.tenant.name if self.__config.tenant else None
         self.__parsed[asset.id] = asset
 
     def id(self, _, iface: dict) -> str:
