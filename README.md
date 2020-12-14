@@ -1,4 +1,4 @@
-![Logo](https://dsecure.me/wp-content/uploads/2019/11/dSecure-1.png)
+![Logo](https://raw.githubusercontent.com/DSecureMe/vmc/master/images/vmp.png)
 
 [![Build Status](https://travis-ci.com/DSecureMe/vmc.svg?branch=master)](https://travis-ci.com/DSecureMe/vmc) [![codecov](https://codecov.io/gh/DSecureMe/vmc/branch/master/graph/badge.svg)](https://codecov.io/gh/DSecureMe/vmc) [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0) [![PyPI version](https://badge.fury.io/py/vmcenter.svg)](https://badge.fury.io/py/vmcenter)
 [![Codacy Badge](https://api.codacy.com/project/badge/Grade/7e6cbf0a970e4b19963bc3a63f843bf7)](https://www.codacy.com/gh/DSecureMe/vmc?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=DSecureMe/vmc&amp;utm_campaign=Badge_Grade)
