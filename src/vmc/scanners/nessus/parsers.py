@@ -120,13 +120,11 @@ class NessusReportParser(Parser):
                         for cve in cves:
                             vuln['cve_id'] = get_value(cve)
                             vuln['cve'] = CveDocument.get_or_create(cve_id=vuln['cve_id'])
-                            vuln['id'] = self._vuln_id(vuln['asset'].ip_address, vuln['protocol'], vuln['plugin_id'],
-                                                       vuln['cve_id'])
+                            vuln['id'] = self._vuln_id(vuln, vuln['cve_id'])
                             self._create(vuln)
                     else:
                         vuln['cve'] = self._create_nessus_cve(item)
-                        vuln['id'] = self._vuln_id(vuln['asset'].ip_address, vuln['protocol'], vuln['plugin_id'],
-                                                   vuln['cve'].id)
+                        vuln['id'] = self._vuln_id(vuln, vuln['cve'].id)
                         self._create(vuln)
 
         return self.__parsed, self.__scanned_hosts
@@ -195,8 +193,8 @@ class NessusReportParser(Parser):
         self.__parsed[vuln.id] = vuln
 
     @staticmethod
-    def _vuln_id(ip, protocol, plugin_id, cve_id) -> str:
-        key = F"{ip}-{protocol}-{plugin_id}-{cve_id}"
+    def _vuln_id(vuln, cve_id) -> str:
+        key = F"{vuln['asset'].ip_address}-{vuln['protocol']}-{vuln['port']}-{vuln['plugin_id']}-{cve_id}"
         return str(uuid.uuid3(uuid.NAMESPACE_OID, key))
 
     @staticmethod
