@@ -16,4 +16,4 @@ elasticsearch_dsl==7.3.0
 python-gvm==20.11.0
 bootstrap-admin==0.4.4
 netaddr==0.7.19
-djangorestframework==3.11.0
+djangorestframework==3.11.2
