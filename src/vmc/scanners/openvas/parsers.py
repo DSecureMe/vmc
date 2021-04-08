@@ -74,7 +74,7 @@ class GmpParserOMP7(Parser):
             scan_date = r.find('./creation_time').text
 
             if ip_address not in self.__scanned_host:
-                asset = AssetDocument.get_or_create(ip_address, self._config)
+                asset = AssetDocument.get_or_create(ip_address, config=self._config)
                 self.__scanned_host[ip_address] = asset
             else:
                 asset = self.__scanned_host[ip_address]
@@ -134,7 +134,7 @@ class GMP9Parser(Parser):
             scan_date = r.find('./creation_time').text
 
             if ip_address not in self.__scanned_host:
-                asset = AssetDocument.get_or_create(ip_address, self._config)
+                asset = AssetDocument.get_or_create(ip_address, config=self._config)
                 self.__scanned_host[ip_address] = asset
             else:
                 asset = self.__scanned_host[ip_address]

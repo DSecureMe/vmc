@@ -277,6 +277,7 @@ class NessusReportParserTest(ESTestCase, TestCase):
         vuln_id = str(uuid.uuid3(uuid.NAMESPACE_OID, '10.31.2.30-tcp-23-42263-NESSUS-42263'))
         self.assertIsInstance(parsed[vuln_id], VulnerabilityDocument)
         self.assertEquals(parsed[vuln_id].asset.ip_address, '10.31.2.30')
+        self.assertEquals(parsed[vuln_id].asset.mac_address, '3E:CE:D5:62:DF:E2')
         self.assertEquals(parsed[vuln_id].cve.id, 'NESSUS-42263')
         self.assertEqual(parsed[vuln_id].cve.base_score_v3, 6.5)
 

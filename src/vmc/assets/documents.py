@@ -124,7 +124,7 @@ class AssetDocument(Document, AssetInnerDoc):
         return assets
 
     @staticmethod
-    def get_or_create(ip_address, config=None):
+    def get_or_create(ip_address, mac_address=None, config=None):
         index = AssetDocument.get_index(config)
         result = AssetDocument.search(index=index).filter(
             Q('term', ip_address=ip_address) & ~Q('match', tags=AssetStatus.DELETED)).execute()
@@ -138,6 +138,7 @@ class AssetDocument(Document, AssetInnerDoc):
 
         return AssetDocument(id=ip_address,
                              ip_address=ip_address,
+                             mac_address=mac_address,
                              tenant=config.tenant.name if config and config.tenant else None,
                              source=source,
                              tags=[AssetStatus.DISCOVERED]).save(index=index, refresh=True)

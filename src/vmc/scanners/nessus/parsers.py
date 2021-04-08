@@ -50,7 +50,8 @@ class AssetFactory:
     @staticmethod
     def create(item: RestrictedElement, config) -> AssetDocument:
         ip_address = item.find(".//tag[@name='host-ip']").text
-        return AssetDocument.get_or_create(ip_address, config)
+        mac_address = get_value(item.find(".//tag[@name='mac-address']"))
+        return AssetDocument.get_or_create(ip_address, mac_address, config)
 
 
 class NessusReportParser(Parser):
