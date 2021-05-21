@@ -37,7 +37,7 @@ The default license throughout the repository is Apache License 2.0 unless the h
 
 # Try it
 We encourage you to try our demo instance. You can get it from [here](https://github.com/DSecureMe/vmc-demo)
-Instruction how to use it is in the demo [readme](https://github.com/DSecureMe/vmc-demo/blob/master/README.MD) file
+Instruction how to use it is in the demo [readme](https://github.com/DSecureMe/vmc-demo/blob/main/README.md) file
 
 
 # Contributing
