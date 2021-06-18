@@ -154,7 +154,7 @@ class NessusReportParser(Parser):
             cve.attack_vector_v3 = metrics.AttackVectorV3(cvss3_vector['AV'])
             cve.attack_complexity_v3 = metrics.AttackComplexityV3(cvss3_vector['AC'])
             cve.privileges_required_v3 = metrics.PrivilegesRequiredV3(cvss3_vector['PR'])
-            cve.user_interaction_v3 = metrics.UserInteractionV3(cvss3_vector['AV'])
+            cve.user_interaction_v3 = metrics.UserInteractionV3(cvss3_vector['UI'])
             cve.scope_v3 = metrics.ScopeV3(cvss3_vector['S'])
             cve.confidentiality_impact_v3 = metrics.ImpactV3(cvss3_vector['C'])
             cve.integrity_impact_v3 = metrics.ImpactV3(cvss3_vector['I'])
