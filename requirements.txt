@@ -17,3 +17,4 @@ python-gvm==20.11.0
 bootstrap-admin==0.4.4
 netaddr==0.7.19
 djangorestframework==3.11.2
+urllib3>=1.26.5 # not directly required, pinned by Snyk to avoid a vulnerability
