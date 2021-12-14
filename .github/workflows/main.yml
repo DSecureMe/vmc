@@ -44,5 +44,7 @@ jobs:
         run: pip install tox
       
       - name: Test with tox ${{ matrix.env.TOXENV }}
-        env: ${{ matrix.env }}
-        run: tox -e travis
+        env: 
+          ${{ matrix.env }}
+           ELASTICSEARCH_URL = 127.0.0.1:${{ job.services.elasticsearch.ports[9200] }}
+        run: tox
