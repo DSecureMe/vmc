@@ -12,25 +12,23 @@ jobs:
   run-action:
     name: Test
     runs-on: ubuntu-latest
+ 
+    services:
+      elasticsearch:
+        image: elasticsearch:7.5.0
+        ports:
+        - 9200/tcp
+        options: -e="discovery.type=single-node" --health-cmd="curl http://localhost:9200/_cluster/health" --health-interval=10s --health-timeout=5s --health-retries=10
+ 
     strategy:
       matrix:
-        elasticsearch: ["7.5-SNAPSHOT"]
         python-version: [3.6, 3.7, 3.8]
+      fail-fast: false
+      
     steps:
       - name: Checkout
         uses: actions/checkout@v1
-
-      - name: Configure sysctl limits
-        run: |
-          sudo swapoff -a
-          sudo sysctl -w vm.swappiness=1
-          sudo sysctl -w fs.file-max=262144
-          sudo sysctl -w vm.max_map_count=262144
-
-      - name: Start Elasticsearch
-        uses: ./elasticsearch
-        with:
-          stack-version: ${{ matrix.elasticsearch }}
+        
 
       - name: Elasticsearch is reachable
         run: |
