@@ -1,0 +1,50 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+  schedule:
+    - cron:  '0 23 * * *'
+  workflow_dispatch:
+
+# A workflow run is made up of one or more jobs that can run sequentially or in parallel
+jobs:
+  run-action:
+    name: Test
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        elasticsearch: ["7.5-SNAPSHOT"]
+        python-version: [3.6, 3.7, 3.8]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v1
+
+      - name: Configure sysctl limits
+        run: |
+          sudo swapoff -a
+          sudo sysctl -w vm.swappiness=1
+          sudo sysctl -w fs.file-max=262144
+          sudo sysctl -w vm.max_map_count=262144
+
+      - name: Start Elasticsearch
+        uses: ./elasticsearch
+        with:
+          stack-version: ${{ matrix.elasticsearch }}
+
+      - name: Elasticsearch is reachable
+        run: |
+          curl --verbose --show-error http://localhost:9200
+
+      - uses: actions/checkout@master
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v1
+        with:
+          python-version: ${{ matrix.python-version }}
+      
+      - name: Install tox
+        run: pip install tox
+      
+      - name: Test with tox ${{ matrix.env.TOXENV }}
+        env: ${{ matrix.env }}
+        run: tox -e travis
