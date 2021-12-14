@@ -32,7 +32,7 @@ jobs:
 
       - name: Elasticsearch is reachable
         run: |
-          curl --verbose --show-error http://localhost:9200
+          curl --verbose --show-error http://localhost:${{ job.services.elasticsearch.ports[9200] }}
 
       - uses: actions/checkout@master
       - name: Set up Python ${{ matrix.python-version }}
