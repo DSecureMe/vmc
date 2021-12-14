@@ -47,4 +47,4 @@ jobs:
         env: 
           ${{ matrix.env }}
            ELASTICSEARCH_URL = 127.0.0.1:${{ job.services.elasticsearch.ports[9200] }}
-        run: tox
+        run: tox -e github
