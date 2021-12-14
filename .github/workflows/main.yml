@@ -47,3 +47,8 @@ jobs:
         env: 
          ELASTICSEARCH_URL: "127.0.0.1:${{ job.services.elasticsearch.ports[9200] }}"
         run: tox -e github
+      
+      - uses: codecov/codecov-action@v2
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          fail_ci_if_error: true
