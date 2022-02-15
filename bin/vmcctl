@@ -11,15 +11,15 @@ start () {
     case $1 in
        worker)
             echo "Starting VMC Worker"
-            celery worker -A vmc.config.celery  -O fair
+            celery --app vmc.config.celery worker -O fair
             ;;
        scheduler)
             echo "Starting VMC Scheduler"
-            celery -A vmc.config.celery beat --scheduler django_celery_beat.schedulers:DatabaseScheduler  --pidfile=/tmp/scheduler.pid
+            celery --app beat vmc.config.celery --scheduler django_celery_beat.schedulers:DatabaseScheduler  --pidfile=/tmp/scheduler.pid
             ;;
        monitor)
             echo "Starting VMC Monitor"
-            celery flower -A vmc.config.celery --address=0.0.0.0 --port=8080
+            celery -app -A vmc.config.celery flower --address=0.0.0.0 --port=8080
             ;;
        admin)
             echo "Starting VMC Admin"

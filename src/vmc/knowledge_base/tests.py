@@ -79,10 +79,10 @@ class CWEFactoryTest(ESTestCase, TestCase):
         uut = result.hits[0]
 
         self.assertEqual(uut.id, 'CWE-1004')
-        self.assertEquals(uut.name, "Sensitive Cookie Without 'HttpOnly' Flag")
-        self.assertEquals(uut.status, "Incomplete")
-        self.assertEquals(uut.weakness_abstraction, "Variant")
-        self.assertEquals(uut.description, "The software uses a cookie to store sensitive information, "
+        self.assertEqual(uut.name, "Sensitive Cookie Without 'HttpOnly' Flag")
+        self.assertEqual(uut.status, "Incomplete")
+        self.assertEqual(uut.weakness_abstraction, "Variant")
+        self.assertEqual(uut.description, "The software uses a cookie to store sensitive information, "
                                            "but the cookie is not marked with the HttpOnly flag.")
         self.assertEqual(uut.extended_description,
                          "The HttpOnly flag directs compatible browsers to prevent client-side script from accessing "
@@ -144,8 +144,8 @@ class CveFactoryTest(ESTestCase, TestCase):
                          'information from process memory via a crafted web site, aka "Internet Explorer Information '
                          'Disclosure Vulnerability." This vulnerability is different from those described in '
                          'CVE-2017-0009 and CVE-2017-0059.')
-        self.assertEquals(str(cve.published_date), '2017-03-17 00:59:00+00:00')
-        self.assertEquals(str(cve.last_modified_date), '2017-07-12 01:29:00+00:00')
+        self.assertEqual(str(cve.published_date), '2017-03-17 00:59:00+00:00')
+        self.assertEqual(str(cve.last_modified_date), '2017-07-12 01:29:00+00:00')
 
         self.assertEqual(cve.cwe.id, 'CWE-200')
         self.assertEqual(len(cve.cpe), 3)

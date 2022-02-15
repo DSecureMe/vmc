@@ -17,4 +17,3 @@
  * under the License.
  *
 """
-default_app_config = 'vmc.scanners.nessus.apps.NessusConfig'

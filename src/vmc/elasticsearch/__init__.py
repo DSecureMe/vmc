@@ -31,5 +31,3 @@ def autodiscover():
 __all__ = ['Document', 'TupleValueField', 'EnumField', 'Keyword', 'InnerDoc', 'Nested',
            'Q', 'Date', 'Float', 'Object', 'Search', 'Integer', 'ListField']
 
-
-default_app_config = 'vmc.elasticsearch.apps.ElasticSearchConfig'
