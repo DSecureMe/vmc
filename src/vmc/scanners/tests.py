@@ -18,9 +18,8 @@
  */
 """
 from io import BytesIO
-from unittest import skipIf, skip
+from unittest import skipIf
 from unittest.mock import patch, MagicMock, call
-from pathlib import Path
 from datetime import datetime
 
 from django.urls import reverse
@@ -41,6 +40,8 @@ from vmc.scanners.parsers import Parser
 from vmc.scanners.clients import Client
 from vmc.vulnerabilities.documents import VulnerabilityDocument
 from vmc.elasticsearch.models import Tenant, Config as Prefix
+
+from vmc.common.tests import get_fixture_location
 
 
 @skipIf(not elastic_configured(), 'Skip if elasticsearch is not configured')
@@ -228,13 +229,12 @@ class TasksTest(ESTestCase, TestCase):
                                                     discovered_assets='discovered_assets', config=self.config)
         vuln_mock.create_or_update.assert_called_once_with('first', 'second', self.config)
 
-    @skip
     def test__update_call_nessus_parser(self):
         self.manager().get_parser.return_value = NessusReportParser(self.config)
         scanners_registry.register('test-scanner', self.manager)
         self.client.get_scans.return_value = {'scans': [{'id': 2, 'folder_id': 2}],
                                                 'folders': [{'type': 'custom', 'id': 2, 'name': 'test'}]}
-        with open(Path(__file__).parent / "nessus/fixtures/internal.xml", 'rb') as f:
+        with open(get_fixture_location(__file__, "../nessus/fixtures/internal.xml"), 'rb') as f:
             self.client.download_scan.return_value = BytesIO(f.read())
 
         _update_scans(self.config.pk)
