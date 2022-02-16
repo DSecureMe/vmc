@@ -42,7 +42,13 @@ jobs:
       
       - name: Install tox
         run: pip install tox
-      
+
+      - name: Build package
+        run: python3 setup.py build
+
+      - name: Install package
+        run: python3 setup.py install
+
       - name: Test with tox ${{ matrix.env.TOXENV }}
         env: 
          ELASTICSEARCH_URL: "127.0.0.1:${{ job.services.elasticsearch.ports[9200] }}"
