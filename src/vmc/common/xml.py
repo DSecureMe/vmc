@@ -18,11 +18,11 @@
  *
 """
 
-from defusedxml import cElementTree
+from defusedxml import ElementTree
 
 
 def iter_elements_by_name(handle, name: str):
-    events = cElementTree.iterparse(handle, events=("start", "end",))
+    events = ElementTree.iterparse(handle, events=("start", "end",))
     _, root = next(events)  # pylint: disable=stop-iteration-return
     for event, elem in events:
         if event == "end" and elem.tag == name:
@@ -31,5 +31,5 @@ def iter_elements_by_name(handle, name: str):
 
 
 def get_root_element(file):
-    return cElementTree.parse(file).getroot()
+    return ElementTree.parse(file).getroot()
 

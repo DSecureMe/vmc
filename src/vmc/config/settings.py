@@ -139,6 +139,7 @@ if not get_config('database.unix_socket', ''):
 else:
     DATABASES['default']['OPTIONS'] = {'unix_socket': get_config('database.unix_socket', '')}
 
+DEFAULT_AUTO_FIELD = 'django.db.models.AutoField'
 
 AUTH_PASSWORD_VALIDATORS = [
     {
