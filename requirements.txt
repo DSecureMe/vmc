@@ -3,7 +3,6 @@ psycopg2-binary==2.9.3
 celery==5.2.3
 requests==2.27.1
 beautifulsoup4==4.10.0
-flower==1.0.0
 django_celery_beat==2.2.1
 django-redis==5.2.0
 lxml==4.7.1

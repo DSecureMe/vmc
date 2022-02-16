@@ -17,3 +17,5 @@
  * under the License.
  *
 """
+
+default_app_config = 'vmc.knowledge_base.apps.KnowledgeBaseConfig'

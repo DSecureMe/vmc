@@ -11,21 +11,17 @@ start () {
     case $1 in
        worker)
             echo "Starting VMC Worker"
-            celery --app vmc.config.celery worker -O fair
+            celery --app vmc.config worker -O fair
             ;;
        scheduler)
             echo "Starting VMC Scheduler"
-            celery --app beat vmc.config.celery --scheduler django_celery_beat.schedulers:DatabaseScheduler  --pidfile=/tmp/scheduler.pid
-            ;;
-       monitor)
-            echo "Starting VMC Monitor"
-            celery -app -A vmc.config.celery flower --address=0.0.0.0 --port=8080
+            celery --app vmc.config beat --scheduler django_celery_beat.schedulers:DatabaseScheduler  --pidfile=/tmp/scheduler.pid
             ;;
        admin)
             echo "Starting VMC Admin"
             vmc migrate
             vmc create_index
-            gunicorn vmc.config.wsgi:application --bind localhost:8001 --access-logfile '-'
+            gunicorn vmc.config.wsgi:application --bind 0.0.0.0:8001 --access-logfile '-'
             ;;
        *)
             echo "Invalid Option, try: worker scheduler monitor admin"

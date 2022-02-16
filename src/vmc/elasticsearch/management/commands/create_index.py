@@ -17,8 +17,9 @@
  * under the License.
  *
 """
-
+from django.conf import settings
 from django.core.management.base import BaseCommand
+from elasticsearch_dsl.connections import connections
 
 from vmc.elasticsearch.registries import registry
 
@@ -27,6 +28,7 @@ class Command(BaseCommand):
     help = 'Creates indexes in ElasticSearch'
 
     def handle(self, *args, **options):
+        connections.configure(**settings.ELASTICSEARCH_DSL)
         documents = registry.get_documents()
         for index in documents:
             documents[index].init(index=index)
