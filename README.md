@@ -41,7 +41,7 @@ Instruction how to use it is in the demo [readme](https://github.com/DSecureMe/v
 
 
 # Contributing
-Please see our [Code of conduct](https://github.com/DSecureMe/vmc/blob/master/CODE_OF_CONDUCT.md). We welcome your contributions. Please feel free to fork the code, play with it, make some patches and send us pull requests via issues.
+Please see our [Code of conduct](https://github.com/DSecureMe/vmc/blob/master/CODE_OF_CONDUCT.md). We welcome your contributions. Please feel free to fork the code, play with it, make some patches and send us pull requests via issues. At this [link](https://github.com/DSecureMe/vmc-dev-toolkit) you can find the dev toolkit to help you get start.
 
 # Support
 Please [open an issue on GitHub](https://github.com/DSecureMe/vmc/issues) if you'd like to report a bug or request a feature.
