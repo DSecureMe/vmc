@@ -1,4 +1,4 @@
-django==3.2.13
+django==3.2.14
 psycopg2-binary==2.9.3
 celery==5.2.3
 requests==2.27.1
