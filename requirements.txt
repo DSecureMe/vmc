@@ -1,6 +1,6 @@
 django==3.2.16
 psycopg2-binary==2.9.3
-celery==5.2.3
+celery==5.2.7
 requests==2.27.1
 beautifulsoup4==4.10.0
 django_celery_beat==2.2.1
