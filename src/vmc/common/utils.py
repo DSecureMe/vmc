@@ -26,6 +26,7 @@ import concurrent.futures
 from io import BytesIO
 from zipfile import ZipFile
 from vmc.config.celery import app as celery_app
+from vmc.config.settings import DEFAULT_REQUEST_TIMEOUT
 
 
 class ThreadPoolExecutor:
@@ -46,7 +47,7 @@ thread_pool_executor = ThreadPoolExecutor()
 
 
 def is_downloadable(url: str, verify: bool = True) -> bool:
-    h = requests.head(url, allow_redirects=True, verify=verify)
+    h = requests.head(url, allow_redirects=True, verify=verify, timeout=DEFAULT_REQUEST_TIMEOUT)
     header = h.headers
     content_type = header.get('Content-Type')
     if 'text' in content_type.lower():
@@ -59,7 +60,7 @@ def is_downloadable(url: str, verify: bool = True) -> bool:
 def get_file(url: str, verify: bool = True) -> [BytesIO, None]:
     content = None
     if is_downloadable(url, verify):
-        response = requests.get(url, verify=verify)
+        response = requests.get(url, verify=verify, timeout=DEFAULT_REQUEST_TIMEOUT)
 
         if response.status_code == 200:
 

@@ -28,6 +28,7 @@ import requests
 from typing import Dict
 from io import BytesIO
 
+from vmc.config.settings import DEFAULT_REQUEST_TIMEOUT
 from vmc.scanners.models import Config
 from vmc.scanners.clients import Client
 
@@ -234,7 +235,7 @@ class NessusClient(Client):
 
     def _get_version(self) -> str:
         try:
-            resp = requests.get(F'{self._url}/server/properties', verify=not self._config.insecure)
+            resp = requests.get(F'{self._url}/server/properties', verify=not self._config.insecure, timeout=DEFAULT_REQUEST_TIMEOUT)
             version = resp.json()
             return version['nessus_ui_version']
 

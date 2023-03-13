@@ -28,6 +28,7 @@ from parameterized import parameterized
 from vmc.common.apps import CommonConfig
 from vmc.common.enum import TupleValueEnum
 from vmc.common.utils import is_downloadable, get_file, handle_ranges
+from vmc.config.settings import DEFAULT_REQUEST_TIMEOUT
 
 
 def get_fixture_location(module, name):
@@ -97,7 +98,7 @@ class UtilsTest(TestCase):
 
         self.assertEqual(is_downloadable(UtilsTest.URL, verify), result)
 
-        requests.head.assert_called_once_with(UtilsTest.URL, allow_redirects=True, verify=verify)
+        requests.head.assert_called_once_with(UtilsTest.URL, allow_redirects=True, verify=verify, timeout=DEFAULT_REQUEST_TIMEOUT)
 
     @parameterized.expand([
         ('test.zip', 'zip', True, b'ZIP is working\n'),
@@ -115,7 +116,7 @@ class UtilsTest(TestCase):
             )
 
         self.assertEqual(get_file(UtilsTest.URL, verify).readline(), result)
-        requests.get.assert_called_once_with(UtilsTest.URL, verify=verify)
+        requests.get.assert_called_once_with(UtilsTest.URL, verify=verify, timeout=DEFAULT_REQUEST_TIMEOUT)
 
     @patch('vmc.common.utils.requests')
     def test_call_get_file_json(self, requests):

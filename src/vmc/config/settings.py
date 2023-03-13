@@ -58,6 +58,8 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = get_config('secret_key', 'SECRET_KEY')
 
+DEFAULT_REQUEST_TIMEOUT = 30
+
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = get_config('debug', False)
 
