@@ -39,7 +39,7 @@ class TheHiveClient:
         return TheHiveClient._log_response_if_error(requests.post(F"{self._url}/api/case", headers=self.headers, data={
             'title': title,
             'description': description
-        }))['caseId']
+        }, timeout=DEFAULT_REQUEST_TIMEOUT))['caseId']
 
     def update_case(self, case_id, description, tags):
         return TheHiveClient._log_response_if_error(
