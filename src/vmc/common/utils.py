@@ -60,7 +60,7 @@ def is_downloadable(url: str, verify: bool = True) -> bool:
 def get_file(url: str, verify: bool = True) -> [BytesIO, None]:
     content = None
     if is_downloadable(url, verify):
-        response = requests.get(url, verify=verify)
+        response = requests.get(url, verify=verify, timeout=DEFAULT_REQUEST_TIMEOUT)
 
         if response.status_code == 200:
 
