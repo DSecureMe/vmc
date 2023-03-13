@@ -20,6 +20,8 @@
 import logging
 import requests
 
+from vmc.config.settings import DEFAULT_REQUEST_TIMEOUT
+
 
 LOGGER = logging.getLogger(__name__)
 
@@ -31,7 +33,7 @@ class TheHiveClient:
 
     def get_alert(self, alert_id):
         return TheHiveClient._log_response_if_error(
-            requests.get(F"{self._url}/api/alert/{alert_id}", headers=self.headers))
+            requests.get(F"{self._url}/api/alert/{alert_id}", headers=self.headers, timeout=DEFAULT_REQUEST_TIMEOUT))
 
     def create_case(self, title, description):
         return TheHiveClient._log_response_if_error(requests.post(F"{self._url}/api/case", headers=self.headers, data={
