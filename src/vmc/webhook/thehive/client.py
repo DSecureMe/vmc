@@ -46,14 +46,14 @@ class TheHiveClient:
             requests.patch(F"{self._url}/api/case/{case_id}", headers=self.headers, json={
                 'description': description,
                 'tags': list(tags)
-        }))
+        }, timeout=DEFAULT_REQUEST_TIMEOUT))
 
     def merge_alert_to_case(self, alert_id, case_id):
         return TheHiveClient._log_response_if_error(
             requests.post(F"{self._url}/api/alert/merge/_bulk", headers=self.headers, json={
                 "caseId": str(case_id),
                 "alertIds": [str(alert_id)]
-        }))
+        }, timeout=DEFAULT_REQUEST_TIMEOUT))
 
     def create_task(self, case_id, title, description, group):
         return TheHiveClient._log_response_if_error(
@@ -61,7 +61,7 @@ class TheHiveClient:
                 'title': title,
                 'description': description,
                 'group': group
-        }))['id']
+        }, timeout=DEFAULT_REQUEST_TIMEOUT))['id']
 
     @staticmethod
     def _log_response_if_error(resp):
