@@ -37,6 +37,7 @@ from vmc.webhook.thehive.handlers import _process_tasks
 from vmc.vulnerabilities.tests import create_vulnerability
 from vmc.webhook.thehive.tasks import process_task_log
 from vmc.vulnerabilities.documents import VulnerabilityDocument
+from vmc.config.settings import DEFAULT_REQUEST_TIMEOUT
 
 
 class TheHiveClientTest(TestCase):
@@ -47,7 +48,7 @@ class TheHiveClientTest(TestCase):
     @patch('vmc.webhook.thehive.client.requests')
     def test_call_get_alert(self, requests):
         self.uut.get_alert(1)
-        requests.get.assert_called_once_with('http://localhost/api/alert/1', headers={"Authorization": "Bearer token"})
+        requests.get.assert_called_once_with('http://localhost/api/alert/1', headers={"Authorization": "Bearer token"}, timeout=DEFAULT_REQUEST_TIMEOUT)
 
     @patch('vmc.webhook.thehive.client.requests')
     def test_call_create_case(self, requests):
@@ -58,7 +59,7 @@ class TheHiveClientTest(TestCase):
         requests.post.assert_called_once_with('http://localhost/api/case', headers={"Authorization": "Bearer token"}, data={
             'title': 'sample title',
             'description': 'sample desc'
-        })
+        }, timeout=DEFAULT_REQUEST_TIMEOUT)
 
     @patch('vmc.webhook.thehive.client.requests')
     def test_call_update_case(self, requests):
@@ -66,7 +67,7 @@ class TheHiveClientTest(TestCase):
         requests.patch.assert_called_once_with('http://localhost/api/case/15', headers={"Authorization": "Bearer token"}, json={
             'description': 'sample desc',
             'tags': ['tags']
-        })
+        }, timeout=DEFAULT_REQUEST_TIMEOUT)
 
     @patch('vmc.webhook.thehive.client.requests')
     def test_call_merge_alert_to_case(self, requests):
@@ -74,7 +75,7 @@ class TheHiveClientTest(TestCase):
         requests.post.assert_called_once_with('http://localhost/api/alert/merge/_bulk', headers={"Authorization": "Bearer token"}, json={
             "caseId": '12',
             "alertIds": ['15']
-        })
+        }, timeout=DEFAULT_REQUEST_TIMEOUT)
 
     @patch('vmc.webhook.thehive.client.requests')
     def test_call_create_task(self, requests):
@@ -83,7 +84,7 @@ class TheHiveClientTest(TestCase):
             'title': 'sample title',
             'description': 'sample desc',
             'group': 'group'
-        })
+        }, timeout=DEFAULT_REQUEST_TIMEOUT)
 
 
 class TaskProcessorTests(TestCase):
