@@ -19,3 +19,4 @@ djangorestframework==3.13.1
 tzdata==2021.5
 setuptools>=65.5.1 # not directly required, pinned by Snyk to avoid a vulnerability
 importlib-metadata==4.13.0
+paramiko>=3.4.0 # not directly required, pinned by Snyk to avoid a vulnerability
