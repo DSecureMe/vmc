@@ -1,7 +1,7 @@
 django==3.2.25
 psycopg2-binary==2.9.5
 celery==5.2.7
-requests==2.31.0
+requests==2.32.0
 beautifulsoup4==4.11.2
 django_celery_beat==2.2.1
 django-redis==5.2.0
