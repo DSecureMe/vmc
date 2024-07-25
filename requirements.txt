@@ -15,7 +15,7 @@ elasticsearch_dsl==7.4.0
 python-gvm==21.11.0
 bootstrap-admin==0.4.4
 netaddr==0.8.0
-djangorestframework==3.13.1
+djangorestframework==3.15.2
 tzdata==2021.5
 setuptools>=70.0.0 # not directly required, pinned by Snyk to avoid a vulnerability
 importlib-metadata==4.13.0
