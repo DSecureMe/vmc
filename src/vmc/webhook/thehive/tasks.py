@@ -53,16 +53,16 @@ def process_task_log(event):
 
                 doc = VulnerabilityDocument.get(task.document_id, index=index)
 
-                LOGGER.debug(F'Documents found')
+                LOGGER.debug('Documents found')
 
                 if hasattr(doc, 'tags'):
                     if tag not in doc.tags:
                         doc.tags.append(tag)
-                        LOGGER.debug(F'Saved')
+                        LOGGER.debug('Saved')
                         doc.save()
                 else:
                     doc.tags = [tag]
-                    LOGGER.debug(F'Saved')
+                    LOGGER.debug('Saved')
                     doc.save()
 
     except Exception as ex:

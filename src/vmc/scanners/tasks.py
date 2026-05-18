@@ -64,10 +64,10 @@ def _update_scans(config_pk: int):
         parser = manager.get_parser()
         now_date = now()
 
-        LOGGER.info(F'Trying to download scan lists')
+        LOGGER.info('Trying to download scan lists')
         scan_list = client.get_scans()
         scan_list = parser.get_scans_ids(scan_list)
-        LOGGER.info(F'scan list downloaded')
+        LOGGER.info('scan list downloaded')
         LOGGER.debug(F'Scan list: {scan_list}')
 
         for scan_id in scan_list:

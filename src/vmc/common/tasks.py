@@ -57,7 +57,7 @@ def __release_lock(key: str):
 
 
 @app.task(bind=True)
-def __release_lock_error(key: str, module: str, model_name: str, config_pk: int):
+def __release_lock_error(self, key: str, module: str, model_name: str, config_pk: int):
     if cache.get(key, None):
         cache.delete(key)
 
