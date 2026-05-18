@@ -21,6 +21,8 @@
 
 from __future__ import absolute_import, unicode_literals
 
+import io
+import json
 import logging
 
 from datetime import datetime
@@ -35,11 +37,54 @@ from vmc.knowledge_base.factories import CveFactory, CWEFactory, ExploitFactory
 
 
 START_YEAR = 2002
-CVE_NVD_URL = 'https://nvd.nist.gov/feeds/json/cve/1.1/nvdcve-1.1-{}.json.gz'
+CVE_NVD_URL = 'https://nvd.nist.gov/feeds/json/cve/2.0/nvdcve-2.0-{}.json.gz'
 CWE_MITRE_URL = 'https://cwe.mitre.org/data/xml/cwec_v2.12.xml.zip'
 VIA4_URL = 'https://www.cve-search.org/feeds/via4.json'
 
 LOGGER = logging.getLogger(__name__)
+
+
+def _nvd2_to_nvd1(vuln: dict) -> dict:
+    cve2 = vuln.get('cve', {})
+    metrics = cve2.get('metrics', {})
+    cvss_v3 = (metrics.get('cvssMetricV31') or metrics.get('cvssMetricV30') or [{}])[0]
+    cvss_v2 = (metrics.get('cvssMetricV2') or [{}])[0]
+
+    impact = {}
+    if cvss_v3.get('cvssData'):
+        impact['baseMetricV3'] = {'cvssV3': cvss_v3['cvssData']}
+    if cvss_v2.get('cvssData'):
+        impact['baseMetricV2'] = {'cvssV2': cvss_v2['cvssData']}
+
+    nodes = []
+    for cfg in cve2.get('configurations', []):
+        for node in cfg.get('nodes', []):
+            nodes.append({
+                'cpe_match': [
+                    {'cpe23Uri': m.get('criteria'), 'vulnerable': m.get('vulnerable', True)}
+                    for m in node.get('cpeMatch', [])
+                    if m.get('criteria')
+                ]
+            })
+
+    return {
+        'cve': {
+            'CVE_data_meta': {'ID': cve2.get('id')},
+            'description': {'description_data': cve2.get('descriptions', [])},
+            'references': {'reference_data': [
+                {'refsource': r.get('source', ''), 'url': r['url']}
+                for r in cve2.get('references', []) if 'url' in r
+            ]},
+            'problemtype': {'problemtype_data': [
+                {'description': w.get('description', [])}
+                for w in cve2.get('weaknesses', [])
+            ] or [{'description': []}]},
+        },
+        'configurations': {'nodes': nodes},
+        'impact': impact,
+        'publishedDate': cve2.get('published'),
+        'lastModifiedDate': cve2.get('lastModified'),
+    }
 
 
 @shared_task
@@ -67,8 +112,10 @@ def update_cve(year: int):
         file = get_file(CVE_NVD_URL.format(year))
         if file:
             LOGGER.info(F'File downloaded for {year} year, parsing...')
-            CveFactory.process(file)
+            data = json.load(file)
             file.close()
+            translated = {'CVE_Items': [_nvd2_to_nvd1(v) for v in data.get('vulnerabilities', [])]}
+            CveFactory.process(io.StringIO(json.dumps(translated)))
             LOGGER.info(F'Parsing for {year}, done.')
         else:
             LOGGER.info(F'Unable to download file for {year} year')
