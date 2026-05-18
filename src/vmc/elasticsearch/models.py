@@ -44,7 +44,7 @@ class Config(BaseModel):
 
     def save(self, force_insert=False, force_update=False, using=None,
              update_fields=None):
-        self.prefix = slugify(self.prefix, to_lower=True)
+        self.prefix = slugify(self.prefix, lowercase=True)
         super().save(force_insert=force_insert, force_update=force_update,
                      using=using, update_fields=update_fields)
 
@@ -73,7 +73,7 @@ class Tenant(BaseModel):
         from vmc.elasticsearch.registries import registry
 
         if not self.modified_date:
-            self.slug_name = slugify(self.name, to_lower=True)
+            self.slug_name = slugify(self.name, lowercase=True)
 
         super().save(force_insert=force_insert, force_update=force_update,
                      using=using, update_fields=update_fields)

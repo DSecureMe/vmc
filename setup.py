@@ -21,7 +21,7 @@ import sys
 import os
 from setuptools import setup, find_packages
 
-assert sys.version_info >= (3, 7), 'Python 3.7+ required.'
+assert sys.version_info >= (3, 10), 'Python 3.10+ required.'
 
 THIS_DIRECTORY = os.path.abspath(os.path.dirname(__file__))
 
