@@ -35,7 +35,7 @@ from vmc.knowledge_base.documents import CveDocument, CweDocument
 from vmc.knowledge_base.factories import CveFactory, CWEFactory
 from vmc.knowledge_base import metrics
 from vmc.knowledge_base.utils import calculate_base_score_v2, calculate_base_score_v3
-from vmc.knowledge_base.tasks import update_exploits, update_cwe, update_cve
+from vmc.knowledge_base.tasks import update_exploits, update_cwe, update_cve, _nvd2_to_nvd1
 
 
 def create_cve(cve_id='CVE-2017-0002', save=True) -> CveDocument:
@@ -250,13 +250,13 @@ class UpdateCveTaskTest(ESTestCase, TestCase):
 
     @patch('vmc.knowledge_base.tasks.get_file')
     def test_call(self, get_file):
-        file = open(get_fixture_location(__file__, 'nvdcve-1.0-2017.json'))
+        file = open(get_fixture_location(__file__, 'nvdcve-2.0-2017.json'))
         get_file.return_value = file
 
         update_cve(2017)
 
         get_file.assert_called_once_with(
-            'https://nvd.nist.gov/feeds/json/cve/1.1/nvdcve-1.1-2017.json.gz'
+            'https://nvd.nist.gov/feeds/json/cve/2.0/nvdcve-2.0-2017.json.gz'
         )
         self.assertEqual(Search().index(CveDocument.Index.name).count(), 2)
 
@@ -306,3 +306,42 @@ class UpdateExploitsTaskTest(ESTestCase, TestCase):
         self.assertEqual(cve.modified_date, prev_modified_date)
         self.assertEqual(len(cve.exploits), 1)
         self.assertEqual(cve.exploits, [{'id': '44904', 'url': 'https://www.exploit-db.com/exploits/44904'}])
+
+
+class Nvd2ToNvd1TranslatorTest(TestCase):
+
+    def setUp(self):
+        import json as _json
+        with open(get_fixture_location(__file__, 'nvdcve-2.0-2017.json')) as handle:
+            self.data = _json.load(handle)
+
+    def test_translates_id_and_dates(self):
+        out = _nvd2_to_nvd1(self.data['vulnerabilities'][0])
+        self.assertEqual(out['cve']['CVE_data_meta']['ID'], 'CVE-2017-0008')
+        self.assertEqual(out['publishedDate'], '2017-03-17T00:59:00.290')
+        self.assertTrue(out['lastModifiedDate'])
+
+    def test_translates_cvss_v3_score(self):
+        out = _nvd2_to_nvd1(self.data['vulnerabilities'][0])
+        self.assertEqual(out['impact']['baseMetricV3']['cvssV3']['baseScore'], 4.3)
+
+    def test_translates_cpe_match(self):
+        out = _nvd2_to_nvd1(self.data['vulnerabilities'][0])
+        nodes = out['configurations']['nodes']
+        self.assertTrue(any(
+            m['cpe23Uri'].startswith('cpe:2.3:')
+            for node in nodes for m in node['cpe_match']
+        ))
+
+    def test_translates_references_with_refsource(self):
+        out = _nvd2_to_nvd1(self.data['vulnerabilities'][0])
+        refs = out['cve']['references']['reference_data']
+        self.assertGreater(len(refs), 0)
+        self.assertIn('refsource', refs[0])
+        self.assertIn('url', refs[0])
+
+    def test_empty_vuln_yields_minimal_skeleton(self):
+        out = _nvd2_to_nvd1({})
+        self.assertIsNone(out['cve']['CVE_data_meta']['ID'])
+        self.assertEqual(out['configurations']['nodes'], [])
+        self.assertEqual(out['impact'], {})
