@@ -20,6 +20,9 @@
 
 import os
 import yaml
+from django.templatetags.static import static
+from django.urls import reverse_lazy
+from django.utils.translation import gettext_lazy as _
 
 CFG = None
 CFG_PATH = '/etc/vmc/config.yml'
@@ -82,6 +85,9 @@ INTERNAL_APPS = [
 ]
 
 THIRD_PARTY_APPS = [
+    'unfold',
+    'unfold.contrib.filters',
+    'unfold.contrib.forms',
     'vmc.branding',
     'django.contrib.admin',
     'django.contrib.auth',
@@ -97,6 +103,50 @@ THIRD_PARTY_APPS = [
 
 
 INSTALLED_APPS = THIRD_PARTY_APPS + INTERNAL_APPS
+
+UNFOLD = {
+    "SITE_TITLE": "VMC",
+    "SITE_HEADER": "VMC",
+    "SITE_SUBHEADER": "Vulnerability Management Center",
+    "SITE_URL": "/admin/",
+    "SITE_ICON": lambda request: static("vmp_small.png"),
+    "SITE_LOGO": lambda request: static("vmp.png"),
+    "SITE_SYMBOL": "shield",
+    "SHOW_HISTORY": True,
+    "SHOW_VIEW_ON_SITE": False,
+    "THEME": None,
+    "COLORS": {
+        "primary": {
+            "50": "239 246 255",
+            "100": "219 234 254",
+            "200": "191 219 254",
+            "300": "147 197 253",
+            "400": "96 165 250",
+            "500": "59 130 246",
+            "600": "52 122 183",
+            "700": "37 99 175",
+            "800": "30 64 175",
+            "900": "30 58 138",
+            "950": "23 37 84",
+        },
+    },
+    "SIDEBAR": {
+        "show_search": True,
+        "show_all_applications": True,
+        "navigation": [
+            {
+                "title": _("Knowledge base"),
+                "items": [
+                    {
+                        "title": _("Update CVE database"),
+                        "icon": "cloud_download",
+                        "link": reverse_lazy("update_knowledge_base"),
+                    },
+                ],
+            },
+        ],
+    },
+}
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
