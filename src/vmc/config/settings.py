@@ -73,6 +73,9 @@ CSRF_TRUSTED_ORIGINS = get_config(
     [F"{SCHEMA}://{DOMAIN}{PORT}", "http://localhost:8080", "http://localhost"],
 )
 
+LOGIN_REDIRECT_URL = '/admin/'
+LOGOUT_REDIRECT_URL = '/admin/login/'
+
 
 INTERNAL_APPS = [
     'vmc.common',
