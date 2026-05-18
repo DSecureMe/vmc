@@ -17,10 +17,12 @@
  * under the License.
  */
 """
-from unittest import TestCase
+from unittest import TestCase, skipIf
 
+from django.core.management import call_command
 from elasticsearch_dsl.connections import connections
 
+from vmc.config.test_settings import elastic_configured
 from vmc.elasticsearch.apps import ElasticSearchConfig
 from vmc.elasticsearch.registries import registry
 from vmc.elasticsearch.models import Config
@@ -58,3 +60,15 @@ class ConfigTest(TestCase):
 
     def test_call__str__(self):
         self.assertEqual(ConfigTest.create_config().__str__(), ConfigTest.NAME)
+
+
+@skipIf(not elastic_configured(), 'Skip if elasticsearch is not configured')
+class CreateIndexIdempotencyTest(ESTestCase, TestCase):
+    """Re-running `vmc create_index` against an already-initialised cluster
+    must succeed silently (regression guard for STAB-02 idempotency)."""
+
+    def test_create_index_twice_does_not_raise(self):
+        # ESTestCase.setUp already initialised every registered index.
+        # The second invocation must not raise.
+        call_command('create_index')
+        call_command('create_index')
