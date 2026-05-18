@@ -494,3 +494,27 @@ class GetAssetManagerConfigTest(ESTestCase, LiveServerTestCase):
         self.assertEqual(resp['insecure'], self.config.insecure)
         self.assertEqual(resp['enabled'], self.config.enabled)
         self.assertEqual(resp['tenant'], self.config.tenant.name)
+
+
+class RalphClientRedactTest(TestCase):
+    """Regression test for commit 76c1d91 — error logs must not leak creds."""
+
+    def test_redact_strips_sensitive_keys(self):
+        m = {'username': 'u', 'password': 'p', 'token': 't',
+             'authorization': 'Bearer x', 'api_key': 'k',
+             'apikey': 'k2', 'secret': 's', 'data': 'd'}
+        out = RalphClient._redact(m)
+        self.assertEqual(out['username'], 'u')
+        self.assertEqual(out['data'], 'd')
+        for k in ('password', 'token', 'authorization', 'api_key', 'apikey', 'secret'):
+            self.assertEqual(out[k], RalphClient.REDACTED, F'{k} not redacted')
+
+    def test_redact_case_insensitive(self):
+        self.assertEqual(
+            RalphClient._redact({'Password': 'p', 'TOKEN': 't'}),
+            {'Password': RalphClient.REDACTED, 'TOKEN': RalphClient.REDACTED}
+        )
+
+    def test_redact_non_dict_passthrough(self):
+        self.assertEqual(RalphClient._redact('plain string'), 'plain string')
+        self.assertEqual(RalphClient._redact(None), None)
