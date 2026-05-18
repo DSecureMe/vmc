@@ -31,6 +31,7 @@ admin.site.index_title = "Dashboard"
 
 urlpatterns = [
     path('', lambda request: redirect('admin/', permanent=False)),
+    path('dashboard/', lambda request: redirect('/admin/', permanent=False)),
     path('admin/', admin.site.urls),
     path('admin/knowlege-base/update', update_knowledge_base, name='update_knowledge_base'),
     path('api/v1/assets-manager/config', get_asset_manager_config, name='get_asset_manager_config'),

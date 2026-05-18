@@ -1,0 +1,9 @@
+{% extends "admin/login.html" %}
+
+{% load static %}
+
+{% block login_before %}
+    <div class="flex items-center justify-center mb-6">
+        <img src="{% static 'vmp.png' %}" alt="{{ site_header }}" class="h-20" />
+    </div>
+{% endblock %}

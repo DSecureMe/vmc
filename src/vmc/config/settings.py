@@ -68,6 +68,11 @@ DEBUG = get_config('debug', False)
 
 ALLOWED_HOSTS = ['*']
 
+CSRF_TRUSTED_ORIGINS = get_config(
+    'csrf_trusted_origins',
+    [F"{SCHEMA}://{DOMAIN}{PORT}", "http://localhost:8080", "http://localhost"],
+)
+
 
 INTERNAL_APPS = [
     'vmc.common',
@@ -85,10 +90,10 @@ INTERNAL_APPS = [
 ]
 
 THIRD_PARTY_APPS = [
+    'vmc.branding',
     'unfold',
     'unfold.contrib.filters',
     'unfold.contrib.forms',
-    'vmc.branding',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
