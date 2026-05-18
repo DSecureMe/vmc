@@ -64,11 +64,7 @@ class ConfigTest(TestCase):
 
 @skipIf(not elastic_configured(), 'Skip if elasticsearch is not configured')
 class CreateIndexIdempotencyTest(ESTestCase, TestCase):
-    """Re-running `vmc create_index` against an already-initialised cluster
-    must succeed silently (regression guard for STAB-02 idempotency)."""
 
     def test_create_index_twice_does_not_raise(self):
-        # ESTestCase.setUp already initialised every registered index.
-        # The second invocation must not raise.
         call_command('create_index')
         call_command('create_index')

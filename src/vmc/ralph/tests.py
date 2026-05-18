@@ -497,7 +497,6 @@ class GetAssetManagerConfigTest(ESTestCase, LiveServerTestCase):
 
 
 class RalphClientRedactTest(TestCase):
-    """Regression test for commit 76c1d91 — error logs must not leak creds."""
 
     def test_redact_strips_sensitive_keys(self):
         m = {'username': 'u', 'password': 'p', 'token': 't',
