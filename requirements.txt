@@ -1,11 +1,11 @@
 django==3.2.25
 psycopg2-binary==2.9.5
 celery==5.2.7
-requests==2.32.0
+requests==2.32.4
 beautifulsoup4==4.11.2
 django_celery_beat==2.2.1
 django-redis==5.2.0
-lxml==4.9.1
+lxml==5.3.0
 defusedxml==0.7.1
 django-celery-results==2.4.0
 pyyaml==6.0
@@ -15,7 +15,7 @@ elasticsearch_dsl==7.4.0
 python-gvm==21.11.0
 bootstrap-admin==0.4.4
 netaddr==0.8.0
-djangorestframework==3.13.1
+djangorestframework==3.15.2
 tzdata==2021.5
 setuptools>=70.0.0 # not directly required, pinned by Snyk to avoid a vulnerability
 importlib-metadata==4.13.0
