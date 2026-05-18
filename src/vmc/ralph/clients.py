@@ -98,18 +98,29 @@ class RalphClient:
 
         return resp.json()
 
-    @staticmethod
-    def _raise_exception(headers, endpoint, status_code, data=None, content=None):
-        data = json.loads(data)
-        if 'password' in data:
-            data['password'] = '*********'
+    SENSITIVE_KEYS = ('password', 'token', 'authorization', 'api_key', 'apikey', 'secret')
+    REDACTED = '*********'
+
+    @classmethod
+    def _redact(cls, mapping):
+        if not isinstance(mapping, dict):
+            return mapping
+        return {
+            k: cls.REDACTED if k.lower() in cls.SENSITIVE_KEYS else v
+            for k, v in mapping.items()
+        }
+
+    @classmethod
+    def _raise_exception(cls, headers, endpoint, status_code, data=None, content=None):
+        data = cls._redact(json.loads(data))
+        headers = cls._redact(headers)
 
         LOGGER.error("*****************START ERROR*****************")
-        LOGGER.error(F"JSON    : {data}")
-        LOGGER.error(F"HEADERS : {headers}")
-        LOGGER.error(F"URL     : {endpoint}")
+        LOGGER.error("JSON    : %s", data)
+        LOGGER.error("HEADERS : %s", headers)
+        LOGGER.error("URL     : %s", endpoint)
         LOGGER.error("******************END ERROR******************")
-        LOGGER.error(F"RESPONSE CODE: {status_code}")
+        LOGGER.error("RESPONSE CODE: %s", status_code)
         raise RalphClientException(
             F'request data: {data}\n'
             F'request headers: {headers}\n'
