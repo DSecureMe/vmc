@@ -83,7 +83,6 @@ INTERNAL_APPS = [
 
 THIRD_PARTY_APPS = [
     'vmc.branding',
-    'bootstrap_admin',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
