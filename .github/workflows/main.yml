@@ -10,30 +10,29 @@ jobs:
   run-action:
     name: Test
     runs-on: ubuntu-latest
- 
+
     services:
       elasticsearch:
-        image: elasticsearch:7.5.0
+        image: elasticsearch:7.17.13
         ports:
         - 9200/tcp
         options: -e="discovery.type=single-node" --health-cmd="curl http://localhost:9200/_cluster/health" --health-interval=10s --health-timeout=5s --health-retries=10
- 
+
     strategy:
       matrix:
-        python-version: [3.8, 3.9]
+        python-version: ["3.10"]
       fail-fast: false
-      
+
     steps:
       - name: Checkout
-        uses: actions/checkout@v1
+        uses: actions/checkout@v4
 
       - name: Elasticsearch is reachable
         run: |
           curl --verbose --show-error http://localhost:${{ job.services.elasticsearch.ports[9200] }}
 
-      - uses: actions/checkout@master
       - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v1
+        uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
 
@@ -41,11 +40,11 @@ jobs:
         run: pip install tox
 
       - name: Test with tox ${{ matrix.env.TOXENV }}
-        env: 
+        env:
          ELASTICSEARCH_URL: "127.0.0.1:${{ job.services.elasticsearch.ports[9200] }}"
         run: tox -e github
-      
-      - uses: codecov/codecov-action@v2
+
+      - uses: codecov/codecov-action@v4
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           fail_ci_if_error: false
