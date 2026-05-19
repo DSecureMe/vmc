@@ -29,6 +29,8 @@ from django_celery_beat.admin import PeriodicTaskForm as CeleryPeriodicTaskForm
 from django_celery_beat.admin import TaskSelectWidget as CeleryTaskSelectWidget
 from django_celery_beat.models import PeriodicTask
 
+from unfold.admin import ModelAdmin as UnfoldModelAdmin
+
 from vmc.common.tasks import start_workflow, workflow_in_progress
 
 
@@ -57,7 +59,7 @@ class PeriodicTaskForm(CeleryPeriodicTaskForm):
     regtask = None
 
 
-class PeriodicTaskAdmin(CeleryPeriodicTaskAdmin):
+class PeriodicTaskAdmin(UnfoldModelAdmin, CeleryPeriodicTaskAdmin):
     form = PeriodicTaskForm
     fieldsets = (
         (None, {
@@ -84,7 +86,7 @@ class PeriodicTaskAdmin(CeleryPeriodicTaskAdmin):
         return qs.exclude(name__contains='celery.')
 
 
-class ConfigBaseAdmin(admin.ModelAdmin):
+class ConfigBaseAdmin(UnfoldModelAdmin):
     list_display = ('name', 'host', 'tenant', 'enabled', 'last_success_date', 'last_update_status')
     actions = ('enable_configs', 'disable_configs', 'toggle_configs', 'run_configs')
     readonly_fields = [

@@ -18,7 +18,8 @@
  *
 """
 from django.contrib import admin
-from django.contrib.admin import ModelAdmin
+
+from unfold.admin import ModelAdmin
 
 from vmc.webhook.models import TheHive4, TheHive4LogConverter
 

@@ -19,11 +19,13 @@
 """
 from django.contrib import admin
 
+from unfold.admin import ModelAdmin
+
 from vmc.common.tasks import workflow_in_progress
 from vmc.elasticsearch.models import Config, Tenant
 
 
-class DisableChangeActionAdmin(admin.ModelAdmin):
+class DisableChangeActionAdmin(ModelAdmin):
 
     def has_change_permission(self, request, obj=None):
         return False

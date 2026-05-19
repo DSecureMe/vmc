@@ -25,6 +25,6 @@
 {{ block.super }}
 <li>
     {% url cl.opts|admin_urlname:'import_all' as import_all_url %}
-    <a id="import-all" href="{{ import_all_url }}" class="btn btn-primary btn-xs" data-toggle="tooltip" data-placement="bottom" title="Import all">Import all</a>
+    <a id="import-all" href="{{ import_all_url }}" class="addlink bg-primary-600 flex h-9 items-center justify-center px-4 rounded-full text-white" title="Import all">Import all</a>
 </li>
 {% endblock %}
