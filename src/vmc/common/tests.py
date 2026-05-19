@@ -23,9 +23,12 @@ from decimal import Decimal
 from unittest import TestCase
 from unittest.mock import patch, Mock
 
+from django.test import TestCase as DjangoTestCase
+
 from parameterized import parameterized
 
 from vmc.common.apps import CommonConfig
+from vmc.common.dashboard import dashboard_callback
 from vmc.common.enum import TupleValueEnum
 from vmc.common.utils import is_downloadable, get_file, handle_ranges
 from vmc.config.settings import DEFAULT_REQUEST_TIMEOUT
@@ -146,3 +149,38 @@ class UtilsTest(TestCase):
         self.assertEqual(handle_ranges([s, e3]), ["192.168.1.1", "192.169.1.1"])
         self.assertEqual(handle_ranges([s, e4]), ["192.168.1.1", "192.168.1.10"])
         self.assertEqual(handle_ranges([s, e4]), ["192.168.1.1", "192.168.1.10"])
+
+
+class DashboardCallbackTest(DjangoTestCase):
+    EXPECTED_TITLES = (
+        'Tenants',
+        'Scanner configs',
+        'Ralph configs',
+        'Elasticsearch configs',
+        'TheHive webhooks',
+        'Periodic tasks',
+    )
+
+    def test_callback_populates_dashboard_kpi(self):
+        context = {}
+        result = dashboard_callback(Mock(), context)
+
+        self.assertIs(result, context)
+        self.assertIn('dashboard_kpi', result)
+        self.assertEqual(len(result['dashboard_kpi']), len(self.EXPECTED_TITLES))
+
+    def test_callback_kpi_shape(self):
+        result = dashboard_callback(Mock(), {})
+
+        for kpi in result['dashboard_kpi']:
+            self.assertIn('title', kpi)
+            self.assertIn('metric', kpi)
+            self.assertIn('url', kpi)
+            self.assertIsInstance(kpi['metric'], int)
+            self.assertTrue(kpi['url'].startswith('/admin/'))
+
+    def test_callback_titles(self):
+        result = dashboard_callback(Mock(), {})
+        titles = [str(kpi['title']) for kpi in result['dashboard_kpi']]
+        for expected in self.EXPECTED_TITLES:
+            self.assertIn(expected, titles)

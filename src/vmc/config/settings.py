@@ -123,6 +123,7 @@ UNFOLD = {
     "SHOW_HISTORY": True,
     "SHOW_VIEW_ON_SITE": False,
     "THEME": None,
+    "DASHBOARD_CALLBACK": "vmc.common.dashboard.dashboard_callback",
     "COLORS": {
         "primary": {
             "50": "239 246 255",
@@ -143,12 +144,102 @@ UNFOLD = {
         "show_all_applications": True,
         "navigation": [
             {
+                "title": _("Tenants"),
+                "items": [
+                    {
+                        "title": _("Tenants"),
+                        "icon": "domain",
+                        "link": reverse_lazy("admin:elasticsearch_tenant_changelist"),
+                    },
+                    {
+                        "title": _("Elasticsearch configs"),
+                        "icon": "storage",
+                        "link": reverse_lazy("admin:elasticsearch_config_changelist"),
+                    },
+                ],
+            },
+            {
+                "title": _("Scanners"),
+                "items": [
+                    {
+                        "title": _("Scanner configurations"),
+                        "icon": "radar",
+                        "link": reverse_lazy("admin:scanners_config_changelist"),
+                    },
+                ],
+            },
+            {
+                "title": _("Asset sources"),
+                "items": [
+                    {
+                        "title": _("Ralph"),
+                        "icon": "inventory_2",
+                        "link": reverse_lazy("admin:ralph_config_changelist"),
+                    },
+                ],
+            },
+            {
                 "title": _("Knowledge base"),
                 "items": [
                     {
                         "title": _("Update CVE database"),
                         "icon": "cloud_download",
                         "link": reverse_lazy("update_knowledge_base"),
+                    },
+                ],
+            },
+            {
+                "title": _("Webhooks"),
+                "items": [
+                    {
+                        "title": _("TheHive4"),
+                        "icon": "webhook",
+                        "link": reverse_lazy("admin:webhook_thehive4_changelist"),
+                    },
+                    {
+                        "title": _("Log converters"),
+                        "icon": "tune",
+                        "link": reverse_lazy("admin:webhook_thehive4logconverter_changelist"),
+                    },
+                ],
+            },
+            {
+                "title": _("Periodic tasks"),
+                "items": [
+                    {
+                        "title": _("Tasks"),
+                        "icon": "schedule",
+                        "link": reverse_lazy("admin:django_celery_beat_periodictask_changelist"),
+                    },
+                    {
+                        "title": _("Task results"),
+                        "icon": "task_alt",
+                        "link": reverse_lazy("admin:django_celery_results_taskresult_changelist"),
+                    },
+                ],
+            },
+            {
+                "title": _("API"),
+                "items": [
+                    {
+                        "title": _("API tokens"),
+                        "icon": "key",
+                        "link": reverse_lazy("admin:authtoken_tokenproxy_changelist"),
+                    },
+                ],
+            },
+            {
+                "title": _("Users"),
+                "items": [
+                    {
+                        "title": _("Users"),
+                        "icon": "person",
+                        "link": reverse_lazy("admin:auth_user_changelist"),
+                    },
+                    {
+                        "title": _("Groups"),
+                        "icon": "group",
+                        "link": reverse_lazy("admin:auth_group_changelist"),
                     },
                 ],
             },

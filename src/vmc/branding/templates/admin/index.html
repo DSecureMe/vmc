@@ -1,0 +1,17 @@
+{% extends "admin/index.html" %}
+
+{% block content %}
+    {% if dashboard_kpi %}
+        <div class="grid grid-cols-1 gap-4 mb-8 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+            {% for kpi in dashboard_kpi %}
+                <a href="{{ kpi.url }}"
+                   class="bg-white border border-gray-200 hover:border-primary-500 px-4 py-3 rounded-md shadow-sm transition-colors dark:bg-base-900 dark:border-base-800 dark:hover:border-primary-500">
+                    <p class="text-font-subtle-light text-sm dark:text-font-subtle-dark">{{ kpi.title }}</p>
+                    <p class="font-semibold mt-2 text-2xl text-font-important-light dark:text-font-important-dark">{{ kpi.metric }}</p>
+                </a>
+            {% endfor %}
+        </div>
+    {% endif %}
+
+    {{ block.super }}
+{% endblock %}
