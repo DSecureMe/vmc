@@ -160,6 +160,16 @@ class AdminPanelTest(LiveServerTestCase):
         self.client.logout()
 
 
+class DownloadScanRedirectTest(TestCase):
+
+    def test_unauthenticated_redirects_to_login(self):
+        scan_id = 'a' * 64
+        response = self.client.get(F'/api/v1/scans/backups/{scan_id}')
+
+        self.assertEqual(response.status_code, 302)
+        self.assertIn(F'next=/api/v1/scans/backups/{scan_id}', response['Location'])
+
+
 class ParserTest(TestCase):
 
     def test_get_scans_ids_call(self):

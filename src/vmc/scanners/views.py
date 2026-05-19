@@ -18,8 +18,8 @@
  *
 """
 import re
+from django.contrib.auth.views import redirect_to_login
 from django.http import HttpResponse
-from django.shortcuts import redirect
 from rest_framework.generics import get_object_or_404
 from rest_framework.exceptions import NotFound
 from pathlib import Path
@@ -30,7 +30,7 @@ from vmc.scanners.models import Scan
 def download_scan(request, scan_id):
 
     if not request.user.is_authenticated:
-        return redirect(F'/admin/login/?next={request.path}')
+        return redirect_to_login(request.get_full_path())
 
     if not re.match(r"[a-f0-9]{64}", scan_id):
         raise NotFound

@@ -112,18 +112,18 @@ class RalphClient:
 
     @classmethod
     def _raise_exception(cls, headers, endpoint, status_code, data=None, content=None):
-        data = cls._redact(json.loads(data))
-        headers = cls._redact(headers)
+        safe_data = cls._redact(json.loads(data))
+        safe_headers = cls._redact(headers)
 
         LOGGER.error("*****************START ERROR*****************")
-        LOGGER.error("JSON    : %s", data)
-        LOGGER.error("HEADERS : %s", headers)
+        LOGGER.error("JSON    : %s", safe_data)
+        LOGGER.error("HEADERS : %s", safe_headers)
         LOGGER.error("URL     : %s", endpoint)
         LOGGER.error("******************END ERROR******************")
         LOGGER.error("RESPONSE CODE: %s", status_code)
         raise RalphClientException(
-            F'request data: {data}\n'
-            F'request headers: {headers}\n'
+            F'request data: {safe_data}\n'
+            F'request headers: {safe_headers}\n'
             F'url: {endpoint}\n'
             F'response code: {status_code}\n'
             F'response body: {content}\n')
