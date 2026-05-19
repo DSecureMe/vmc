@@ -115,12 +115,10 @@ class RalphClient:
         safe_data = cls._redact(json.loads(data))
         safe_headers = cls._redact(headers)
 
-        LOGGER.error("*****************START ERROR*****************")
-        LOGGER.error("JSON    : %s", safe_data)
-        LOGGER.error("HEADERS : %s", safe_headers)
-        LOGGER.error("URL     : %s", endpoint)
-        LOGGER.error("******************END ERROR******************")
-        LOGGER.error("RESPONSE CODE: %s", status_code)
+        LOGGER.error(
+            "Ralph request failed: url=%s response_code=%s",
+            endpoint, status_code,
+        )
         raise RalphClientException(
             F'request data: {safe_data}\n'
             F'request headers: {safe_headers}\n'
